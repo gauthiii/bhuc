@@ -52,7 +52,7 @@ const live = {
   getDocumentation: (id: string) => j(`/note/${id}`),
   getNotesSummary: (patientId: string) => j(`/notes/summary/${patientId}`),
   getLatestNote: (patientId: string) => j(`/note/latest/${patientId}`),
-  draftNewNote: (patientId: string) => j(`/note/new/${patientId}`, { method: 'POST', body: '{}' }),
+  draftNewNote: (patientId: string, screening?: string) => j(`/note/new/${patientId}${screening ? `?screening=${encodeURIComponent(screening)}` : ''}`, { method: 'POST', body: '{}' }),
   signNote: (id: string) => j('/note/sign', { method: 'POST', body: JSON.stringify({ id }) }),
   getPriorAuth: (patientId: string) => j(`/priorauth?patient=${patientId}`),
   askCoverage: (question: string) => j('/priorauth', { method: 'POST', body: JSON.stringify({ question }) }),

@@ -162,6 +162,7 @@ export interface WorklistItem {
   waitMinutes: number
   requiresConfirmation: boolean
   noteCount?: number
+  screeningCount?: number
 }
 
 export interface NotesSummary {
@@ -185,6 +186,7 @@ export interface PatientChart {
 
 export interface RiskDetail {
   screeningId: string
+  patientId?: string
   patientName: string
   instrument: Instrument
   riskBand: RiskBand
@@ -197,6 +199,7 @@ export interface RiskDetail {
 export interface DocumentationDraft {
   id: string
   patientName: string
+  screeningId?: string
   lines: { id: string; text: string; verified: boolean }[]
   suggestedCodes: { code: string; type: 'ICD-10' | 'CPT'; description: string; accepted: boolean }[]
   signed: boolean

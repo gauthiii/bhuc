@@ -229,9 +229,12 @@ def risk_detail(screening_id: str) -> dict:
     except (json.JSONDecodeError, TypeError):
         pass
     action = (dv(rec.get("u_clinician_action")) or "pending").lower()
+    patient_ref = rec.get("u_patient")
+    patient_id = patient_ref["value"] if isinstance(patient_ref, dict) else patient_ref
     return {
         "screeningId": dv(rec.get("u_number")),
         "sysId": dv(rec.get("sys_id")),
+        "patientId": patient_id or "",
         "patientName": dv(rec.get("u_patient")) or "Unknown",
         "instrument": (rec.get("u_instrument") or {}).get("value") if isinstance(rec.get("u_instrument"), dict) else rec.get("u_instrument"),
         "riskBand": (rec.get("u_risk_band") or {}).get("value") if isinstance(rec.get("u_risk_band"), dict) else (rec.get("u_risk_band") or "unknown"),

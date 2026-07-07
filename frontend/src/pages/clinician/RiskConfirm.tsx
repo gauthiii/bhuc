@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { AlertTriangle } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { AlertTriangle, PenLine } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, RiskBadge, StatusBadge, Spinner, ErrorState, Button, Textarea, Field, RadioGroup } from '../../components/ui'
@@ -125,8 +125,13 @@ export function ClinicianRiskConfirm() {
               <p className="mt-3 flex items-center gap-1 text-xs text-amber-700"><AlertTriangle className="h-3.5 w-3.5" /> Select Confirm, Adjust, or Reject to proceed.</p>
             )}
 
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button onClick={submit} disabled={!canSubmit}>{submitting ? 'Submitting…' : 'Submit decision'}</Button>
+              {data.patientId && (
+                <Link to={`/clinician/documentation/${data.patientId}?new=1&screening=${data.screeningId}`}>
+                  <Button variant="secondary"><PenLine className="h-4 w-4" /> Start note for this screening</Button>
+                </Link>
+              )}
             </div>
           </Panel>
         </div>

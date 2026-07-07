@@ -17,6 +17,7 @@ export function ClinicianDocumentation() {
   const [sp] = useSearchParams()
   const wantNew = sp.get('new') === '1'
   const noteParam = sp.get('note')
+  const screeningParam = sp.get('screening') ?? undefined
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [data, setData] = useState<DocumentationDraft | null>(null)
@@ -37,7 +38,7 @@ export function ClinicianDocumentation() {
       try {
         if (wantNew) {
           setPhase('drafting')
-          const d = await api.draftNewNote(id!)          // Agent 3 runs here
+          const d = await api.draftNewNote(id!, screeningParam)   // Agent 3 runs here
           if (alive) apply(d)
         } else if (noteParam) {
           apply(await api.getDocumentation(noteParam))
@@ -48,7 +49,7 @@ export function ClinicianDocumentation() {
     }
     run()
     return () => { alive = false }
-  }, [id, wantNew, noteParam])
+  }, [id, wantNew, noteParam, screeningParam])
 
   const unverifiedCount = lines.filter((l) => !l.verified).length
   const canSign = unverifiedCount === 0 && attested && !signing && !signed
@@ -111,7 +112,7 @@ export function ClinicianDocumentation() {
 
             <Panel
               title={`Session note — ${data.patientName}`}
-              subtitle={data.id}
+              subtitle={data.screeningId ? `${data.id} · from ${data.screeningId}` : data.id}
               actions={signed
                 ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Signed &amp; verified</StatusBadge>
                 : <StatusBadge tone="warning">Draft</StatusBadge>}

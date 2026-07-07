@@ -173,8 +173,10 @@
 | 17 | `u_pdf_generated` | PDF generated | boolean | — | N | false | — | — |
 | 18 | `u_contains_part2` | Contains Part 2 data | boolean | — | N | false | — | Part2 |
 | 19 | `u_sensitivity` | Sensitivity label | choice | 20 | N | standard | standard, part2 | Part2 |
+| 20 | `u_screening` | Screening ID | reference | — | N | — | → `u_bhuc_screening` | — |
 
 > **Added 2026-07-07 (Agent 4 record-op alignment):** `u_sensitivity` mirrors `u_bhuc_consent.u_sensitivity` so the **Consent & Data Protection Agent** (§4.4 Agent 4) can write its `standard\|part2` label to the note table, not just a boolean. `u_contains_part2` is retained as the quick boolean flag used by DLP/masking on C3/C6.
+> **Added 2026-07-07 (`u_screening`):** links a documentation note to the screening it stems from (`→ u_bhuc_screening`). Set by the backend on note creation (`POST /note/new/{patientId}?screening=…` from Risk Confirm, else defaults to the patient's most recent screening). Existing notes backfilled with the most-recent-screening-before-the-note rule.
 
 ## Table 7 — `u_bhuc_prior_auth` (Prior-Authorization Draft)
 
@@ -236,6 +238,7 @@ u_bhuc_patient (1) ──< (M) u_bhuc_care_plan      [u_patient]
 u_bhuc_patient (1) ──< (M) u_bhuc_prior_auth     [u_patient]
 u_bhuc_appointment (1) ──< (M) u_bhuc_care_plan  [u_appointment]
 u_bhuc_appointment (1) ──< (M) u_bhuc_prior_auth [u_appointment]
+u_bhuc_screening (1) ──< (M) u_bhuc_care_plan    [u_screening]
 sys_user (clinician) referenced by screening/appointment/message/care_plan/prior_auth
 ```
 
@@ -248,9 +251,9 @@ sys_user (clinician) referenced by screening/appointment/message/care_plan/prior
 | `u_bhuc_consent` | 14 | 3 | 2 |
 | `u_bhuc_appointment` | 18 | 1 (ref) | 0 |
 | `u_bhuc_message` | 14 | 2 | 1 |
-| `u_bhuc_care_plan` | 19 | 1 (ref) | 3 |
+| `u_bhuc_care_plan` | 20 | 2 (ref) | 3 |
 | `u_bhuc_prior_auth` | 19 | 1 (ref) | 2 |
-| **Total** | **134** | — | — |
+| **Total** | **135** | — | — |
 
 ---
 

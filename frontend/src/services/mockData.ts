@@ -259,7 +259,7 @@ export const mock = {
     return { count: 1, signedCount: 0, hasNotes: true, latestSigned: false, notes: [{ id: 'BHUC_CARE_PLAN_001', signed: false, state: 'draft', signedAt: '', createdAt: iso(0) }] }
   },
   async getLatestNote(patientId: string): Promise<DocumentationDraft | null> { await wait(); return { ...(await this.getDocumentation(patientId)) } },
-  async draftNewNote(patientId: string): Promise<DocumentationDraft> { await wait(1200); return this.getDocumentation(patientId) },
+  async draftNewNote(patientId: string, _screening?: string): Promise<DocumentationDraft> { await wait(1200); return this.getDocumentation(patientId) },
   async signNote(_id?: string) { await wait(); return { ok: true } },
   async getPriorAuth(patientId: string): Promise<PriorAuthPacket> {
     await wait()

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, RefreshCw, FileText } from 'lucide-react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { Panel, RiskBadge, StatusBadge, Spinner, ErrorState, EmptyState, Button } from '../../components/ui'
 import { api } from '../../services/api'
@@ -98,14 +98,9 @@ export function ClinicianWorklist() {
                     </td>
                     <td className="py-3 pr-4 tabular-nums text-slate-600">{r.waitMinutes} min</td>
                     <td className="py-3 pr-4">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {r.requiresConfirmation
-                          ? <StatusBadge tone="warning" icon={<AlertTriangle className="h-3.5 w-3.5" />}>Confirm risk</StatusBadge>
-                          : <StatusBadge tone="success">Confirmed</StatusBadge>}
-                        {(r.noteCount ?? 0) > 0 && (
-                          <StatusBadge tone="info" icon={<FileText className="h-3.5 w-3.5" />}>{r.noteCount} note{r.noteCount === 1 ? '' : 's'}</StatusBadge>
-                        )}
-                      </div>
+                      {r.requiresConfirmation
+                        ? <StatusBadge tone="warning" icon={<AlertTriangle className="h-3.5 w-3.5" />}>Confirm risk</StatusBadge>
+                        : <StatusBadge tone="success">Confirmed</StatusBadge>}
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex justify-end gap-2">

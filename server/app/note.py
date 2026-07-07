@@ -14,7 +14,7 @@ import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from .config import get_settings
@@ -63,6 +63,7 @@ def _to_draft(rec: dict) -> dict:
         "id": _dv(rec.get("u_number")) or _dv(rec.get("sys_id")),
         "sysId": _dv(rec.get("sys_id")),
         "patientName": _dv(rec.get("u_patient")) or "Unknown",
+        "screeningId": _dv(rec.get("u_screening")) or "",
         "lines": lines,
         "suggestedCodes": codes,
         "signed": str(_raw(rec.get("u_signed"))).lower() in ("true", "1"),
@@ -126,11 +127,37 @@ def note_for_patient(patient_id: str) -> dict:
                                 encounterId="ENC-APP"))
 
 
+def _screening_sys_id(table, screening: str) -> str:
+    """Resolve a screening sys_id from a sys_id or a BHUC_SCREENING_00x number."""
+    if not screening:
+        return ""
+    if len(screening) == 32:
+        return screening
+    found = table.list(SCREENING, f"u_number={screening}", fields="sys_id", limit=1)
+    return found[0]["sys_id"] if found else ""
+
+
+SCREENING = "u_bhuc_screening"
+
+
 @router.post("/note/new/{patient_id}")
-def new_note(patient_id: str) -> dict:
-    """Always draft a NEW note (runs Agent 3) — 'Start note' / 'Start another note'."""
-    return draft_note(NoteDraft(patient=patient_id, encounter=_CANNED_ENCOUNTER,
-                                encounterId="ENC-APP"))
+def new_note(patient_id: str, screening: str = Query("")) -> dict:
+    """Always draft a NEW note (runs Agent 3) — 'Start note' / 'Start another note'.
+
+    Links the note to a screening (u_screening): the one passed from the UI (Risk
+    Confirm), else the patient's most recent screening (same rule as the backfill)."""
+    table = get_table_client()
+    draft = draft_note(NoteDraft(patient=patient_id, encounter=_CANNED_ENCOUNTER,
+                                 encounterId="ENC-APP"))
+    sid = _screening_sys_id(table, screening)
+    if not sid:
+        latest = table.list(SCREENING, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
+                            fields="sys_id", limit=1)
+        sid = latest[0]["sys_id"] if latest else ""
+    if sid and draft.get("sysId"):
+        table.update(TABLE, draft["sysId"], {"u_screening": sid})
+        draft = _to_draft(table.get(TABLE, draft["sysId"], display_value="all"))  # echo the link
+    return draft
 
 
 @router.get("/note/latest/{patient_id}")
