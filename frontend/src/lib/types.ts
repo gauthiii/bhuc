@@ -155,11 +155,21 @@ export interface CheckInResult { recorded: boolean; escalate: boolean; nextCheck
 export interface WorklistItem {
   screeningId: string
   patientId: string
+  patientNumber?: string // BHUC_PATIENT_00x (shown as subtext, not sys_id)
   patientName: string // may be masked
   riskBand: RiskBand
   confidence: number
   waitMinutes: number
   requiresConfirmation: boolean
+  noteCount?: number
+}
+
+export interface NotesSummary {
+  count: number
+  signedCount: number
+  hasNotes: boolean
+  latestSigned: boolean
+  notes: { id: string; signed: boolean; state: string; signedAt: string; createdAt: string }[]
 }
 
 export interface MaskableField { value: string | null; masked: boolean }

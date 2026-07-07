@@ -5,7 +5,7 @@ import type {
   DispositionCase, DocumentationDraft, Eligibility, Message, MessageThread, PatientChart,
   PatientProfile, PriorAuthPacket, RiskDetail, SchedulingRecommendation, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
-  MeResponse, ScreeningStatusItem, BatchScreeningResult,
+  MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -254,6 +254,12 @@ export const mock = {
       ],
     }
   },
+  async getNotesSummary(_patientId?: string): Promise<NotesSummary> {
+    await wait()
+    return { count: 1, signedCount: 0, hasNotes: true, latestSigned: false, notes: [{ id: 'BHUC_CARE_PLAN_001', signed: false, state: 'draft', signedAt: '', createdAt: iso(0) }] }
+  },
+  async getLatestNote(patientId: string): Promise<DocumentationDraft | null> { await wait(); return { ...(await this.getDocumentation(patientId)) } },
+  async draftNewNote(patientId: string): Promise<DocumentationDraft> { await wait(1200); return this.getDocumentation(patientId) },
   async signNote(_id?: string) { await wait(); return { ok: true } },
   async getPriorAuth(patientId: string): Promise<PriorAuthPacket> {
     await wait()

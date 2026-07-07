@@ -126,6 +126,46 @@ def note_for_patient(patient_id: str) -> dict:
                                 encounterId="ENC-APP"))
 
 
+@router.post("/note/new/{patient_id}")
+def new_note(patient_id: str) -> dict:
+    """Always draft a NEW note (runs Agent 3) — 'Start note' / 'Start another note'."""
+    return draft_note(NoteDraft(patient=patient_id, encounter=_CANNED_ENCOUNTER,
+                                encounterId="ENC-APP"))
+
+
+@router.get("/note/latest/{patient_id}")
+def latest_note(patient_id: str):
+    """Most recent note for a patient (signed or draft), or null if none. View-only —
+    does NOT run the agent (use POST /note/draft to create a new one)."""
+    table = get_table_client()
+    found = table.list(TABLE, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
+                       display_value="all", limit=1)
+    return _to_draft(found[0]) if found else None
+
+
+@router.get("/notes/summary/{patient_id}")
+def notes_summary(patient_id: str) -> dict:
+    """Counts + signed status for a patient's notes (drives the Chart panel + button label)."""
+    table = get_table_client()
+    rows = table.list(TABLE, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
+                      fields="u_number,u_signed,u_state,u_signed_at,sys_created_on", limit=100)
+    notes = [{
+        "id": r.get("u_number"),
+        "signed": str(r.get("u_signed")).lower() in ("true", "1"),
+        "state": r.get("u_state"),
+        "signedAt": r.get("u_signed_at") or "",
+        "createdAt": r.get("sys_created_on") or "",
+    } for r in rows]
+    signed = [n for n in notes if n["signed"]]
+    return {
+        "count": len(notes),
+        "signedCount": len(signed),
+        "hasNotes": len(notes) > 0,
+        "latestSigned": bool(notes and notes[0]["signed"]),
+        "notes": notes,
+    }
+
+
 @router.get("/note/{note_id}")
 def get_note(note_id: str) -> dict:
     table = get_table_client()

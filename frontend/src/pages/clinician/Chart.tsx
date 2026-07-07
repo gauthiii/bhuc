@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Lock, Unlock, FileText } from 'lucide-react'
+import { Lock, Unlock, FileText, CheckCircle2, PenLine } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { Panel, RiskBadge, StatusBadge, Spinner, ErrorState, Button } from '../../components/ui'
 import { api } from '../../services/api'
 import { formatDateTime } from '../../lib/format'
-import type { PatientChart, MaskableField } from '../../lib/types'
+import type { PatientChart, MaskableField, NotesSummary } from '../../lib/types'
 
 // C3 — Patient Summary / Chart. Part 2 / SUD fields masked server-side unless reveal re-fetch.
 export function ClinicianChart() {
@@ -14,6 +14,7 @@ export function ClinicianChart() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [canSeePart2, setCanSeePart2] = useState(false)
+  const [notes, setNotes] = useState<NotesSummary | null>(null)
 
   async function load(reveal: boolean) {
     setLoading(true)
@@ -28,6 +29,12 @@ export function ClinicianChart() {
   }
 
   useEffect(() => { load(canSeePart2) }, [patientId, canSeePart2])
+  useEffect(() => {
+    api.getNotesSummary(patientId!).then(setNotes).catch(() => setNotes(null))
+  }, [patientId])
+
+  const noteCount = notes?.count ?? 0
+  const startLabel = noteCount > 0 ? 'Start another note' : 'Start note'
 
   function MaskedValue({ field }: { field: MaskableField }) {
     if (field.masked) {
@@ -46,7 +53,7 @@ export function ClinicianChart() {
       intro="Consolidated chart with an AI-generated summary. SUD / 42 CFR Part 2 fields are masked by the server unless consent and role permit."
       actions={
         <div className="flex flex-wrap gap-2">
-          <Link to={`/clinician/documentation/${patientId}`}><Button variant="secondary">Start note</Button></Link>
+          <Link to={`/clinician/documentation/${patientId}?new=1`}><Button variant="secondary"><PenLine className="h-4 w-4" /> {startLabel}</Button></Link>
           <Link to={`/clinician/prior-auth/${patientId}`}><Button variant="secondary">Prior-auth</Button></Link>
           <Link to={`/clinician/disposition/${patientId}`}><Button variant="secondary">Disposition</Button></Link>
         </div>
@@ -88,6 +95,24 @@ export function ClinicianChart() {
             </div>
             <p className="mt-3 text-xs text-slate-400">Generated server-side. Not a substitute for chart review.</p>
           </Panel>
+
+          {notes && notes.hasNotes && (
+            <Panel
+              title={<span className="flex items-center gap-2"><FileText className="h-4 w-4" /> Documentation</span>}
+              actions={<Link to={`/clinician/documentation/${patientId}?new=1`}><Button variant="secondary" className="px-3 py-1.5 text-xs"><PenLine className="h-3.5 w-3.5" /> {startLabel}</Button></Link>}
+            >
+              <ul className="grid gap-2">
+                {notes.notes.map((n) => (
+                  <li key={n.id} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm">
+                    <Link to={`/clinician/documentation/${patientId}?note=${n.id}`} className="font-medium text-slate-800 hover:text-teal-800 hover:underline">{n.id}</Link>
+                    {n.signed
+                      ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Signed &amp; verified</StatusBadge>
+                      : <StatusBadge tone="warning">Draft — unsigned</StatusBadge>}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
 
           <Panel title="History">
             <ul className="grid gap-2">

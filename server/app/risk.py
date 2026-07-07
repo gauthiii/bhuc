@@ -163,33 +163,47 @@ def submit_batch(req: ScreeningBatch) -> dict:
 @router.get("/worklist")
 def worklist() -> list:
     table = get_table_client()
+    # dot-walk the patient's real name + BHUC number (not the sys_id)
     rows = table.list(
         TABLE, "u_state=scored^u_clinician_action=pending^ORDERBYDESCsys_updated_on",
-        fields="sys_id,u_number,u_patient,u_instrument,u_risk_band,u_confidence",
-        display_value="all", limit=50)
+        fields=("sys_id,u_number,u_patient,u_patient.u_first_name,u_patient.u_last_name,"
+                "u_patient.u_number,u_risk_band,u_confidence"),
+        display_value="false", limit=50)
 
-    def dv(v):
-        return v["display_value"] if isinstance(v, dict) else v
+    def raw(v):  # reference fields come back as {link, value}
+        return v.get("value") if isinstance(v, dict) else v
 
-    def raw(v):
-        return v["value"] if isinstance(v, dict) else v
+    # note counts per patient (one extra query for all patients in the queue)
+    patient_ids = {raw(r.get("u_patient")) for r in rows if raw(r.get("u_patient"))}
+    note_counts: dict[str, int] = {}
+    if patient_ids:
+        notes = table.list("u_bhuc_care_plan",
+                           "u_patientIN" + ",".join(patient_ids),
+                           fields="u_patient", limit=500)
+        for n in notes:
+            pid = raw(n.get("u_patient"))
+            note_counts[pid] = note_counts.get(pid, 0) + 1
 
     out = []
     for r in rows:
-        band = (raw(r.get("u_risk_band")) or "unknown").lower()   # 'high' not 'High'
+        band = (r.get("u_risk_band") or "unknown").lower()
         try:
-            conf = int(raw(r.get("u_confidence")) or 0)
+            conf = int(r.get("u_confidence") or 0)
         except (TypeError, ValueError):
             conf = 0
+        pid = raw(r.get("u_patient")) or ""
+        name = f"{r.get('u_patient.u_first_name', '')} {r.get('u_patient.u_last_name', '')}".strip()
         out.append({
-            "screeningId": dv(r.get("u_number")) or dv(r.get("sys_id")),
-            "sysId": raw(r.get("sys_id")),
-            "patientId": raw(r.get("u_patient")) or "",
-            "patientName": dv(r.get("u_patient")) or "Unknown",
+            "screeningId": r.get("u_number") or r.get("sys_id"),
+            "sysId": r.get("sys_id"),
+            "patientId": pid,
+            "patientNumber": r.get("u_patient.u_number") or "",
+            "patientName": name or "Unknown patient",
             "riskBand": band,
             "confidence": conf,
             "waitMinutes": 0,
             "requiresConfirmation": band in ("moderate", "high"),
+            "noteCount": note_counts.get(pid, 0),
         })
     return out
 

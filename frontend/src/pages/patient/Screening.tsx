@@ -6,7 +6,7 @@ import type { Instrument, ScreeningQuestion, MeResponse, ScreeningStatusItem, Ba
 import { usePatientAuth } from '../../contexts/AuthContext'
 import { PatientShell } from '../../components/portals'
 import { CrisisDialog } from '../../components/CrisisDialog'
-import { ScreeningRunProgress } from '../../components/ScreeningRunProgress'
+import { AgentRunProgress } from '../../components/AgentRunProgress'
 import { Panel, Button, RadioGroup, StatusBadge, Spinner } from '../../components/ui'
 
 const INSTRUMENTS: { key: Instrument; name: string }[] = [
@@ -159,7 +159,17 @@ export function PatientScreening() {
 
         {phase === 'running' && (
           <>
-            <ScreeningRunProgress instruments={INSTRUMENTS} done={runComplete} error={runError} />
+            <AgentRunProgress
+              runningTitle="Running your risk identification"
+              doneTitle="Risk identification complete"
+              statusTexts={['Scoring your responses…', 'Applying clinical risk-band rules…', 'Cross-checking instrument thresholds…', 'Checking for safety flags…', 'Routing results to your care team…']}
+              cardSteps={['Queued', 'Analyzing responses', 'Applying scoring rules', 'Finalizing']}
+              cards={INSTRUMENTS.map((i) => ({ key: i.key, name: i.name }))}
+              done={runComplete}
+              error={runError}
+              doneMessage="Risk identification has been completed and sent to the clinicians for review."
+              doneSubtext="Your care team will review your responses. You can track the status below at any time."
+            />
             {runComplete && !runError && (
               <div className="flex justify-end">
                 <Link to="/patient/home"><Button variant="secondary">Back to home</Button></Link>
