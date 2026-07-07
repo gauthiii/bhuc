@@ -35,13 +35,15 @@ jobs:
 
       - name: Build
         run: npm run build
-        # Deployed site can't reach the local backend, so build in demo/mock mode.
-        # VITE_FRONTDOOR_LIVE=false keeps the front-door chat on mock too, since the
-        # hosted site has no /api rewrite to the Render backend yet (relative /api
-        # calls would 404 on Firebase). Flip both once prod points at the Render URL.
+        # Demo/mock for all screens whose backend routes don't exist yet (USE_MOCK),
+        # EXCEPT the Front-Door chat, which is live over A2A. There's no /api rewrite
+        # on Firebase, so the hosted app calls the Render backend by ABSOLUTE URL —
+        # only the front-door uses VITE_API_BASE, so this doesn't affect mock screens.
+        # (Render CORS already allows https://bhuc-ai.web.app.)
         env:
           VITE_USE_MOCK: "true"
-          VITE_FRONTDOOR_LIVE: "false"
+          VITE_FRONTDOOR_LIVE: "true"
+          VITE_API_BASE: "https://bhuc-backend.onrender.com/api/x_bhuc"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
