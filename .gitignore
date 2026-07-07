@@ -1,0 +1,37 @@
+# ---- Secrets: never commit any real .env (templates .env.example ARE committed) ----
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+dist/
+*.local
+
+# ---- Python / backend ----
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# ---- Firebase ----
+.firebase/
+firebase-debug.log
+
+# ---- OS / editor ----
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# ---- Stray office-doc artifacts ----
+BHUC_AI_Platform_Implementation_Guide*.docx
+[Content_Types].xml
+_rels/
+docProps/
+word/

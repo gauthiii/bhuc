@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+
+/*
+  BHUC design system — careatlas visual pattern (light theme, navy ink, Avenir/Inter)
+  layered with the behavioral-health must-haves from plan.md §3.1:
+    - amber = attention/pending, teal = confirmed/safe, red = clinical-risk/crisis/governance only.
+    - persistent, always-functional 988 crisis banner.
+*/
+:root {
+  color: #102033;
+  background: #f5f6f8;
+  font-family: 'Avenir Next', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  /* Status semantics (plan §3.1) */
+  --ink: #102033;
+  --muted: #5b6b7c;
+  --accent: #1f6f6a;         /* teal-forward primary, consistent with careatlas calm palette */
+  --amber: #b45309;
+  --amber-bg: #fef3c7;
+  --teal: #0f766e;
+  --teal-bg: #ccfbf1;
+  --red: #b91c1c;            /* clinical risk / crisis / governance ONLY */
+  --red-bg: #fee2e2;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(245, 246, 248, 0.92), rgba(250, 250, 250, 0.98)),
+    #f5f6f8;
+}
+
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+
+/* Serif display for page titles — nods to plan §3.1 while keeping careatlas body sans. */
+.font-display {
+  font-family: 'Source Serif 4', 'Newsreader', Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.01em;
+}
+
+/* Accessible focus ring (WCAG 2.1 AA) */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
