@@ -2,6 +2,8 @@
 
 **Governed risk:** *Output Integrity / Hallucination* — the risk that the **Risk Identification Agent (Agent 2)** produces a wrong/ungrounded risk score, or the **Clinical Documentation Agent (Agent 3)** fabricates clinical detail or leaks PHI in its output. In behavioral‑health this is a patient‑safety and HIPAA problem, so UC2 governs **both agents as one pair** (`plan.md` §4.1, §4.4).
 
+> **Prerequisite note — roles/ACLs are NOT required for UC2.** SN‑Step 13 (`u_bhuc_*` least‑privilege roles + `svc-bhuc-*` service accounts + PII/Part 2 masking) governs **UC3 (Privacy / 42 CFR Part 2)** and **UC5 (Excessive Privileges)**, not Output Integrity. The native guardrails hook the agent's LLM output regardless of data‑access roles, and the app‑layer grounding/HITL run under the current open/admin setup. The AICT/AIRC config only needs the **steward roles** (`sn_ai_governance.ai_steward`, `sn_grc_ai_gov.ai_risk_and_compliance_admin`), which already exist on the instance. **Decision (2026‑07‑07): build ACLs before UC3/UC5; UC2 proceeds without them.** (One caveat: the AI Asset Security Score / access metrics only become meaningful evidence once the ACLs exist.)
+
 This document is the **plan only** — nothing here is executed yet. It covers what to do on the **ServiceNow side**, in the **React app (backend + frontend)**, and **how to test**. Sources are cited inline; `[Doc]` = ServiceNow Enable AI docs (Zurich, retrieved via the docs MCP); `[Verified]` = confirmed on `ven04690` via REST during planning.
 
 ---
