@@ -223,7 +223,7 @@ export const mock = {
       status: 'pending',
     }
   },
-  async confirmRisk() { await wait(); return { ok: true } },
+  async confirmRisk(_id?: string, _action?: string, _rationale?: string) { await wait(); return { ok: true } },
   async getDocumentation(id: string): Promise<DocumentationDraft> {
     await wait()
     return {
@@ -239,7 +239,7 @@ export const mock = {
       ],
     }
   },
-  async signNote() { await wait(); return { ok: true } },
+  async signNote(_id?: string) { await wait(); return { ok: true } },
   async getPriorAuth(patientId: string): Promise<PriorAuthPacket> {
     await wait()
     return {

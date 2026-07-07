@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # ---- BHUC agent sys_id map (sn_aia_agent) — captured live (action.md AG-11) ----
     # Agent 1: BHUC Front Door Security Agent (svc-bhuc-frontdoor). [Verified over A2A 2026-07-07]
     snow_agent_frontdoor: str = "903ca5a73b390f1076f13b64c3e45a90"
+    # Agent 2: BHUC Risk Identification Agent. [Verified over A2A 2026-07-07]
+    snow_agent_risk: str = "ac2e79a73b7d0f1076f13b64c3e45af3"
+    # Agent 3: BHUC Clinical Documentation Agent. [Verified over A2A 2026-07-07]
+    snow_agent_clinicaldoc: str = "59243d673bf5cb105551369693e45aed"
 
     request_timeout: float = 20.0
 

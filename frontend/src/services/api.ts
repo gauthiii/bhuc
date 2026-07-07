@@ -55,17 +55,33 @@ const live = {
   getDisposition: (id: string) => j(`/disposition/${id}`),
 }
 
-// Per-endpoint live override: the Front-Door Security Agent (Agent 1) is built and
-// verified over A2A, but the other ~35 CRUD routes are not yet implemented on the
-// backend (BE-6). So keep the app on mock, EXCEPT route the front-door chat to the
-// live FastAPI backend when VITE_FRONTDOOR_LIVE=true (default on). Flip the whole
-// app with VITE_USE_MOCK=false once the rest of the backend lands.
+// Per-endpoint live overrides. The rest of the app stays on mock (its CRUD routes
+// aren't built), but specific agent-backed flows call the live FastAPI backend:
+//   VITE_FRONTDOOR_LIVE — Front-Door chat (Agent 1)
+//   VITE_AGENTS_LIVE   — Risk Identification (Agent 2) + Clinical Documentation (Agent 3)
+// Flip the whole app with VITE_USE_MOCK=false once all backend routes land.
 const FRONTDOOR_LIVE = (import.meta.env.VITE_FRONTDOOR_LIVE ?? 'true') !== 'false'
+const AGENTS_LIVE = (import.meta.env.VITE_AGENTS_LIVE ?? 'true') !== 'false'
 
-const base = USE_MOCK ? mock : (live as any)
-const withLiveFrontdoor =
-  USE_MOCK && FRONTDOOR_LIVE ? { ...mock, frontDoorChat: live.frontDoorChat } : base
+// getDocumentation receives a patientId from the Chart "Start note" link; route it to
+// the idempotent for-patient draft endpoint (returns an existing draft or drafts one).
+const liveAgent2and3 = {
+  submitScreening: live.submitScreening,
+  getWorklist: live.getWorklist,
+  getRiskDetail: live.getRiskDetail,
+  confirmRisk: live.confirmRisk,
+  getDocumentation: (patientId: string) => j(`/note/for-patient/${patientId}`),
+  signNote: live.signNote,
+}
+
+const overrides = USE_MOCK
+  ? {
+      ...mock,
+      ...(FRONTDOOR_LIVE ? { frontDoorChat: live.frontDoorChat } : {}),
+      ...(AGENTS_LIVE ? liveAgent2and3 : {}),
+    }
+  : (live as any)
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const api = withLiveFrontdoor as typeof mock
-export const IS_MOCK = USE_MOCK && !FRONTDOOR_LIVE
+export const api = overrides as typeof mock
+export const IS_MOCK = USE_MOCK && !FRONTDOOR_LIVE && !AGENTS_LIVE

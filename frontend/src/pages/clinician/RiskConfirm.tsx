@@ -44,7 +44,8 @@ export function ClinicianRiskConfirm() {
     if (!canSubmit) return
     setSubmitting(true)
     try {
-      await api.confirmRisk()
+      const action = decision === 'confirm' ? 'confirmed' : decision === 'adjust' ? 'adjusted' : 'rejected'
+      await api.confirmRisk(screeningId!, action, rationale)
       navigate('/clinician/worklist')
     } catch {
       setError('Submitting the decision failed. Try again.')

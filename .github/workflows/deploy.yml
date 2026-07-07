@@ -43,6 +43,9 @@ jobs:
         env:
           VITE_USE_MOCK: "true"
           VITE_FRONTDOOR_LIVE: "true"
+          # Agents 2/3 write endpoints stay mock in the public build until Cognito auth
+          # guards them (they create ServiceNow records). Flip to "true" once auth lands.
+          VITE_AGENTS_LIVE: "false"
           VITE_API_BASE: "https://bhuc-backend.onrender.com/api/x_bhuc"
 
       - name: Deploy to Firebase Hosting

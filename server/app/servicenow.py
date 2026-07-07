@@ -214,6 +214,62 @@ class ServiceNowA2AClient:
         }
 
 
+class TableClient:
+    """Thin ServiceNow Table API client (basic auth) for u_bhuc_* CRUD.
+
+    Per plan §8.2 BE-Step 3/6: agent invocation uses the OAuth A2A client, but plain
+    Table-API CRUD uses basic auth. Open/pre-governance for now (SN-Step 13 ACLs later).
+    """
+
+    def __init__(self, settings: Settings) -> None:
+        self._s = settings
+        self._auth = (settings.snow_username or "", settings.snow_password or "")
+
+    def _url(self, table: str, sys_id: Optional[str] = None) -> str:
+        u = f"{self._s.snow_base_url}/api/now/table/{table}"
+        return f"{u}/{sys_id}" if sys_id else u
+
+    def create(self, table: str, fields: dict) -> dict:
+        r = httpx.post(self._url(table), json=fields, auth=self._auth,
+                       headers={"Accept": "application/json"}, timeout=self._s.request_timeout)
+        r.raise_for_status()
+        return r.json()["result"]
+
+    def get(self, table: str, sys_id: str, display_value: str = "false") -> dict:
+        r = httpx.get(self._url(table, sys_id), auth=self._auth,
+                      params={"sysparm_display_value": display_value},
+                      headers={"Accept": "application/json"}, timeout=self._s.request_timeout)
+        r.raise_for_status()
+        return r.json()["result"]
+
+    def update(self, table: str, sys_id: str, fields: dict) -> dict:
+        r = httpx.patch(self._url(table, sys_id), json=fields, auth=self._auth,
+                        headers={"Accept": "application/json"}, timeout=self._s.request_timeout)
+        r.raise_for_status()
+        return r.json()["result"]
+
+    def list(self, table: str, query: str, *, fields: str = "", limit: int = 100,
+             display_value: str = "false") -> list:
+        params = {"sysparm_query": query, "sysparm_limit": str(limit),
+                  "sysparm_display_value": display_value}
+        if fields:
+            params["sysparm_fields"] = fields
+        r = httpx.get(self._url(table), auth=self._auth, params=params,
+                      headers={"Accept": "application/json"}, timeout=self._s.request_timeout)
+        r.raise_for_status()
+        return r.json()["result"]
+
+
+_table: Optional[TableClient] = None
+
+
+def get_table_client() -> TableClient:
+    global _table
+    if _table is None:
+        _table = TableClient(get_settings())
+    return _table
+
+
 _client: Optional[ServiceNowA2AClient] = None
 _client_lock = threading.Lock()
 

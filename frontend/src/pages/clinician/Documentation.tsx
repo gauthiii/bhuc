@@ -58,7 +58,7 @@ export function ClinicianDocumentation() {
     if (!canSign) return
     setSigning(true)
     try {
-      await api.signNote()
+      await api.signNote(data!.id)
       setSigned(true)
     } catch {
       setError('Signing the note failed. Try again.')
