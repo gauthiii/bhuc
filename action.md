@@ -22,7 +22,7 @@
 | Phase | Workstream | Items | Done (☑) | Partial (◐) | Est. person-days | Est. person-days left |
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Decisions (DEC) | 4 | 1 | 0 | ~2.5 | ~2 |
-| 0 | Pre-flight verification (VER) | 4 | 0 | 0 | ~0.75 | ~0.75 |
+| 0 | Pre-flight verification (VER) | 4 | 2 | 0 | ~0.75 | ~0.35 |
 | 1 | Data model & knowledge (DATA) | 4 | 2 | 1 | ~7 | ~1.5 |
 | 1 | ServiceNow platform (SN) | 8 | 1 | 1 | ~7 | ~5.5 |
 | 2 | Agents (AG) | 13 | 3 | 1 | ~15 | ~9.25 |
@@ -32,7 +32,7 @@
 | 6 | iframe portal wiring (PORT) | 3 | 1 | 0 | ~2 | ~1.5 |
 | 7 | Demo (DEMO) | 5 | 0 | 0 | ~2.5 | ~2.5 |
 | — | Doc cleanup (DOC) | 6 | 0 | 0 | ~2 | ~2 |
-| | **Total** | **81** | **21** | **5** | **~76 person-days** | **~40.5 person-days** |
+| | **Total** | **81** | **23** | **5** | **~76 person-days** | **~40 person-days** |
 
 > Estimates are single-threaded; with an SN admin + backend dev + frontend dev working in parallel, calendar time compresses substantially (see "Suggested critical path" at the end).
 > **Est. person-days left** counts every not-done (☐) item at full effort and each partially-complete (◐) item at half its estimate (est − done − ½·partial), summed from the per-item estimates in the phase tables below.
@@ -52,8 +52,8 @@
 
 | ID | Task | Plan Ref | Cx | Effort (d) | Depends On | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| VER-1 | Confirm exact Zurich build (System Diagnostics → Stats) | §0.1 G-1; App D #1 | S | 0.1 | — | ☐ |
-| VER-2 | Confirm 9 AICT dashboard tabs render (open `Workspaces → AI Control Tower`) | §0.1 G-2; App D | S | 0.25 | — | ☐ |
+| VER-1 | Confirm exact Zurich build (System Diagnostics → Stats). **DONE 2026-07-07:** build tag `glide-zurich-07-01-2025__patch10-hotfix3-07-01-2026` (Zurich, patch10-hotfix3, build 07-02-2026), enterprise, `ven04690` ONLINE. See §0.1 G-1. | §0.1 G-1; App D #1 | S | 0.1 | — | ☑ |
+| VER-2 | Confirm AICT dashboard tabs render (open `Workspaces → AI Control Tower`). **DONE 2026-07-07:** 8 tabs render (Overview, AI asset inventory, Value, Evaluation, Risk & compliance, Security & privacy, AI cases, AI Gateway). Native agents auto-register: 32 AI systems (30 Agentic/2 Gen), inventory 35 assets, security score **Good** / 0 access issues, Guardrails present, risk classification populated. Now Assist Evaluation disabled by default → **out of scope for BHUC** (decision in §0.1 G-2). Validates §5.1 native governance. | §0.1 G-2; App D | S | 0.25 | — | ☑ |
 | VER-3 | Enumerate existing authority documents in `sn_compliance_authority_document` | App D #5 | S | 0.25 | — | ☐ |
 | VER-4 | Confirm current `kill_switch.mode` + model-provider Fallback values | App D #6 | S | 0.1 | — | ☐ |
 
