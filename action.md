@@ -19,22 +19,23 @@
 
 ## Effort summary by workstream (phase)
 
-| Phase | Workstream | Items | Est. person-days |
-| --- | --- | --- | --- |
-| 0 | Decisions (DEC) | 4 | ~2.5 |
-| 0 | Pre-flight verification (VER) | 4 | ~0.75 |
-| 1 | Data model & knowledge (DATA) | 4 | ~7 |
-| 1 | ServiceNow platform (SN) | 8 | ~7 |
-| 2 | Agents (AG) | 12 | ~15 |
-| 3 | Governance config (GOV) | 10 | ~5 |
-| 4 | Backend / FastAPI (BE) | 10 | ~10.5 |
-| 5 | Frontend / React (FE) | 12 | ~19 |
-| 6 | iframe portal wiring (PORT) | 3 | ~2 |
-| 7 | Demo (DEMO) | 5 | ~2.5 |
-| — | Doc cleanup (DOC) | 6 | ~2 |
-| | **Total** | **78** | **~73 person-days** |
+| Phase | Workstream | Items | Done (☑) | Partial (◐) | Est. person-days | Est. person-days left |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | Decisions (DEC) | 4 | 0 | 0 | ~2.5 | ~2.5 |
+| 0 | Pre-flight verification (VER) | 4 | 0 | 0 | ~0.75 | ~0.75 |
+| 1 | Data model & knowledge (DATA) | 4 | 1 | 2 | ~7 | ~3 |
+| 1 | ServiceNow platform (SN) | 8 | 1 | 1 | ~7 | ~5.5 |
+| 2 | Agents (AG) | 13 | 1 | 1 | ~15 | ~12.75 |
+| 3 | Governance config (GOV) | 10 | 0 | 0 | ~5 | ~5 |
+| 4 | Backend / FastAPI (BE) | 10 | 1 | 2 | ~10.5 | ~8.5 |
+| 5 | Frontend / React (FE) | 12 | 10 | 0 | ~19 | ~2 |
+| 6 | iframe portal wiring (PORT) | 3 | 1 | 0 | ~2 | ~1.5 |
+| 7 | Demo (DEMO) | 5 | 0 | 0 | ~2.5 | ~2.5 |
+| — | Doc cleanup (DOC) | 6 | 0 | 0 | ~2 | ~2 |
+| | **Total** | **79** | **15** | **6** | **~73 person-days** | **~46 person-days** |
 
 > Estimates are single-threaded; with an SN admin + backend dev + frontend dev working in parallel, calendar time compresses substantially (see "Suggested critical path" at the end).
+> **Est. person-days left** counts every not-done (☐) item at full effort and each partially-complete (◐) item at half its estimate (est − done − ½·partial), summed from the per-item estimates in the phase tables below.
 
 ---
 
