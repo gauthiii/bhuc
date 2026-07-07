@@ -1610,7 +1610,9 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 
 ---
 
-#### Agent 3 — BHUC Clinical Documentation Agent (Use Case 2, Phase 4 — Clinical Assessment)
+#### Agent 3 — BHUC Clinical Documentation Agent (Use Case 2, Phase 4 — Clinical Assessment) — ✅ AS-BUILT & VERIFIED (2026-07-07)
+
+> **As-built (verified 2026-07-07):** all three tools fire. Test (Maya, encounter `ENC-MAYA-0001`) → created `BHUC_CARE_PLAN_001`, a sectioned draft note (CC/HPI/MSE/Assessment/Plan), unverified lines `["L5","L7"]`, suggested ICD-10 `F32.12` + CPT `99214`, `state=draft, signed=false`. Bullets below reflect the actual build. **Two build notes:** (1) the write tool was left as the **framework CRUD** (not the custom write-Script of Agent 2); its `gr.insert()` checks the create ACL, so with no ACLs it errors *"Cannot create record due to security constraints"* — for now it **runs under an admin ACL** on `u_bhuc_care_plan` (least-privilege ACLs deferred to SN-Step 13, per the build-first/govern-later sequencing). A drop-in `GlideRecord` write-Script (§4.6.4) is the alternative that avoids ACLs entirely. (2) The CRUD insert **skips the `u_number` field default** (leaves the literal `"number"`); a before-insert business rule **`BHUC Care Plan - autonumber`** regenerates `BHUC_CARE_PLAN_00x` when the value is empty or off-prefix.
 
 **Purpose:** Ambient scribe. During the clinician's session (with patient consent) it drafts the clinical note live, grounds every line to what was actually recorded, flags any unverified line, and suggests ICD-10/CPT codes — but never signs. A clinician edits and signs (Supervised, screen C5).
 
@@ -1629,9 +1631,9 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 - **Long-term memory:** OFF.
 
 **Step 2 — Add tools.**
-- **Tool A — Search retrieval (coding/clinical reference). Build the KB + KB-filtered source + profile per §4.6.2.** Hybrid; Results limit `8`; threshold `0.3`; source = an ICD-10/CPT + clinical-doc KB; citations required. **Autonomous.**
-- **Tool B — Record operation (write draft note + codes).** **Table: `u_bhuc_care_plan`** (or the dedicated note table). Map inputs: `draft_note`, `unverified_lines[]`, `suggested_codes[]`. **Execution mode: Supervised.**
-- **Tool C — Script (grounding/unverified tagger). [Custom build]** Name `bhuc_note_grounding`; `GlideRecordSecure`; marks each drafted line grounded/unverified against source. **Autonomous.**
+- **Tool A — Search retrieval (coding/clinical reference). [As-built: `AIA RAG Retriever` → profile `BHUC Clinical Coding Search`]** Built per §4.6.2 over KB `BHUC Clinical Coding and Documentation` (`103b883f…`). Hybrid; Results limit `8`; threshold `0.3`; citations required. **Autonomous.**
+- **Tool B — CRUD write (Create). [As-built: `Draft a BHUC Clinical Note`, framework CRUD]** Create → new `u_bhuc_care_plan`. Inputs: `draft_note`, `unverified_lines`, `suggested_codes`, `patient` (sys_id), `encounter_id`. Sets `state=draft, signed=false`. **The framework `gr.insert()` enforces the create ACL** — needs an ACL (currently admin) until SN-Step 13; a `GlideRecord` write-Script (§4.6.4) is the ACL-free alternative. **Autonomous** as-built (plan originally said Supervised — the human sign happens on C5, not in the agent turn).
+- **Tool C — Script (grounding/unverified tagger). [As-built: `bhuc_note_grounding`]** Inputs: `draft_lines` (required), `source_refs`. Tokenizes each drafted line against the source and returns grounded/unverified tags (Agent 3 test flagged `L5/L7`). Pure computation — no record access, so ACLs don't apply. **Autonomous.**
 
 **Step 3 — Security controls.** User access = `u_bhuc_clinician`. Data access = **Dynamic user, Approved roles** (role masking).
 
