@@ -43,9 +43,11 @@ jobs:
         env:
           VITE_USE_MOCK: "true"
           VITE_FRONTDOOR_LIVE: "true"
-          # Agents 2/3 write endpoints stay mock in the public build until Cognito auth
-          # guards them (they create ServiceNow records). Flip to "true" once auth lands.
-          VITE_AGENTS_LIVE: "false"
+          # Whole app live in prod (user decision 2026-07-07): patient screening, clinician
+          # flows, and governance agent chats all call the live Render backend. NOTE: the
+          # backend endpoints are UNAUTHENTICATED — this exposes open write/agent endpoints
+          # to the public site. Set back to "false" (or add Cognito JWT, BE-Step 2) to close.
+          VITE_AGENTS_LIVE: "true"
           VITE_API_BASE: "https://bhuc-backend.onrender.com/api/x_bhuc"
 
       - name: Deploy to Firebase Hosting
