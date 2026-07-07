@@ -21,18 +21,18 @@
 
 | Phase | Workstream | Items | Done (☑) | Partial (◐) | Est. person-days | Est. person-days left |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0 | Decisions (DEC) | 4 | 0 | 0 | ~2.5 | ~2.5 |
+| 0 | Decisions (DEC) | 4 | 1 | 0 | ~2.5 | ~2 |
 | 0 | Pre-flight verification (VER) | 4 | 0 | 0 | ~0.75 | ~0.75 |
 | 1 | Data model & knowledge (DATA) | 4 | 2 | 1 | ~7 | ~1.5 |
 | 1 | ServiceNow platform (SN) | 8 | 1 | 1 | ~7 | ~5.5 |
 | 2 | Agents (AG) | 13 | 3 | 1 | ~15 | ~9.25 |
 | 3 | Governance config (GOV) | 10 | 0 | 0 | ~5 | ~5 |
 | 4 | Backend / FastAPI (BE) | 10 | 1 | 2 | ~10.5 | ~8.5 |
-| 5 | Frontend / React (FE) | 12 | 10 | 0 | ~19 | ~2 |
+| 5 | Frontend / React (FE) | 14 | 12 | 0 | ~22 | ~2 |
 | 6 | iframe portal wiring (PORT) | 3 | 1 | 0 | ~2 | ~1.5 |
 | 7 | Demo (DEMO) | 5 | 0 | 0 | ~2.5 | ~2.5 |
 | — | Doc cleanup (DOC) | 6 | 0 | 0 | ~2 | ~2 |
-| | **Total** | **79** | **18** | **5** | **~73 person-days** | **~41 person-days** |
+| | **Total** | **81** | **21** | **5** | **~76 person-days** | **~40.5 person-days** |
 
 > Estimates are single-threaded; with an SN admin + backend dev + frontend dev working in parallel, calendar time compresses substantially (see "Suggested critical path" at the end).
 > **Est. person-days left** counts every not-done (☐) item at full effort and each partially-complete (◐) item at half its estimate (est − done − ½·partial), summed from the per-item estimates in the phase tables below.
@@ -43,7 +43,7 @@
 
 | ID | Task | Plan Ref | Cx | Effort (d) | Depends On | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| DEC-1 | 🔴 Decide agent invocation model: **ServiceNow trigger vs A2A call** per agent (avoid double-fire) | §9.1 OQ-1; §2.8; §4.4; §8.1 SN-Step 9 | M | 0.5 | — | ☐ |
+| DEC-1 | 🔴 Decide agent invocation model: **ServiceNow trigger vs A2A call** per agent (avoid double-fire). **DECIDED 2026-07-07: backend blocking A2A, ServiceNow triggers OFF.** The FastAPI backend writes the record (Table API) then invokes the agent over A2A (`configuration.blocking=true`) and returns the reply inline; agent triggers stay inactive so nothing double-fires. Proven for Agents 1/2/3 (front-door, screening batch, note draft). | §9.1 OQ-1; §2.8; §4.4; §8.1 SN-Step 9; BE-4 | M | 0.5 | — | ☑ |
 | DEC-2 | 🔴 Decide human-in-the-loop mechanism: **Supervised mode vs app draft-gate (C4/C5)** | §9.1 OQ-2; §2.8 step 7; §4.4; §8.3 FE-Step 7 | M | 0.5 | — | ☐ |
 | DEC-3 | 🔴 Decide AI-Steward auth path: **Cognito SSO federation vs direct ServiceNow user+role** | §9.1 OQ-3; §2.5; §2.6 | S | 0.5 | — | ☐ |
 | DEC-4 | 🔴 Decide in-frame Cognito auth approach (**hosted-UI redirect vs popup+PKCE**); spike-validate in an iframe | §9.2 OQ-6; §8.3 FE-Step 5 | M | 1 | — | ☐ |
@@ -140,6 +140,7 @@
 | FE-7 | Human-in-the-loop + Part 2 masking UI (C3/C4/C5/C6) | §8.3 FE-Step 7; DEC-2 | M | 1 | DEC-2, FE-1 | ☑ |
 | FE-8 | Surface agent outputs w/ citations + fairness result | §8.3 FE-Step 8; §3.3 | M | 0.5 | FE-3, BE-4 | ☑ |
 | FE-9b | **Patient-portal agent flow (done 2026-07-07):** Screening rewritten as a **guided 3-questionnaire stepper** (C-SSRS→PHQ-9→GAD-7, no per-instrument agent) → **Submit all** runs the 3 Risk agents in **parallel** (`POST /intake/screening/batch`) with an **animated progress** component (color-shifting bar, rotating texts, per-agent cards) → "sent to clinicians for review". **Auth+registration gate** (`GET /patient/me` by email) blocks running unless registered. **Screening status tracker** (stages only, no scores) on Home + Screening. **Profile page** (`/patient/profile`, nav swapped from Registration) shows the `u_bhuc_patient` record when registered; Registration completion calls `POST /patient/register`. Backend: `patient.py` + batch in `risk.py`. Gated by `VITE_AGENTS_LIVE` (prod build off until auth). | §3.2 P4; §4.4 Agent 2 | L | 1.5 | BE-4, AG-2 | ☑ |
+| FE-9c | **Clinician-portal agent flow (done 2026-07-07):** Worklist shows real patient **name + `BHUC_PATIENT_00x`** (dot-walk, not sys_id) + a **Screening column** (each row = one screening). **Risk Confirm** renders a **read-only "already reviewed"** panel (confirmed/adjusted/rejected + clinician rationale) instead of re-asking; pending still shows the form. **Chart** has a Documentation panel (Signed & verified / Draft) + "Start note / Start another note". **Note generation (Agent 3)** shows the same animated run UI as the screening batch (`AgentRunProgress`); Documentation supports draft/view/verified modes. **Notes linked to screenings** via new `u_bhuc_care_plan.u_screening` (set on create from Risk Confirm or defaulted to latest; existing 6 notes backfilled). Backend: worklist name/screening + note `summary`/`latest`/`new` endpoints. | §3.3 C2/C3/C4/C5; §4.4 Agents 2/3 | L | 1.5 | BE-4, AG-3 | ☑ |
 | FE-9 | Build **9 Patient screens** (P1–P9) | §3.2 | XL | 6 | FE-1, FE-3 | ☑ |
 | FE-10 | Build **8 Clinician screens** (C1–C8) | §3.3 | XL | 5 | FE-1, FE-3 | ☑ |
 | FE-11 | Do NOT build governance dashboard (guard against scope creep) | §8.3 FE-Step 9 | S | 0 | — | ☑ |
