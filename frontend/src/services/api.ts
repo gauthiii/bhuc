@@ -55,6 +55,17 @@ const live = {
   getDisposition: (id: string) => j(`/disposition/${id}`),
 }
 
+// Per-endpoint live override: the Front-Door Security Agent (Agent 1) is built and
+// verified over A2A, but the other ~35 CRUD routes are not yet implemented on the
+// backend (BE-6). So keep the app on mock, EXCEPT route the front-door chat to the
+// live FastAPI backend when VITE_FRONTDOOR_LIVE=true (default on). Flip the whole
+// app with VITE_USE_MOCK=false once the rest of the backend lands.
+const FRONTDOOR_LIVE = (import.meta.env.VITE_FRONTDOOR_LIVE ?? 'true') !== 'false'
+
+const base = USE_MOCK ? mock : (live as any)
+const withLiveFrontdoor =
+  USE_MOCK && FRONTDOOR_LIVE ? { ...mock, frontDoorChat: live.frontDoorChat } : base
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const api = (USE_MOCK ? mock : (live as any)) as typeof mock
-export const IS_MOCK = USE_MOCK
+export const api = withLiveFrontdoor as typeof mock
+export const IS_MOCK = USE_MOCK && !FRONTDOOR_LIVE

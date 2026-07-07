@@ -36,8 +36,12 @@ jobs:
       - name: Build
         run: npm run build
         # Deployed site can't reach the local backend, so build in demo/mock mode.
+        # VITE_FRONTDOOR_LIVE=false keeps the front-door chat on mock too, since the
+        # hosted site has no /api rewrite to the Render backend yet (relative /api
+        # calls would 404 on Firebase). Flip both once prod points at the Render URL.
         env:
           VITE_USE_MOCK: "true"
+          VITE_FRONTDOOR_LIVE: "false"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

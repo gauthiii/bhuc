@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .aws_auth import router as aws_auth_router
+from .frontdoor import router as frontdoor_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
         }
 
     app.include_router(aws_auth_router)
+    app.include_router(frontdoor_router)
     return app
 
 

@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     snow_a2a_client_secret: Optional[str] = None
     snow_a2a_scope: Optional[str] = "a2aauthscope"
     snow_a2a_token_skew_seconds: int = 60
+    # A2A agent execution timeout (blocking mode; agent can take a while, BE-Step 5).
+    snow_agent_execute_timeout: float = 90.0
+
+    # ---- BHUC agent sys_id map (sn_aia_agent) — captured live (action.md AG-11) ----
+    # Agent 1: BHUC Front Door Security Agent (svc-bhuc-frontdoor). [Verified over A2A 2026-07-07]
+    snow_agent_frontdoor: str = "903ca5a73b390f1076f13b64c3e45a90"
 
     request_timeout: float = 20.0
 

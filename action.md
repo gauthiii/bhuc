@@ -94,7 +94,7 @@
 | AG-8 | Configure **security controls** = AI-user bound to `svc-bhuc-*` per agent | §8.1 SN-Step 8; SN-Step 13c | M | 0.5 | SN-13, AG-1…6 | ☐ |
 | AG-9 | Configure **triggers** (or leave off) per DEC-1 outcome | §8.1 SN-Step 9; §4.3 Step 5 | M | 0.5 | DEC-1, AG-1…6 | ☐ |
 | AG-10 | **Test** each agent (manual test + Test-access/Access-Analyzer) | §8.1 SN-Step 10; §4.3 Step 7 | M | 1 | AG-7/8/9 | ☐ |
-| AG-11 | Register agents in AICT/AIRC; **capture each `sn_aia_agent` sys_id** for the backend map | §8.1 SN-Step 11; SN-Step 14d | S | 0.5 | AG-10 | ☐ |
+| AG-11 | Register agents in AICT/AIRC; **capture each `sn_aia_agent` sys_id** for the backend map. **Agent 1 captured 2026-07-07:** `BHUC Front Door Security Agent` = `903ca5a73b390f1076f13b64c3e45a90` (in `config.py` `snow_agent_frontdoor`). Agents 2–6 not yet built. | §8.1 SN-Step 11; SN-Step 14d | S | 0.5 | AG-10 | ◐ |
 
 ## Phase 3 — Governance configuration (AICT + AIRC) — `plan.md` §5 / §8.1 SN-Step 12 / §5.8
 
@@ -118,7 +118,7 @@
 | BE-1 | Scaffold FastAPI service (routers/services/config; deploy target) | §8.2 BE-Step 1 | M | 1 | — | ◐ |
 | BE-2 | Cognito JWT validation at the boundary (JWKS, groups→roles) | §8.2 BE-Step 2 | M | 0.5 | BE-1 | ☐ |
 | BE-3 | ServiceNow auth: OAuth A2A (agents) + basic auth (CRUD) split | §8.2 BE-Step 3 | M | 0.5 | BE-1, SN-14 | ☐ |
-| BE-4 | A2A agent-invocation module (JSON-RPC `message/send`; endpoint→agent map) | §8.2 BE-Step 4 | L | 2 | BE-3, AG-11, SN-14 | ☐ |
+| BE-4 | A2A agent-invocation module (JSON-RPC `message/send`; endpoint→agent map). **Front-Door done & verified live 2026-07-07:** `servicenow.py` (OAuth client-credentials token cache + `execute_agent` + reply parse) + `frontdoor.py` (`POST /api/x_bhuc/frontdoor/chat`), mounted in `main.py`. Tested locally against Agent 1: facility Qs return KB-cited answers; crisis phrase → 988 reassurance (with safe fallback). Agents 2–6 endpoints pending their builds. | §8.2 BE-Step 4 | L | 2 | BE-3, AG-11, SN-14 | ◐ |
 | BE-5 | Implement blocking mode (+ optional push-notification callback route) | §8.2 BE-Step 5; DEC-1 | M | 0.5 | BE-4 | ☐ |
 | BE-6 | Hybrid CRUD endpoints — implement **all ~35** `/api/x_bhuc/*` routes over `u_bhuc_*` tables | §8.2 BE-Step 6; §3.2/§3.3 | XL | 4 | SN-1, DATA-1/2 | ☐ |
 | BE-7 | CORS + framing allowlist (Firebase + SN portal origins) | §8.2 BE-Step 7 | S | 0.25 | BE-1 | ☐ |

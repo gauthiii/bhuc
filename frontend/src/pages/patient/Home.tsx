@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
 import { Send, CalendarDays, HeartPulse, MessageCircle } from 'lucide-react'
 import { api } from '../../services/api'
 import type { ChatReply, ChatTurn, DashboardSummary } from '../../lib/types'
@@ -9,6 +10,37 @@ import { Panel, Button, StatusBadge, Spinner, ErrorState, Textarea, EmptyState }
 import { formatDateTime } from '../../lib/format'
 
 const QUICK_REPLIES = ['Book a visit', 'I need to talk', 'Check coverage']
+
+// Agent replies are Markdown (bold, links, numbered lists). Render them; links open
+// in a new tab. User turns are plain text (no markdown parsing on user input).
+function MessageBody({ role, text }: { role: ChatTurn['role']; text: string }) {
+  if (role === 'user') return <>{text}</>
+  return (
+    <div className="md-msg">
+      <ReactMarkdown
+        components={{
+          a: ({ node: _node, ...props }) => (
+            <a {...props} target="_blank" rel="noreferrer noopener" />
+          ),
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  )
+}
+
+// Animated "typing…" indicator (three bouncing dots).
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start msg-enter">
+      <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-3" role="status" aria-label="Assistant is typing">
+        <span className="typing-dots"><span /><span /><span /></span>
+        <span className="sr-only">Assistant is typing…</span>
+      </div>
+    </div>
+  )
+}
 
 export function PatientHome() {
   const [turns, setTurns] = useState<ChatTurn[]>([
@@ -58,11 +90,13 @@ export function PatientHome() {
           <Panel title="Chat with BHUC Care">
             <div ref={logRef} role="log" aria-live="polite" aria-label="Conversation" className="mb-3 max-h-[22rem] space-y-3 overflow-y-auto pr-1">
               {turns.map((t) => (
-                <div key={t.id} className={t.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
-                  <p className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${t.role === 'user' ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-800'}`}>{t.text}</p>
+                <div key={t.id} className={`msg-enter ${t.role === 'user' ? 'flex justify-end' : 'flex justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${t.role === 'user' ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-800'}`}>
+                    <MessageBody role={t.role} text={t.text} />
+                  </div>
                 </div>
               ))}
-              {sending && <p className="text-xs text-slate-400" role="status">Assistant is typing…</p>}
+              {sending && <TypingIndicator />}
             </div>
             <div className="mb-3 flex flex-wrap gap-2">
               {QUICK_REPLIES.map((q) => (
