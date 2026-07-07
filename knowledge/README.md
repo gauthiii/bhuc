@@ -8,16 +8,35 @@ Built per the verified as-built procedure in `plan.md` **§4.6.2**. KB records +
 were created live via REST on **2026-07-07**; articles land in **Draft** — the publish +
 AI Search source + profile steps below are **UI-only** (REST is business-rule-blocked).
 
-## What exists now
+## What exists now (all KBs Published; sources + profiles built & Published, verified 2026-07-07)
 
 | KB (title) | Agent | `kb_knowledge_base` sys_id | Articles | Mirror file |
 | --- | --- | --- | --- | --- |
-| BHUC Facility Information | 1 (Front-Door) | `11c6b5a73bf90f1076f13b64c3e45a0b` | 11 (Published) | — (facts in `facility.ts`) |
-| BHUC Screening Scoring Rules | 2 (Risk ID) | `532b483f3b71cf1076f13b64c3e45a68` | 5 (Draft) | `bhuc-screening-scoring-rules.md` |
-| BHUC Clinical Coding and Documentation | 3 (Clinical Doc) | `103b883f3b71cf1076f13b64c3e45afa` | 5 (Draft) | `bhuc-clinical-coding-and-documentation.md` |
-| BHUC Payer Policy Library | 5 (Prior-Auth) | `c93bc83f3b71cf1076f13b64c3e45af7` | 6 (Draft) | `bhuc-payer-policy-library.md` |
-| BHUC Clinician Directory | 6 (Scheduling) | `c23b8c3f3b71cf1076f13b64c3e45adb` | 6 (Draft) | `bhuc-clinician-directory.md` |
-| BHUC Consent and 42 CFR Part 2 Reference | 4 (Consent) — reference only | `fa3b4cb33b3d4f105551369693e45ae1` | 5 (Draft) | `bhuc-consent-and-42-cfr-part-2-reference.md` |
+| BHUC Facility Information | 1 (Front-Door) | `11c6b5a73bf90f1076f13b64c3e45a0b` | 11 (Published) | `bhuc-facility-information.md` |
+| BHUC Screening Scoring Rules | 2 (Risk ID) | `532b483f3b71cf1076f13b64c3e45a68` | 5 (Published) | `bhuc-screening-scoring-rules.md` |
+| BHUC Clinical Coding and Documentation | 3 (Clinical Doc) | `103b883f3b71cf1076f13b64c3e45afa` | 5 (Published) | `bhuc-clinical-coding-and-documentation.md` |
+| BHUC Payer Policy Library | 5 (Prior-Auth) | `c93bc83f3b71cf1076f13b64c3e45af7` | 6 (Published) | `bhuc-payer-policy-library.md` |
+| BHUC Clinician Directory | 6 (Scheduling) | `c23b8c3f3b71cf1076f13b64c3e45adb` | 6 (Published) | `bhuc-clinician-directory.md` |
+| BHUC Consent and 42 CFR Part 2 Reference | 4 (Consent) — reference only | `fa3b4cb33b3d4f105551369693e45ae1` | 5 (Published) | `bhuc-consent-and-42-cfr-part-2-reference.md` |
+
+### AI Search sources + profiles (as-built, verified)
+Each profile maps to exactly its own KB-filtered source (`ais_search_source`) — no stock Knowledge/Catalog sources.
+
+| KB | Source (`ais_search_source`) | Source sys_id | Profile (`ais_search_profile`, Published) | Profile sys_id |
+| --- | --- | --- | --- | --- |
+| Facility Information | BHUC Facility - Knowledge | `78dbcf273b3d0f105551369693e45a29` | BHUC Facility Search (`bhuc_facility_search`) | `63bc872b3b3d0f105551369693e45a94` |
+| Screening Scoring Rules | BHUC Screening - Knowledge | `ca209cb33bf1cf1076f13b64c3e45ac7` | BHUC Screening Search (`bhuc_screening_search`) | `ba29d8773b75cf1076f13b64c3e45ac0` |
+| Clinical Coding and Documentation | BHUC Clinical Coding - Knowledge | `257090373bf1cf1076f13b64c3e45a95` | BHUC Clinical Coding Search (`bhuc_clinical_coding_search`) | `953b90733bb5cf1076f13b64c3e45ab2` |
+| Payer Policy Library | BHUC Payer Policy - Knowledge | `e5c714bf3b35cf1076f13b64c3e45a6d` | BHUC Payer Policy Search (`bhuc_payer_policy_search`) | `52ab98b33bb5cf1076f13b64c3e45a23` |
+| Clinician Directory | BHUC Clinician Directory - Knowledge | `fbd75cbf3b35cf1076f13b64c3e45aab` | BHUC Clinician Directory Search (`bhuc_clinician_directory_search`) | `b34cd4773bb5cf1076f13b64c3e45a9e` |
+| Consent & 42 CFR Part 2 Reference | BHUC Consent - Knowledge | `d06894733b75cf1076f13b64c3e45a74` | BHUC Consent Search (`bhuc_consent_search`) | `639c9c373bb5cf1076f13b64c3e45a87` |
+
+### Status
+- ✅ **Step A — KBs + articles built and Published** (all 6).
+- ✅ **Step B — AI Search sources built** (KB-filtered, one per KB).
+- ✅ **Step C — Search profiles built & Published** (one per KB, one source each).
+- ⏳ **Step D — wire each agent's Search Retrieval tool** — pending, done per-agent during the AG-2/3/5/6 builds (settings table below).
+- 🧹 **Cleanup** — retire stray `KB0010011` placeholder from the Facility KB (see bottom).
 
 Content policy: **real standards** for PHQ-9/GAD-7/C-SSRS scoring, ICD-10-CM F-codes, CPT
 psych codes, and 42 CFR Part 2; **demo-but-consistent** (labelled "sample") for the payer
