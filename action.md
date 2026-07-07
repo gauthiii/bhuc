@@ -25,14 +25,14 @@
 | 0 | Pre-flight verification (VER) | 4 | 0 | 0 | ~0.75 | ~0.75 |
 | 1 | Data model & knowledge (DATA) | 4 | 2 | 1 | ~7 | ~1.5 |
 | 1 | ServiceNow platform (SN) | 8 | 1 | 1 | ~7 | ~5.5 |
-| 2 | Agents (AG) | 13 | 1 | 1 | ~15 | ~12.75 |
+| 2 | Agents (AG) | 13 | 2 | 1 | ~15 | ~11.25 |
 | 3 | Governance config (GOV) | 10 | 0 | 0 | ~5 | ~5 |
 | 4 | Backend / FastAPI (BE) | 10 | 1 | 2 | ~10.5 | ~8.5 |
 | 5 | Frontend / React (FE) | 12 | 10 | 0 | ~19 | ~2 |
 | 6 | iframe portal wiring (PORT) | 3 | 1 | 0 | ~2 | ~1.5 |
 | 7 | Demo (DEMO) | 5 | 0 | 0 | ~2.5 | ~2.5 |
 | — | Doc cleanup (DOC) | 6 | 0 | 0 | ~2 | ~2 |
-| | **Total** | **79** | **16** | **5** | **~73 person-days** | **~44.5 person-days** |
+| | **Total** | **79** | **17** | **5** | **~73 person-days** | **~43 person-days** |
 
 > Estimates are single-threaded; with an SN admin + backend dev + frontend dev working in parallel, calendar time compresses substantially (see "Suggested critical path" at the end).
 > **Est. person-days left** counts every not-done (☐) item at full effort and each partially-complete (◐) item at half its estimate (est − done − ½·partial), summed from the per-item estimates in the phase tables below.
@@ -85,7 +85,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | AG-0 | Agent build prerequisites (`sn_aia.admin`, model provider, guided-setup preamble) | §4.3; §4.4 preamble | S | 0.25 | SN-5 | ☐ |
 | AG-1 | Build **Front-Door Security Agent** (UC1) — crisis-classifier Script + BHUC-scoped Search Retrieval + 988 escalation subflow. **DONE & verified over A2A 2026-07-06** (facility answers cite BHUC KB; crisis → escalation). As-built procedures captured in **§4.6**. Supporting objects: KB `BHUC Facility Information`, profile `BHUC Facility Search`, subflow `BHUC 988 Escalation`, table `u_bhuc_escalation`, group `BHUC On-Call`. | §4.4 Agent 1; §4.6 | L | 2 | AG-0, DATA-3, AG-12 | ☑ |
-| AG-2 | Build **Risk Identification Agent** (UC2/P3) | §4.4 Agent 2 | M | 1.5 | AG-0, DATA-1/3 | ☐ |
+| AG-2 | Build **Risk Identification Agent** (UC2/P3). **DONE & verified 2026-07-07** — 3 tools all fire: Search Retrieval (`BHUC Screening Search`) → Script `Write risk score` (writes `u_risk_band/u_confidence/u_rationale`, `state→scored` on `u_bhuc_screening` by `screening_sys_id`) → Subflow `BHUC Risk Confirmation Latest` (routes to clinician: `clinician_action=pending`). Verified: `BHUC_SCREENING_002` (C-SSRS) + `_003` (PHQ-9) → band High/conf 95 with rationale, scored + routed. **Gotchas hit & fixed (see §4.4 Agent 2 / §4.6):** (1) write Script used `outputs` → hung; fixed to `return` (§4.6.1); (2) write tool needs the record **sys_id as an input** (agent has no record-lookup tool); (3) `GlideRecordSecure` blocked (no ACLs yet, SN-13) → temporarily `GlideRecord` for testing; (4) Tool C must be a **published SubFlow** (not a Flow) with **Run As = System User** (session-user run-as → "prohibited by security rules" for the public agent). | §4.4 Agent 2; §4.6 | M | 1.5 | AG-0, DATA-1/3 | ☑ |
 | AG-3 | Build **Clinical Documentation Agent** (UC2/P4) — ambient scribe + grounding script | §4.4 Agent 3 | L | 2 | AG-0, DATA-1/3 | ☐ |
 | AG-4 | Build **Consent & Data Protection Agent** (UC3/P4) — Part 2 labeler script | §4.4 Agent 4 | L | 2 | AG-0, SN-4 | ☐ |
 | AG-5 | Build **Prior-Auth Compliance Agent** (UC3/P5) | §4.4 Agent 5 | M | 1.5 | AG-0, DATA-3 | ☐ |

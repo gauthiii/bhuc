@@ -1573,7 +1573,9 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 
 > **Use Case 2 = two agents.** The screening-scoring agent (Agent 2) and the ambient-documentation agent (Agent 3) are separate Agent Studio objects, triggered in different journey phases, but share one governed risk (Output Integrity / Hallucination) and one governance posture. Build both.
 
-#### Agent 2 — BHUC Risk Identification Agent (Use Case 2, Phase 3 — Triage & Screening)
+#### Agent 2 — BHUC Risk Identification Agent (Use Case 2, Phase 3 — Triage & Screening) — ✅ AS-BUILT & VERIFIED (2026-07-07)
+
+> **As-built (verified 2026-07-07):** all three tools fire end-to-end. Test: `BHUC_SCREENING_002` (C-SSRS) and `_003` (PHQ-9, item 9 positive) → risk band **High**, confidence 95, grounded rationale, record set `state=scored, clinician_action=pending` and routed to the clinician. The bullets below are updated to the **actual build**; the four gotchas hit are folded into §4.6 as reusable learnings. Agent 2's tools are the reference pattern for Agents 3/5/6 (Search Retrieval + write-back Script + confirmation Subflow).
 
 **Purpose:** Scores validated instrument responses (C-SSRS/PHQ-9/GAD-7) into a risk band + confidence with a rationale, and routes the draft to a clinician — always deferring the final determination (Supervised).
 
@@ -1592,9 +1594,9 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 - **Long-term memory:** OFF.
 
 **Step 2 — Add tools and information.**
-- **Tool A — Search retrieval (scoring rules). Build the KB + KB-filtered source + profile per §4.6.2.** Hybrid; Results limit `10`; threshold `0.3`; source = a dedicated instrument-scoring KB (create + publish articles, then scope a profile to it). **Autonomous.**
-- **Tool B — Record operation (write score).** **Table: `u_bhuc_screening`** (score fields). Map inputs: `risk_band`, `confidence`, `rationale`. **Execution mode: Supervised** `[Doc: "Add a record operation," Supervised]`.
-- **Tool C — Flow action (clinician confirmation gate). Build the subflow per §4.6.3** (String inputs only; publish). Subflow `BHUC Risk Confirmation` → routes the draft to the clinician worklist (C2) and Risk Confirmation screen (C4); blocks finalization until Confirm/Adjust/Reject. **Supervised** (here the confirmation gate is intended). 
+- **Tool A — Search retrieval (scoring rules). [As-built: `AIA RAG Retriever` → profile `BHUC Screening Search`]** Built per §4.6.2 over KB `BHUC Screening Scoring Rules` (`532b483f…`). Hybrid; Results limit `10`; threshold `0.3`. **Autonomous.**
+- **Tool B — Write-back Script (NOT a Record Operation as-built). [As-built: `Write risk score (script)`]** A Script tool is what actually worked. Declared inputs: **`risk_band`, `confidence`, `rationale`, and `screening_sys_id`** — the target record's **sys_id must be an input**, because the agent has no record-lookup tool to resolve a Number to a sys_id (§4.6.4). Body does `GlideRecord('u_bhuc_screening').get(inputs.screening_sys_id)`, sets `u_risk_band/u_confidence/u_rationale/u_scored_by_agent=true/u_state='scored'`, and **`return`s** a JSON string — it must NOT use `outputs` (§4.6.1). **Autonomous.** *(Uses `GlideRecord` to bypass ACLs during pre-governance testing; switch to `GlideRecordSecure` once SN-Step 13 ACLs exist.)*
+- **Tool C — Flow action (clinician confirmation). [As-built: subflow `BHUC Risk Confirmation Latest`]** Built per §4.6.3. Must be a **published SubFlow** (a plain *Flow* is not invokable as an agent tool), **String input `screening_sys_id`** (no reference inputs), and **Run As = System User** — with "User who initiates the session," a **public** agent hits *"The requested flow operation was prohibited by security rules"* (§4.6.4). Actions: Look Up Record on `u_bhuc_screening` by `screening_sys_id` → Update Record `state=scored, clinician_action=pending` (routes to worklist C2 / Risk Confirmation C4), optional Send Email to a clinician group; no outputs. **Autonomous** (the human confirm/adjust/reject happens on screen C4, not inside the agent turn).
 
 **Step 3 — Define security controls.** User access = **Users with specified roles** → `u_bhuc_clinician`. Data access = **Dynamic user** with **Approved roles** (role masking; never "allow all roles") `[Doc: "Define security controls"]`.
 
@@ -1758,7 +1760,9 @@ The fifth locked use case, **Enterprise AI Governance Control Tower**, is realiz
 > *(No open questions noted for this use case. Note the two directives applied above: the governed risk is framed as **Excessive Privileges** (not Excessive Agency), and access to managed AI assets is granted via **non-human identities**.)*
 ---
 
-### 4.6 Reusable Build Procedures (As-Built — verified on `ven04690`, 2026-07-06)
+### 4.6 Reusable Build Procedures (As-Built — verified on `ven04690`, 2026-07-06/07)
+
+> §4.6.1–4.6.3 are from the Agent 1 build; **§4.6.4 (write-back tools + confirmation subflows) is from the Agent 2 build, verified 2026-07-07.**
 
 Agent 1 (**BHUC Front-Door Security Agent**) was built end-to-end and **verified working over A2A** (facility questions answer with citations from the BHUC KB; a crisis phrase triggers the escalation subflow). The procedures below are the **actual, corrected steps** from that build — they supersede the generic tool bullets in §4.3/§4.4 where they differ, and are referenced by **every other agent that uses a Script tool, a Search Retrieval tool, or a Flow action** (Agents 2, 3, 5, 6). Build those agents' equivalent tools the same way.
 
@@ -1821,6 +1825,15 @@ Used by **Agents 1** (988 escalation) and **2** (clinician confirmation gate). F
    - *Supporting objects created for Agent 1:* table `u_bhuc_escalation` (`BHUC_ESCALATION_00n`), group **BHUC On-Call**, subflow **BHUC 988 Escalation**.
 
 > **Also verified during Agent 1 build:** the agent is reachable over A2A at `POST /api/sn_aia/a2a/v2/agent/id/{sys_id}` (the `agent_card` GET returns "No agent available" even for working agents — ignore it as a health check). The agent must be **Active** and (for external A2A) third-party-accessible; `sn_aia_agent_config` showed `active=true, public=true`.
+
+#### 4.6.4 Write-back tools + confirmation subflows (as-built from Agent 2, verified 2026-07-07)
+
+Used by **Agents 2, 3, 5, 6** — any agent that writes to a `u_bhuc_*` record and/or routes to a human. Four learnings, each a bug actually hit and fixed on Agent 2:
+
+1. **A write-back tool needs the target record's `sys_id` as a declared input.** The agent has **no built-in record-lookup tool**, so it cannot turn a Number (`BHUC_SCREENING_002`) into a sys_id. Declare `screening_sys_id` (or the equivalent) as a tool input and have the caller/prompt/trigger supply it; the script then does `GlideRecord(table).get(inputs.sys_id)`. *(A read Script/Record-lookup tool is the alternative if you want the agent to resolve records itself.)*
+2. **Write scripts `return`, never use `outputs`** — same rule as §4.6.1. `outputs.x=…` throws and hangs the tool. Return a JSON string (e.g. `{success:true}`).
+3. **ACLs (`GlideRecordSecure`) vs testing.** `GlideRecordSecure.get()` returns **false** (looks like "record not found") when no ACL grants access — and the `u_bhuc_*` tables have **no ACLs until SN-Step 13**. For pre-governance pipeline testing use `GlideRecord` (bypasses ACLs); revert to `GlideRecordSecure` + real ACLs before go-live. *(Making the agent "public" governs invocation, not table data access — it does not fix this.)*
+4. **Confirmation subflow must be a published SubFlow with Run As = System User.** (a) It must be a **SubFlow**, not a **Flow** — a plain Flow can't be bound as an agent Flow-action tool (the tool's `input_schema` stays empty and it won't run). (b) It must be **Published** (Draft/no-snapshot won't execute). (c) **Run As = System User** — with "User who initiates the session," a **public** agent throws *"The requested flow operation was prohibited by security rules"* (guest identity lacks flow-execution rights). String inputs only; skip outputs (§4.6.3). *As-built: `BHUC Risk Confirmation Latest`, SubFlow, Published, Run As System User, input `screening_sys_id` (String), Look Up → Update `u_bhuc_screening` `state=scored, clinician_action=pending`.*
 
 ---
 
