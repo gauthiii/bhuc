@@ -73,7 +73,15 @@ npm run build
 firebase deploy --only hosting:bhuc-ai
 ```
 
-**Backend:** runs **locally on `http://localhost:8000`** for now (not yet deployed). When you deploy it (e.g. Render/Cloud Run), update `VITE_API_PROXY_TARGET` / the frontend API base and the CORS origins accordingly.
+**Backend → Render.** The FastAPI backend deploys to **Render** via the committed **`render.yaml`** Blueprint (auto-deploys on every push to `main`).
+
+- **Service:** `bhuc-backend` (Free plan) → **https://bhuc-backend.onrender.com**
+- **Root dir:** `server/` · **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT` · **Health:** `/api/health`
+- Secrets (Cognito, AWS, ServiceNow) are set in the Render dashboard (declared `sync: false` in `render.yaml`, never committed).
+
+One-time connect: Render dashboard → **New → Blueprint** → connect `gauthiii/bhuc` → fill the prompted secret values → **Apply**. After that, every push to `main` redeploys automatically.
+
+> Local dev still runs the backend on `http://localhost:8000` (see above). To make the deployed frontend call the Render backend, set the frontend's API base to `https://bhuc-backend.onrender.com` and rebuild.
 
 ## Environment variables
 

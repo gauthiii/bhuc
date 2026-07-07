@@ -1,0 +1,51 @@
+# Render Blueprint — auto-deploys the BHUC FastAPI backend on every push to main.
+# Connect the repo once in the Render dashboard as a "Blueprint"; Render reads this file,
+# creates the service, and redeploys automatically on each push.
+#
+# Secrets (sync: false) are NOT stored here — Render prompts for their values in the
+# dashboard on first apply. Only non-sensitive values are committed.
+services:
+  - type: web
+    name: bhuc-backend
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: server
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # ---- CORS (non-secret) ----
+      - key: CORS_ORIGINS
+        value: "https://bhuc-ai.web.app,https://bhuc-ai.firebaseapp.com,http://localhost:5173"
+      # ---- AWS Cognito (fill in the dashboard) ----
+      - key: COGNITO_REGION
+        value: us-east-1
+      - key: COGNITO_USER_POOL_ID
+        sync: false
+      - key: COGNITO_CLIENT_ID
+        sync: false
+      - key: COGNITO_CLIENT_SECRET
+        sync: false
+      # ---- AWS credentials for boto3 (fill in the dashboard) ----
+      - key: AWS_REGION
+        value: us-east-1
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      # ---- ServiceNow (optional now; used by the A2A/CRUD layer later) ----
+      - key: SNOW_INSTANCE
+        value: ven04690.service-now.com
+      - key: SNOW_USERNAME
+        sync: false
+      - key: SNOW_PASSWORD
+        sync: false
+      - key: SNOW_A2A_CLIENT_ID
+        sync: false
+      - key: SNOW_A2A_CLIENT_SECRET
+        sync: false
