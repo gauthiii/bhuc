@@ -124,7 +124,7 @@
 | BE-7 | CORS + framing allowlist (Firebase + SN portal origins) | §8.2 BE-Step 7 | S | 0.25 | BE-1 | ☐ |
 | BE-8 | Server-side prompt/Supervised enforcement (no client prompts; draft-gate per DEC-2) | §8.2 BE-Step 8; DEC-2 | M | 0.5 | BE-4, DEC-2 | ☐ |
 | BE-9 | Secrets handling → secrets manager; **rotate exposed AWS keys** | §8.2 BE-Step 9 | M | 0.5 | — | ☐ |
-| BE-10 | Health, tracing, deploy. **render.yaml Blueprint added 2026-07-07** → service `bhuc-backend` (free) → https://bhuc-backend.onrender.com, auto-deploy on push; `/api/health` present. PENDING: connect Blueprint in Render dashboard + set secret env vars. See §2.9.1. | §8.2 BE-Step 10; §2.9.1 | M | 0.5 | BE-1 | ◐ |
+| BE-10 | Health, tracing, deploy. **render.yaml Blueprint added 2026-07-07** → service `bhuc-backend` (free) → https://bhuc-backend.onrender.com, auto-deploy on push; `/api/health` present. **LIVE 2026-07-07** — Blueprint connected; /api/health returns 200, cognito_configured:true. See §2.9.1. | §8.2 BE-Step 10; §2.9.1 | M | 0.5 | BE-1 | ☑ |
 
 ## Phase 5 — Frontend (React + Vite → Firebase) — `plan.md` §3 / §8.3
 
