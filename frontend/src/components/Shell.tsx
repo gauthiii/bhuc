@@ -28,7 +28,7 @@ export function PortalShell({ portal, user, nav, sidebarExtra, onSignOut, childr
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur">
-        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-2">
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-700 text-sm font-bold text-white">B</span>
             <span className="font-display text-lg font-semibold text-slate-800">BHUC Care</span>
@@ -50,7 +50,7 @@ export function PortalShell({ portal, user, nav, sidebarExtra, onSignOut, childr
         <CrisisBanner />
       </header>
 
-      <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-6 sm:px-6">
+      <div className="flex w-full gap-6 px-4 py-6 sm:px-6 lg:px-8">
         {(nav || sidebarExtra) && (
           <nav className="hidden w-56 shrink-0 lg:block">
             <div className="sticky top-28 space-y-4">
