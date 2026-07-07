@@ -1669,7 +1669,7 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 
 **Step 2 — Add tools.**
 - **Tool A — Script (Part 2 classifier/labeler). [Custom build]** Name `bhuc_part2_labeler`; `GlideRecordSecure`; deny-by-default; outputs `sensitivity=part2|standard`. **Autonomous** (labels only).
-- **Tool B — Record operation (write sensitivity label).** **Table: `u_bhuc_consent`** (and the note table's label field). **Supervised.**
+- **Tool B — Record operation (write sensitivity label).** Writes the `standard|part2` label to **`u_bhuc_consent.u_sensitivity`** and to the note table **`u_bhuc_care_plan.u_sensitivity`** (choice field added 2026-07-07 to mirror consent; `u_contains_part2` remains the boolean flag for DLP/masking). **Supervised.**
 
 **Step 3 — Security controls.** User access = `u_bhuc_clinician` + approved case-manager role. Data access = **Dynamic user, Approved roles** (role masking). The labeling script enforces deny-by-default on Part 2 fields for roles outside the approved case-manager set.
 

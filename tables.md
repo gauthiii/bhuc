@@ -172,6 +172,9 @@
 | 16 | `u_finalized_at` | Finalized at | glide_date_time | — | N | — | — | — |
 | 17 | `u_pdf_generated` | PDF generated | boolean | — | N | false | — | — |
 | 18 | `u_contains_part2` | Contains Part 2 data | boolean | — | N | false | — | Part2 |
+| 19 | `u_sensitivity` | Sensitivity label | choice | 20 | N | standard | standard, part2 | Part2 |
+
+> **Added 2026-07-07 (Agent 4 record-op alignment):** `u_sensitivity` mirrors `u_bhuc_consent.u_sensitivity` so the **Consent & Data Protection Agent** (§4.4 Agent 4) can write its `standard\|part2` label to the note table, not just a boolean. `u_contains_part2` is retained as the quick boolean flag used by DLP/masking on C3/C6.
 
 ## Table 7 — `u_bhuc_prior_auth` (Prior-Authorization Draft)
 
@@ -245,9 +248,9 @@ sys_user (clinician) referenced by screening/appointment/message/care_plan/prior
 | `u_bhuc_consent` | 14 | 3 | 2 |
 | `u_bhuc_appointment` | 18 | 1 (ref) | 0 |
 | `u_bhuc_message` | 14 | 2 | 1 |
-| `u_bhuc_care_plan` | 18 | 1 (ref) | 2 |
+| `u_bhuc_care_plan` | 19 | 1 (ref) | 3 |
 | `u_bhuc_prior_auth` | 19 | 1 (ref) | 2 |
-| **Total** | **133** | — | — |
+| **Total** | **134** | — | — |
 
 ---
 
