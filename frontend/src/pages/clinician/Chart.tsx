@@ -45,8 +45,10 @@ export function ClinicianChart() {
       title="Patient chart"
       intro="Consolidated chart with an AI-generated summary. SUD / 42 CFR Part 2 fields are masked by the server unless consent and role permit."
       actions={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link to={`/clinician/documentation/${patientId}`}><Button variant="secondary">Start note</Button></Link>
+          <Link to={`/clinician/prior-auth/${patientId}`}><Button variant="secondary">Prior-auth</Button></Link>
+          <Link to={`/clinician/disposition/${patientId}`}><Button variant="secondary">Disposition</Button></Link>
         </div>
       }
     >
