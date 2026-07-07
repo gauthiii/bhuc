@@ -59,8 +59,8 @@ Health check: `curl http://localhost:8000/api/health`.
 **Frontend → Firebase Hosting.** BHUC deploys to a **separate Hosting site in the same Firebase project as careatlas** (`task--mission`), so it gets its **own URL**, independent of careatlas.
 
 - **Firebase project:** `task--mission`
-- **Hosting site:** `bhuc`
-- **Deployed URL:** **https://bhuc.web.app** (and `https://bhuc.firebaseapp.com`)
+- **Hosting site:** `bhuc-ai`
+- **Deployed URL:** **https://bhuc-ai.web.app** (and `https://bhuc-ai.firebaseapp.com`)
 
 Deploy steps (run from `frontend/`):
 
@@ -68,9 +68,9 @@ Deploy steps (run from `frontend/`):
 cd frontend
 firebase login
 # One-time: create the new hosting site in the task--mission project
-firebase hosting:sites:create bhuc
+firebase hosting:sites:create bhuc-ai
 npm run build
-firebase deploy --only hosting:bhuc
+firebase deploy --only hosting:bhuc-ai
 ```
 
 **Backend:** runs **locally on `http://localhost:8000`** for now (not yet deployed). When you deploy it (e.g. Render/Cloud Run), update `VITE_API_PROXY_TARGET` / the frontend API base and the CORS origins accordingly.
