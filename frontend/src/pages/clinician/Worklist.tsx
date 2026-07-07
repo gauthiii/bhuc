@@ -71,6 +71,7 @@ export function ClinicianWorklist() {
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-4">Patient</th>
+                  <th className="py-2 pr-4">Screening</th>
                   <th className="py-2 pr-4">Risk band</th>
                   <th className="py-2 pr-4">Confidence</th>
                   <th className="py-2 pr-4">Wait</th>
@@ -86,6 +87,9 @@ export function ClinicianWorklist() {
                         {r.patientName}
                       </Link>
                       <div className="text-xs text-slate-400">{r.patientNumber || '—'}</div>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <Link to={`/clinician/risk/${r.screeningId}`} className="font-mono text-xs text-slate-600 hover:text-teal-800 hover:underline">{r.screeningId}</Link>
                     </td>
                     <td className="py-3 pr-4"><RiskBadge band={r.riskBand} /></td>
                     <td className="py-3 pr-4">

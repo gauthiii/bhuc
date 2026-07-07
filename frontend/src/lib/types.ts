@@ -192,6 +192,7 @@ export interface RiskDetail {
   riskBand: RiskBand
   confidence: number
   rationale: string
+  clinicianRationale?: string
   contributingInputs: { label: string; answer: string }[]
   status: 'pending' | 'confirmed' | 'adjusted' | 'rejected'
 }

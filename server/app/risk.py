@@ -240,6 +240,7 @@ def risk_detail(screening_id: str) -> dict:
         "riskBand": (rec.get("u_risk_band") or {}).get("value") if isinstance(rec.get("u_risk_band"), dict) else (rec.get("u_risk_band") or "unknown"),
         "confidence": int((rec.get("u_confidence") or {}).get("value") or 0) if isinstance(rec.get("u_confidence"), dict) else int(rec.get("u_confidence") or 0),
         "rationale": dv(rec.get("u_rationale")) or "",
+        "clinicianRationale": dv(rec.get("u_clinician_rationale")) or "",
         "contributingInputs": [{"label": k, "answer": str(v)} for k, v in responses.items()],
         "status": action if action in ("pending", "confirmed", "adjusted", "rejected") else "pending",
     }

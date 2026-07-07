@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { AlertTriangle, PenLine } from 'lucide-react'
+import { AlertTriangle, PenLine, CheckCircle2 } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, RiskBadge, StatusBadge, Spinner, ErrorState, Button, Textarea, Field, RadioGroup } from '../../components/ui'
@@ -64,9 +64,15 @@ export function ClinicianRiskConfirm() {
         <ErrorState message={error} onRetry={load} />
       ) : data ? (
         <div className="grid gap-4">
-          <HumanInLoopNote>
-            Awaiting your confirmation — no orders, notes, or disposition can be finalized for this patient until you confirm, adjust, or reject this AI risk assessment. The agent never adjudicates risk; a human must.
-          </HumanInLoopNote>
+          {data.status !== 'pending' ? (
+            <HumanInLoopNote>
+              This risk assessment has already been reviewed by a clinician. It's shown read-only below — no further confirmation is needed.
+            </HumanInLoopNote>
+          ) : (
+            <HumanInLoopNote>
+              Awaiting your confirmation — no orders, notes, or disposition can be finalized for this patient until you confirm, adjust, or reject this AI risk assessment. The agent never adjudicates risk; a human must.
+            </HumanInLoopNote>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Panel title="AI assessment" subtitle={`${data.patientName} · ${data.instrument.toUpperCase()}`}>
@@ -90,6 +96,32 @@ export function ClinicianRiskConfirm() {
             </Panel>
           </div>
 
+          {data.status !== 'pending' ? (
+            <Panel
+              title="Clinician decision"
+              actions={<StatusBadge tone={data.status === 'rejected' ? 'danger' : 'success'} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+                {data.status === 'confirmed' ? 'Risk confirmed' : data.status === 'adjusted' ? 'Risk band adjusted' : 'Assessment rejected'}
+              </StatusBadge>}
+            >
+              <p className="text-sm text-slate-700">
+                A clinician has already reviewed this screening. No further confirmation is required.
+              </p>
+              {data.clinicianRationale && (
+                <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Clinician rationale</p>
+                  <p className="mt-1 text-sm text-slate-700">{data.clinicianRationale}</p>
+                </div>
+              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {data.patientId && (
+                  <Link to={`/clinician/documentation/${data.patientId}?new=1&screening=${data.screeningId}`}>
+                    <Button variant="secondary"><PenLine className="h-4 w-4" /> Start note for this screening</Button>
+                  </Link>
+                )}
+                <Button variant="ghost" onClick={() => navigate('/clinician/worklist')}>Back to worklist</Button>
+              </div>
+            </Panel>
+          ) : (
           <Panel title="Your decision">
             <div className="grid gap-3 sm:grid-cols-3">
               <Button variant={decision === 'confirm' ? 'primary' : 'secondary'} onClick={() => setDecision('confirm')}>Confirm risk band</Button>
@@ -134,6 +166,7 @@ export function ClinicianRiskConfirm() {
               )}
             </div>
           </Panel>
+          )}
         </div>
       ) : null}
     </ClinicianShell>
