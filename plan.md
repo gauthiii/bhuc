@@ -93,6 +93,7 @@ Every ServiceNow capability the five use cases depend on is **confirmed installe
    - 2.7 Licensing Assumption & Plugin Dependency Chain
    - 2.8 End-to-End Request Lifecycle
    - 2.9 Deployment & Integration Topology (iframe Portal + A2A) — careatlas-modeled
+     - 2.9.1 As-Built Deployment, Hosting & CI/CD (repo, Firebase, Render, SN portal)
 3. **Frontend & UI/UX Blueprint**
    - 3.1 Design System & Global Standards
    - 3.2 Patient Portal — Screen Inventory & Specifications
@@ -266,6 +267,26 @@ The careatlas reference is the OAuth API client **"Care Atlast A2A Integration"*
 **Consequence for agent configuration:** because the caller is an external app (no interactive ServiceNow user), each A2A-consumed BHUC agent must have **"Allow third party to access this AI agent" = ON** (§4.3 Step 2 — this overrides the earlier "leave OFF" note now that A2A is in scope) and its data-access identity must be an **AI user (the service account)**, not a dynamic user (§4.3 Step 4). This is the one place the A2A requirement changes the agent build from the original draft.
 
 **End-to-end data path:** `React (Firebase iframe) → FastAPI (OAuth client-credentials + Cognito JWT validation) → ServiceNow [ A2A → 6 agents (svc-bhuc-* identities) | Table/Scripted REST → u_bhuc_* CRUD ] → async A2A callback → FastAPI → React`.
+
+### 2.9.1 As-Built Deployment, Hosting & CI/CD (verified 2026-07-07)
+
+The concrete, deployed artifacts and pipelines. **This is the source of truth for what actually exists.**
+
+**Source repo:** `https://github.com/gauthiii/bhuc` (branch `main`). Local: `bhuc_app/` (frontend/, server/, plan.md, action.md, tables.md, README.md). Secrets (`.env`, `server/.env`) are git-ignored; only `*.env.example` templates are committed. `.env.example` files carry **no** real Cognito/AWS values (the frontend never uses them — see below).
+
+**Frontend — React+Vite on Firebase Hosting.**
+- **Firebase project:** `task--mission` (shared with careatlas). **Hosting site:** `bhuc-ai` → **`https://bhuc-ai.web.app`** (careatlas is a separate site `task--mission.web.app` in the same project — "same project, different URL", since Firebase can't cleanly do "same URL, different route").
+- **CI/CD:** `.github/workflows/deploy.yml` (careatlas-style) — on push to `main`, builds `./frontend` with `VITE_USE_MOCK=true` (demo/standalone; the deployed site has no backend to reach) and deploys to site `bhuc-ai` via `FirebaseExtended/action-hosting-deploy` (`firebaseToolsVersion: "13"`). Requires GitHub secrets `FIREBASE_SERVICE_ACCOUNT` + `FIREBASE_PROJECT_ID=task--mission` (reuse careatlas's service-account value). The site `bhuc-ai` was created once via `firebase hosting:sites:create bhuc-ai` (name `bhuc` was rejected — needs 6+ chars).
+- **Cognito clarification (important):** the **frontend needs NO Cognito/AWS creds** — auth flows `frontend → backend /api/aws/* → Cognito`. All Cognito/AWS secrets live in `server/.env` (backend/boto3) only.
+
+**Backend — FastAPI on Render.**
+- **Blueprint:** `render.yaml` (repo root) → service **`bhuc-backend`** (Free plan) → **`https://bhuc-backend.onrender.com`**. Root dir `server/`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health `/api/health`, `autoDeploy: true` on `main`. Secrets declared `sync: false` (set in Render dashboard, never committed); `CORS_ORIGINS` pre-set to the bhuc-ai Firebase URLs + localhost. One-time: Render → New → Blueprint → connect `gauthiii/bhuc` → fill secret values → Apply. Currently the backend still also runs locally on `http://localhost:8000` for dev.
+
+**ServiceNow Service Portal (iframe host) — AS-BUILT (single portal for now, careatlas pattern).**
+- **Widget** `BHUC Full Screen Frame` (`sp_widget.id = bhuc-frame`) — fixed full-screen iframe (`position:fixed; 100vw/100vh; z-index:9999`, sandbox `allow-scripts allow-same-origin allow-forms allow-popups`) → **`src = https://bhuc-ai.web.app/`** (app root = role picker; the 988 banner has Patient/Clinician quick-nav).
+- **Page** `bhuc_ai_platform` → **Portal "BHUC AI Platform"** (`url_suffix = bhuc_ai_platform`, homepage = that page) → URL **`https://ven04690.service-now.com/bhuc_ai_platform`**.
+- **Nav (All menu):** application menu **"BHUC AI Fusion Center"** (`sys_app_application`, active, `snc_internal`) → module **"BHUC AI Platform"** (`sys_app_module`, `link_type=DIRECT`, `query=/bhuc_ai_platform`). Search **All → "BHUC AI Fusion Center"**.
+- The fixed full-screen iframe overlays all SP chrome — no ServiceNow header/footer/widgets show, exactly like careatlas. *(This is a single portal pointing at the app root; the plan's original two-page split (§8.1 SN-Step 15) into separate `/patient` and `/clinician` pages remains an optional future refinement.)*
 
 ---
 

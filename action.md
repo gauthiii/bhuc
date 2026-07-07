@@ -76,7 +76,7 @@
 | SN-5 | Confirm/select **Now LLM-LTS** provider for agents | §8.1 SN-Step 5 | S | 0.25 | — | ☐ |
 | SN-13 | Create **6 service accounts + composable data roles** (`svc-bhuc-*`, `u_bhuc_ai_agent`, `u_bhuc_patient_pii`, `u_bhuc_part2_access`, …) | §8.1 SN-Step 13 | L | 1.5 | SN-1 | ☐ |
 | SN-14 | Create **A2A OAuth client** + enable per-agent third-party access + (optional) callback registration | §8.1 SN-Step 14 | M | 0.5 | SN-13, AG-11, DEC-1 | ☐ |
-| SN-15 | Build **2 iframe widgets + 2 anonymous SP pages** (`u_bhuc_patient` / `u_bhuc_clinician`) | §8.1 SN-Step 15; §2.9 | M | 1 | FE-4 | ☐ |
+| SN-15 | Build the iframe SP portal. **DONE 2026-07-07 (single portal)** — widget `bhuc-frame` → `https://bhuc-ai.web.app/`, portal **BHUC AI Platform** (`/bhuc_ai_platform`), nav **BHUC AI Fusion Center → BHUC AI Platform**. (Two per-route pages = optional future refinement.) See §2.9.1. | §8.1 SN-Step 15; §2.9.1 | M | 1 | FE-4 | ◐ |
 
 ## Phase 2 — Agents (AI Agent Studio) — `plan.md` §4.3 / §4.4
 
@@ -124,7 +124,7 @@
 | BE-7 | CORS + framing allowlist (Firebase + SN portal origins) | §8.2 BE-Step 7 | S | 0.25 | BE-1 | ☐ |
 | BE-8 | Server-side prompt/Supervised enforcement (no client prompts; draft-gate per DEC-2) | §8.2 BE-Step 8; DEC-2 | M | 0.5 | BE-4, DEC-2 | ☐ |
 | BE-9 | Secrets handling → secrets manager; **rotate exposed AWS keys** | §8.2 BE-Step 9 | M | 0.5 | — | ☐ |
-| BE-10 | Health, tracing, deploy to public host; give SN the callback base | §8.2 BE-Step 10 | M | 0.5 | BE-1 | ☐ |
+| BE-10 | Health, tracing, deploy. **render.yaml Blueprint added 2026-07-07** → service `bhuc-backend` (free) → https://bhuc-backend.onrender.com, auto-deploy on push; `/api/health` present. PENDING: connect Blueprint in Render dashboard + set secret env vars. See §2.9.1. | §8.2 BE-Step 10; §2.9.1 | M | 0.5 | BE-1 | ◐ |
 
 ## Phase 5 — Frontend (React + Vite → Firebase) — `plan.md` §3 / §8.3
 
@@ -133,7 +133,7 @@
 | FE-1 | Scaffold React+Vite app, routes (`/patient`,`/clinician`), design-system components/tokens | §8.3 FE-Step 1; §3.1 | L | 2 | — | ☑ |
 | FE-2 | Cognito/Amplify auth + clinician MFA | §8.3 FE-Step 2; DEC-4 | M | 1 | DEC-4, FE-1 | ☑ |
 | FE-3 | API client (bearer token to FastAPI; 401/403 handling) | §8.3 FE-Step 3 | S | 0.5 | FE-1, BE-2 | ☑ |
-| FE-4 | Deploy to Firebase Hosting (record URL for SN-15) | §8.3 FE-Step 4 | S | 0.5 | FE-1 | ☐ |
+| FE-4 | Deploy to Firebase Hosting. **DONE 2026-07-07** — site `bhuc-ai` in project `task--mission` → https://bhuc-ai.web.app; auto-deploy via `.github/workflows/deploy.yml` on push to main (mock build). See §2.9.1. | §8.3 FE-Step 4; §2.9.1 | S | 0.5 | FE-1 | ☑ |
 | FE-5 | iframe-safety / in-frame auth (per DEC-4) | §8.3 FE-Step 5; DEC-4 | M | 1 | DEC-4, FE-2 | ☐ |
 | FE-6 | Unauthenticated crisis path (988 banner + front-door chat) | §8.3 FE-Step 6; §3.2 P1/P2 | M | 0.5 | FE-1, BE-4 | ☑ |
 | FE-7 | Human-in-the-loop + Part 2 masking UI (C3/C4/C5/C6) | §8.3 FE-Step 7; DEC-2 | M | 1 | DEC-2, FE-1 | ☑ |
@@ -147,7 +147,7 @@
 
 | ID | Task | Plan Ref | Cx | Effort (d) | Depends On | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| PORT-1 | Point the 2 SP iframe widgets at the deployed Firebase routes; make pages public/anonymous | §8.1 SN-Step 15; §2.9 | M | 0.5 | SN-15, FE-4 | ☐ |
+| PORT-1 | Point the SP iframe widget at the deployed Firebase app. **DONE 2026-07-07** — `bhuc-frame` src = https://bhuc-ai.web.app/; portal reachable at /bhuc_ai_platform. See §2.9.1. | §8.1 SN-Step 15; §2.9.1 | M | 0.5 | SN-15, FE-4 | ☑ |
 | PORT-2 | End-to-end wiring test: portal URL → iframe → Cognito → FastAPI → A2A agent → render | §2.8; §2.9 | L | 1 | PORT-1, BE-4, AG-10 | ☐ |
 | PORT-3 | Reproduce the **PII-denial verification** (careatlas ACL-probe pattern) proving `svc-bhuc-risk` PII strip | §8.1 SN-Step 13d; careatlas `ACL_TEST_PROBES` | M | 0.5 | SN-4, SN-13, AG-8 | ☐ |
 
