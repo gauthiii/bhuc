@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { Send, CalendarDays, HeartPulse, MessageCircle } from 'lucide-react'
+import { Send, CalendarDays, HeartPulse, MessageCircle, ClipboardList } from 'lucide-react'
 import { api } from '../../services/api'
-import type { ChatReply, ChatTurn, DashboardSummary } from '../../lib/types'
+import { usePatientAuth } from '../../contexts/AuthContext'
+import type { ChatReply, ChatTurn, DashboardSummary, ScreeningStatusItem } from '../../lib/types'
 import { PatientShell } from '../../components/portals'
 import { CrisisDialog } from '../../components/CrisisDialog'
 import { Panel, Button, StatusBadge, Spinner, ErrorState, Textarea, EmptyState } from '../../components/ui'
@@ -50,7 +51,9 @@ export function PatientHome() {
   const [sending, setSending] = useState(false)
   const [crisis, setCrisis] = useState(false)
 
+  const { user } = usePatientAuth()
   const [dash, setDash] = useState<DashboardSummary | null>(null)
+  const [screening, setScreening] = useState<ScreeningStatusItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
@@ -64,6 +67,9 @@ export function PatientHome() {
       .finally(() => setLoading(false))
   }
   useEffect(loadDash, [])
+  useEffect(() => {
+    api.getScreeningStatus(user?.username ?? '').then(setScreening).catch(() => setScreening([]))
+  }, [user])
   useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight }) }, [turns, sending])
 
   async function send(text: string) {
@@ -161,6 +167,20 @@ export function PatientHome() {
                   : <p className="text-sm text-slate-500">No new messages.</p>}
               </Panel>
             </>
+          )}
+
+          {screening.length > 0 && (
+            <Panel title={<span className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-teal-700" /> Screening status</span>}
+              actions={<Link to="/patient/screening" className="text-sm font-semibold text-teal-700 hover:underline">View</Link>}>
+              <ul className="grid gap-2">
+                {screening.slice(0, 4).map((s) => (
+                  <li key={s.screeningId} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-700">{s.instrument}</span>
+                    <StatusBadge tone={s.stage === 'reviewed' ? 'success' : s.stage === 'under_review' ? 'warning' : 'info'}>{s.stageLabel}</StatusBadge>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
           )}
         </aside>
       </div>

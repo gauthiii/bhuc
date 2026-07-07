@@ -6,6 +6,7 @@ import { RolePicker } from './pages/RolePicker'
 import { PatientSignIn } from './pages/patient/SignIn'
 import { PatientHome } from './pages/patient/Home'
 import { PatientRegistration } from './pages/patient/Registration'
+import { PatientProfile } from './pages/patient/Profile'
 import { PatientScreening } from './pages/patient/Screening'
 import { PatientCoverage } from './pages/patient/Coverage'
 import { PatientAppointments } from './pages/patient/Appointments'
@@ -39,6 +40,7 @@ export default function App() {
       <Route path="/patient/sign-in" element={<PatientSignIn />} />
       <Route path="/patient/home" element={<PatientGuard><PatientHome /></PatientGuard>} />
       <Route path="/patient/register" element={<PatientGuard><PatientRegistration /></PatientGuard>} />
+      <Route path="/patient/profile" element={<PatientGuard><PatientProfile /></PatientGuard>} />
       <Route path="/patient/screening" element={<PatientGuard><PatientScreening /></PatientGuard>} />
       <Route path="/patient/coverage" element={<PatientGuard><PatientCoverage /></PatientGuard>} />
       <Route path="/patient/appointments" element={<PatientGuard><PatientAppointments /></PatientGuard>} />

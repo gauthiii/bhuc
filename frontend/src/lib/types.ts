@@ -8,6 +8,7 @@ export type ConsentType = 'hipaa' | 'part2_sud' | 'tcpa_sms'
 
 // ---- Patient domain ----
 export interface PatientProfile {
+  patientId?: string // u_bhuc_patient sys_id
   number: string // BHUC_PATIENT_001
   firstName: string
   lastName: string
@@ -24,6 +25,26 @@ export interface PatientProfile {
   part2Consent: boolean
   tcpaSmsConsent: boolean
   riskBand: RiskBand
+}
+
+export interface MeResponse {
+  registered: boolean
+  profile: PatientProfile | null
+}
+
+export interface ScreeningStatusItem {
+  screeningId: string
+  instrument: string
+  stage: 'submitted' | 'under_review' | 'reviewed'
+  stageLabel: string
+  submittedAt: string
+}
+
+export interface BatchScreeningResult {
+  ok: boolean
+  count: number
+  anyEscalate: boolean
+  results: { instrument: Instrument; screeningId: string; escalate: boolean }[]
 }
 
 export interface DashboardSummary {

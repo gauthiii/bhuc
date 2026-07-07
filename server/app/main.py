@@ -17,6 +17,7 @@ from .aws_auth import router as aws_auth_router
 from .frontdoor import router as frontdoor_router
 from .risk import router as risk_router
 from .note import router as note_router
+from .patient import router as patient_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
     app.include_router(frontdoor_router)
     app.include_router(risk_router)
     app.include_router(note_router)
+    app.include_router(patient_router)
     return app
 
 

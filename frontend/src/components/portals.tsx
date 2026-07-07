@@ -12,7 +12,7 @@ const PATIENT_NAV: NavItem[] = [
   { to: '/patient/care-plan', label: 'Care plan', icon: <HeartPulse className="h-4 w-4" /> },
   { to: '/patient/messages', label: 'Messages', icon: <MessageCircle className="h-4 w-4" /> },
   { to: '/patient/check-in', label: 'Check-in', icon: <ListChecks className="h-4 w-4" /> },
-  { to: '/patient/register', label: 'Registration', icon: <UserRound className="h-4 w-4" /> },
+  { to: '/patient/profile', label: 'Profile', icon: <UserRound className="h-4 w-4" /> },
 ]
 
 const CLINICIAN_NAV: NavItem[] = [

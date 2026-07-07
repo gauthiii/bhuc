@@ -26,6 +26,10 @@ async function j<T>(path: string, init?: RequestInit): Promise<T> {
 const live = {
   frontDoorChat: (text: string) => j('/frontdoor/chat', { method: 'POST', body: JSON.stringify({ text }) }),
   getProfile: () => j('/patient/me'),
+  getMe: (email: string) => j(`/patient/me?email=${encodeURIComponent(email)}`),
+  registerPatient: (data: unknown) => j('/patient/register', { method: 'POST', body: JSON.stringify(data) }),
+  getScreeningStatus: (email: string) => j(`/screening/status?email=${encodeURIComponent(email)}`),
+  submitScreeningBatch: (patient: string, screenings: unknown[]) => j('/intake/screening/batch', { method: 'POST', body: JSON.stringify({ patient, screenings }) }),
   getDashboard: () => j('/dashboard'),
   submitConsent: (c: unknown) => j('/consent', { method: 'POST', body: JSON.stringify(c) }),
   getInstrumentQuestions: mock.getInstrumentQuestions, // static content
@@ -67,11 +71,15 @@ const AGENTS_LIVE = (import.meta.env.VITE_AGENTS_LIVE ?? 'true') !== 'false'
 // the idempotent for-patient draft endpoint (returns an existing draft or drafts one).
 const liveAgent2and3 = {
   submitScreening: live.submitScreening,
+  submitScreeningBatch: live.submitScreeningBatch,
   getWorklist: live.getWorklist,
   getRiskDetail: live.getRiskDetail,
   confirmRisk: live.confirmRisk,
   getDocumentation: (patientId: string) => j(`/note/for-patient/${patientId}`),
   signNote: live.signNote,
+  getMe: live.getMe,
+  registerPatient: live.registerPatient,
+  getScreeningStatus: live.getScreeningStatus,
 }
 
 const overrides = USE_MOCK

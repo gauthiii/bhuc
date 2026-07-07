@@ -89,6 +89,17 @@ button { cursor: pointer; }
 .md-msg h1, .md-msg h2, .md-msg h3 { font-weight: 700; margin: 0.6rem 0 0.3rem; }
 .md-msg code { background: rgba(0,0,0,0.06); padding: 0.05rem 0.3rem; border-radius: 4px; font-size: 0.85em; }
 
+/* Screening run — progress-bar shimmer while agents are scoring */
+.run-shimmer {
+  position: relative;
+  background-size: 200% 100% !important;
+  animation: run-shimmer-move 1.4s linear infinite;
+}
+@keyframes run-shimmer-move {
+  0% { background-position: 120% 0; }
+  100% { background-position: -20% 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }

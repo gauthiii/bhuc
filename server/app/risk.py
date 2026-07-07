@@ -42,50 +42,41 @@ def _severity(instrument: str, score: Optional[int]) -> Optional[str]:
     return "na"
 
 
-class ScreeningSubmit(BaseModel):
-    instrument: str
-    answers: dict
-    sessionId: Optional[str] = None
-    # Which patient this screening is for (sys_id). Optional while pre-auth.
-    patient: Optional[str] = None
-
-
-@router.post("/intake/screening")
-def submit_screening(req: ScreeningSubmit) -> dict:
+def _run_one(patient: Optional[str], instrument: str, answers: dict,
+             session_id: Optional[str]) -> dict:
+    """Create one screening record, invoke Agent 2 (blocking), return the scored result."""
     settings = get_settings()
     table = get_table_client()
 
-    numeric = [v for v in req.answers.values() if isinstance(v, (int, float))]
-    score = int(sum(numeric)) if req.instrument in ("phq9", "gad7") else None
-    item9 = float(req.answers.get("q9", 0) or 0) > 0
-    cssrs_positive = req.instrument == "c_ssrs" and any(
-        str(v).lower() == "yes" for v in req.answers.values())
+    numeric = [v for v in answers.values() if isinstance(v, (int, float))]
+    score = int(sum(numeric)) if instrument in ("phq9", "gad7") else None
+    item9 = float(answers.get("q9", 0) or 0) > 0
+    cssrs_positive = instrument == "c_ssrs" and any(
+        str(v).lower() == "yes" for v in answers.values())
     flags = []
     if item9:
         flags.append("item9_positive")
     if cssrs_positive:
         flags.append("cssrs_positive")
 
-    # 1) write the screening record (state=submitted) so the agent has a sys_id target.
     fields = {
-        "u_instrument": req.instrument,
-        "u_responses": json.dumps(req.answers),
+        "u_instrument": instrument,
+        "u_responses": json.dumps(answers),
         "u_state": "submitted",
         "u_clinician_action": "pending",
-        "u_session_id": req.sessionId or "",
+        "u_session_id": session_id or "",
         "u_raw_score": "" if score is None else str(score),
         "u_flags": ", ".join(flags),
     }
-    if req.patient:
-        fields["u_patient"] = req.patient
+    if patient:
+        fields["u_patient"] = patient
     rec = table.create(TABLE, fields)
     sys_id = rec["sys_id"]
 
-    # 2) invoke Agent 2 (blocking) — it scores and writes risk_band/confidence/rationale.
-    answer_lines = "\n".join(f"  {k}: {v}" for k, v in req.answers.items())
+    answer_lines = "\n".join(f"  {k}: {v}" for k, v in answers.items())
     msg = (
         f"Score this behavioral-health screening and write the draft result back for "
-        f"clinician confirmation.\n\nscreening_sys_id: {sys_id}\nInstrument: {req.instrument}\n"
+        f"clinician confirmation.\n\nscreening_sys_id: {sys_id}\nInstrument: {instrument}\n"
         f"Responses:\n{answer_lines}\n\nUsing the instrument scoring rules, return a risk band "
         f"(low/moderate/high), a confidence (0-100), and a rationale citing the specific "
         f"responses. Then use the write tool with the screening_sys_id above, and run the "
@@ -94,10 +85,9 @@ def submit_screening(req: ScreeningSubmit) -> dict:
     try:
         get_a2a_client().execute_agent(settings.snow_agent_risk, msg)
     except A2AError as exc:
-        logger.error("Agent 2 A2A failed: %s", exc)
+        logger.error("Agent 2 A2A failed for %s: %s", instrument, exc)
         raise HTTPException(status_code=502, detail="Risk agent unavailable") from exc
 
-    # 3) re-read the record for what the agent wrote.
     scored = table.get(TABLE, sys_id)
     risk_band = scored.get("u_risk_band") or ("high" if (item9 or cssrs_positive) else "moderate")
     try:
@@ -106,16 +96,67 @@ def submit_screening(req: ScreeningSubmit) -> dict:
         confidence = 0
 
     return {
-        "instrument": req.instrument,
+        "instrument": instrument,
         "screeningId": scored.get("u_number") or sys_id,
+        "sysId": sys_id,
         "score": score,
-        "severity": _severity(req.instrument, score),
+        "severity": _severity(instrument, score),
         "riskBand": risk_band,
         "confidence": confidence,
         "rationale": scored.get("u_rationale") or "",
         "flags": flags,
         "escalate": risk_band == "high",
-        "nextInstrument": NEXT_INSTRUMENT.get(req.instrument),
+        "nextInstrument": NEXT_INSTRUMENT.get(instrument),
+    }
+
+
+class ScreeningSubmit(BaseModel):
+    instrument: str
+    answers: dict
+    sessionId: Optional[str] = None
+    patient: Optional[str] = None
+
+
+@router.post("/intake/screening")
+def submit_screening(req: ScreeningSubmit) -> dict:
+    return _run_one(req.patient, req.instrument, req.answers, req.sessionId)
+
+
+class BatchItem(BaseModel):
+    instrument: str
+    answers: dict
+    sessionId: Optional[str] = None
+
+
+class ScreeningBatch(BaseModel):
+    patient: Optional[str] = None
+    screenings: list[BatchItem]
+
+
+@router.post("/intake/screening/batch")
+def submit_batch(req: ScreeningBatch) -> dict:
+    """Run all instruments' agents in parallel (blocking). Patient-facing: no scores
+    returned — only per-instrument completion + an aggregate escalate flag for the 988
+    support message. Scores stay clinician-facing (worklist)."""
+    import concurrent.futures as cf
+
+    results: list[dict] = [None] * len(req.screenings)  # type: ignore
+    with cf.ThreadPoolExecutor(max_workers=max(1, len(req.screenings))) as ex:
+        futures = {
+            ex.submit(_run_one, req.patient, s.instrument, s.answers, s.sessionId): i
+            for i, s in enumerate(req.screenings)
+        }
+        for fut in cf.as_completed(futures):
+            i = futures[fut]
+            r = fut.result()  # HTTPException propagates
+            results[i] = {"instrument": r["instrument"], "screeningId": r["screeningId"],
+                          "escalate": r["escalate"]}
+
+    return {
+        "ok": True,
+        "count": len(results),
+        "anyEscalate": any(r["escalate"] for r in results),
+        "results": results,
     }
 
 

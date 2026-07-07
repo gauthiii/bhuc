@@ -139,6 +139,7 @@
 | FE-6 | Unauthenticated crisis path (988 banner + front-door chat) | §8.3 FE-Step 6; §3.2 P1/P2 | M | 0.5 | FE-1, BE-4 | ☑ |
 | FE-7 | Human-in-the-loop + Part 2 masking UI (C3/C4/C5/C6) | §8.3 FE-Step 7; DEC-2 | M | 1 | DEC-2, FE-1 | ☑ |
 | FE-8 | Surface agent outputs w/ citations + fairness result | §8.3 FE-Step 8; §3.3 | M | 0.5 | FE-3, BE-4 | ☑ |
+| FE-9b | **Patient-portal agent flow (done 2026-07-07):** Screening rewritten as a **guided 3-questionnaire stepper** (C-SSRS→PHQ-9→GAD-7, no per-instrument agent) → **Submit all** runs the 3 Risk agents in **parallel** (`POST /intake/screening/batch`) with an **animated progress** component (color-shifting bar, rotating texts, per-agent cards) → "sent to clinicians for review". **Auth+registration gate** (`GET /patient/me` by email) blocks running unless registered. **Screening status tracker** (stages only, no scores) on Home + Screening. **Profile page** (`/patient/profile`, nav swapped from Registration) shows the `u_bhuc_patient` record when registered; Registration completion calls `POST /patient/register`. Backend: `patient.py` + batch in `risk.py`. Gated by `VITE_AGENTS_LIVE` (prod build off until auth). | §3.2 P4; §4.4 Agent 2 | L | 1.5 | BE-4, AG-2 | ☑ |
 | FE-9 | Build **9 Patient screens** (P1–P9) | §3.2 | XL | 6 | FE-1, FE-3 | ☑ |
 | FE-10 | Build **8 Clinician screens** (C1–C8) | §3.3 | XL | 5 | FE-1, FE-3 | ☑ |
 | FE-11 | Do NOT build governance dashboard (guard against scope creep) | §8.3 FE-Step 9 | S | 0 | — | ☑ |

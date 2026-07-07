@@ -5,6 +5,7 @@ import type {
   DispositionCase, DocumentationDraft, Eligibility, Message, MessageThread, PatientChart,
   PatientProfile, PriorAuthPacket, RiskDetail, SchedulingRecommendation, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
+  MeResponse, ScreeningStatusItem, BatchScreeningResult,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -63,6 +64,20 @@ export const mock = {
 
   // ---- Patient profile / dashboard ----
   async getProfile(): Promise<PatientProfile> { await wait(); return mockProfile },
+  async getMe(_email?: string): Promise<MeResponse> { await wait(); return { registered: true, profile: { ...mockProfile, patientId: 'mock-patient-sys-id' } } },
+  async registerPatient(_data?: unknown): Promise<MeResponse> { await wait(); return { registered: true, profile: { ...mockProfile, patientId: 'mock-patient-sys-id' } } },
+  async getScreeningStatus(_email?: string): Promise<ScreeningStatusItem[]> {
+    await wait()
+    return [
+      { screeningId: 'BHUC_SCREENING_003', instrument: 'PHQ-9', stage: 'reviewed', stageLabel: 'Reviewed by clinician', submittedAt: iso(-1) },
+      { screeningId: 'BHUC_SCREENING_002', instrument: 'C-SSRS', stage: 'under_review', stageLabel: 'Under clinician review', submittedAt: iso(-1) },
+      { screeningId: 'BHUC_SCREENING_001', instrument: 'GAD-7', stage: 'submitted', stageLabel: 'Submitted', submittedAt: iso(0) },
+    ]
+  },
+  async submitScreeningBatch(_patient: string, screenings: { instrument: Instrument }[]): Promise<BatchScreeningResult> {
+    await wait(1200)
+    return { ok: true, count: screenings.length, anyEscalate: false, results: screenings.map((s) => ({ instrument: s.instrument, screeningId: 'BHUC_SCREENING_0XX', escalate: false })) }
+  },
   async getDashboard(): Promise<DashboardSummary> {
     await wait()
     return { nextAppointment: upcomingAppt, carePlanStatus: 'in_progress', carePlanPendingTasks: 1, unreadMessages: 2, registrationComplete: true }

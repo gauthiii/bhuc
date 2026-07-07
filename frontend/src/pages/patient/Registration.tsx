@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { api } from '../../services/api'
+import { usePatientAuth } from '../../contexts/AuthContext'
 import type { ConsentRecord, ConsentType } from '../../lib/types'
 import { PatientShell } from '../../components/portals'
 import { Panel, Stepper, Button, Field, Input, Select } from '../../components/ui'
@@ -19,6 +20,7 @@ const CONSENT_KEYS: ConsentType[] = ['hipaa', 'part2_sud', 'tcpa_sms']
 
 export function PatientRegistration() {
   const navigate = useNavigate()
+  const { user } = usePatientAuth()
   const [step, setStep] = useState(0)
   const [personal, setPersonal] = useState<Personal>({ firstName: '', lastName: '', dob: '', phone: '' })
   const [selfPay, setSelfPay] = useState(false)
@@ -33,6 +35,21 @@ export function PatientRegistration() {
 
   const personalValid = personal.firstName.trim() && personal.lastName.trim() && personal.dob && personal.phone.trim()
   const insuranceValid = selfPay || (carrier.trim() && memberId.trim())
+
+  // On finishing the last consent, persist the patient record (marks them registered)
+  // so the gate opens and the Profile page shows. Best-effort — never block the finish.
+  async function completeRegistration() {
+    try {
+      await api.registerPatient({
+        email: user?.username ?? '',
+        firstName: personal.firstName, lastName: personal.lastName,
+        dateOfBirth: personal.dob, phone: personal.phone,
+        insuranceProvider: selfPay ? '' : carrier, insuranceMemberId: selfPay ? '' : memberId,
+        selfPay, hipaaConsent: true, part2Consent: true, tcpaSmsConsent: true,
+      })
+    } catch { /* non-blocking */ }
+    navigate('/patient/profile')
+  }
 
   return (
     <PatientShell title="Registration & consent" intro="Set up your profile and record each consent separately. Your information is protected under HIPAA and 42 CFR Part 2.">
@@ -95,7 +112,7 @@ export function PatientRegistration() {
             phone={personal.phone}
             onBack={back}
             isLast={step === 4}
-            onDone={() => (step === 4 ? navigate('/patient/home') : next())}
+            onDone={() => (step === 4 ? completeRegistration() : next())}
           />
         )}
       </div>
