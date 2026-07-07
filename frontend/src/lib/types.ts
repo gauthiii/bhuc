@@ -177,6 +177,7 @@ export interface MaskableField { value: string | null; masked: boolean }
 export interface PatientChart {
   patientId: string
   number: string
+  part2Consent?: boolean
   name: MaskableField
   dateOfBirth: MaskableField
   demographics: { label: string; value: MaskableField }[]

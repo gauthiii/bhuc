@@ -65,6 +65,7 @@ export const mock = {
   // ---- Patient profile / dashboard ----
   async getProfile(): Promise<PatientProfile> { await wait(); return mockProfile },
   async getMe(_email?: string): Promise<MeResponse> { await wait(); return { registered: true, profile: { ...mockProfile, patientId: 'mock-patient-sys-id' } } },
+  async setConsent(_body?: unknown): Promise<MeResponse> { await wait(); return { registered: true, profile: { ...mockProfile, patientId: 'mock-patient-sys-id' } } },
   async registerPatient(_data?: unknown): Promise<MeResponse> { await wait(); return { registered: true, profile: { ...mockProfile, patientId: 'mock-patient-sys-id' } } },
   async getScreeningStatus(_email?: string): Promise<ScreeningStatusItem[]> {
     await wait()

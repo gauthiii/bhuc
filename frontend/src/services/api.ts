@@ -47,7 +47,8 @@ const live = {
   getCheckIn: (id: string) => j(`/checkin/${id}`),
   submitCheckIn: (id: string, answers: unknown) => j(`/checkin/${id}`, { method: 'POST', body: JSON.stringify(answers) }),
   getWorklist: () => j('/worklist'),
-  getChart: (patientId: string) => j(`/patient/${patientId}/chart`),
+  getChart: (patientId: string, reveal = false) => j(`/patient/${patientId}/chart${reveal ? '?reveal=1' : ''}`),
+  setConsent: (body: unknown) => j('/patient/consent', { method: 'PATCH', body: JSON.stringify(body) }),
   getRiskDetail: (id: string) => j(`/risk/${id}`),
   confirmRisk: (id: string, action: string, rationale: string) => j('/risk/confirm', { method: 'POST', body: JSON.stringify({ id, action, rationale }) }),
   getDocumentation: (id: string) => j(`/note/${id}`),
@@ -88,6 +89,8 @@ const liveAgent2and3 = {
   registerPatient: live.registerPatient,
   getScreeningStatus: live.getScreeningStatus,
   agentChat: live.agentChat,
+  getChart: live.getChart,
+  setConsent: live.setConsent,
 }
 
 const overrides = USE_MOCK

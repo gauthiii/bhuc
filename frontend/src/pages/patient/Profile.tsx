@@ -39,6 +39,28 @@ export function PatientProfile() {
   }
 
   const p = me.profile
+  const consentItems: { key: 'hipaa' | 'part2' | 'tcpa'; label: string; granted: boolean }[] = [
+    { key: 'hipaa', label: 'HIPAA consent', granted: p.hipaaConsent },
+    { key: 'part2', label: '42 CFR Part 2 (SUD) consent', granted: p.part2Consent },
+    { key: 'tcpa', label: 'Text message (TCPA) consent', granted: p.tcpaSmsConsent },
+  ]
+
+  async function toggleConsent(key: 'hipaa' | 'part2' | 'tcpa', granted: boolean) {
+    setMe((m) => m && m.profile ? { ...m, profile: { ...m.profile,
+      hipaaConsent: key === 'hipaa' ? granted : m.profile.hipaaConsent,
+      part2Consent: key === 'part2' ? granted : m.profile.part2Consent,
+      tcpaSmsConsent: key === 'tcpa' ? granted : m.profile.tcpaSmsConsent } } : m)
+    try {
+      await api.setConsent({ email, patientId: p.patientId, consent: key, granted })
+    } catch {
+      // revert on failure
+      setMe((m) => m && m.profile ? { ...m, profile: { ...m.profile,
+        hipaaConsent: key === 'hipaa' ? !granted : m.profile.hipaaConsent,
+        part2Consent: key === 'part2' ? !granted : m.profile.part2Consent,
+        tcpaSmsConsent: key === 'tcpa' ? !granted : m.profile.tcpaSmsConsent } } : m)
+    }
+  }
+
   const rows: [string, string][] = [
     ['Full name', `${p.firstName} ${p.lastName}`.trim()],
     ['Preferred name', p.preferredName || '—'],
@@ -48,12 +70,6 @@ export function PatientProfile() {
     ['Insurance', p.selfPay ? 'Self-pay' : (p.insuranceProvider || '—')],
     ['Member ID', p.insuranceMemberId || '—'],
   ]
-  const consents: [string, boolean][] = [
-    ['HIPAA consent', p.hipaaConsent],
-    ['42 CFR Part 2 (SUD) consent', p.part2Consent],
-    ['Text message (TCPA) consent', p.tcpaSmsConsent],
-  ]
-
   return (
     <PatientShell
       title="Your profile"
@@ -73,11 +89,15 @@ export function PatientProfile() {
         </Panel>
 
         <Panel title={<span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-teal-700" /> Consents</span>}>
+          <p className="mb-3 text-xs text-slate-500">You control these. Unchecking a consent revokes it — your care team can no longer view data that depends on it (e.g. 42 CFR Part 2 substance‑use information).</p>
           <ul className="grid gap-2">
-            {consents.map(([label, granted]) => (
-              <li key={label} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm text-slate-700">
-                {label}
-                <StatusBadge tone={granted ? 'success' : 'neutral'}>{granted ? 'Granted' : 'Not on file'}</StatusBadge>
+            {consentItems.map((c) => (
+              <li key={c.key} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 text-sm text-slate-700">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={c.granted} onChange={(e) => toggleConsent(c.key, e.target.checked)} className="accent-teal-700" />
+                  {c.label}
+                </label>
+                <StatusBadge tone={c.granted ? 'success' : 'warning'}>{c.granted ? 'Granted' : 'Revoked'}</StatusBadge>
               </li>
             ))}
           </ul>

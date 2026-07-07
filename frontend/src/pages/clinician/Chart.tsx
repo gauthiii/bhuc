@@ -14,7 +14,15 @@ export function ClinicianChart() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [canSeePart2, setCanSeePart2] = useState(false)
+  const [consentDenied, setConsentDenied] = useState(false)
   const [notes, setNotes] = useState<NotesSummary | null>(null)
+
+  // Reveal is gated by BOTH clinician action AND the patient's Part 2 consent.
+  function onRevealToggle() {
+    if (canSeePart2) { setCanSeePart2(false); return }
+    if (!data?.part2Consent) { setConsentDenied(true); return }
+    setCanSeePart2(true)
+  }
 
   async function load(reveal: boolean) {
     setLoading(true)
@@ -69,7 +77,7 @@ export function ClinicianChart() {
             title={<span className="flex items-center gap-2">{data.name.masked ? 'Protected patient' : data.name.value} <RiskBadge band="moderate" /></span>}
             subtitle={data.number}
             actions={
-              <Button variant={canSeePart2 ? 'secondary' : 'primary'} onClick={() => setCanSeePart2((v) => !v)}>
+              <Button variant={canSeePart2 ? 'secondary' : 'primary'} onClick={onRevealToggle}>
                 {canSeePart2 ? <><Unlock className="h-4 w-4" /> Hide Part 2</> : <><Lock className="h-4 w-4" /> Reveal (role + consent)</>}
               </Button>
             }
@@ -129,6 +137,23 @@ export function ClinicianChart() {
           </Panel>
         </div>
       ) : null}
+
+      {consentDenied && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4" role="alertdialog" aria-modal="true" aria-label="Consent required">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-2 text-amber-700">
+              <Lock className="h-5 w-5" />
+              <h2 className="text-lg font-semibold text-slate-900">Consent required</h2>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">
+              The patient has not given consent to view this data. 42 CFR Part 2 (substance‑use) information cannot be revealed without the patient's active consent on file.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <Button onClick={() => setConsentDenied(false)}>Understood</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </ClinicianShell>
   )
 }

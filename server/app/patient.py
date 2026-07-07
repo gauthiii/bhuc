@@ -113,6 +113,92 @@ def patient_register(req: RegisterReq) -> dict:
     return {"registered": True, "profile": _profile(rec)}
 
 
+def _raw(v):
+    return v["value"] if isinstance(v, dict) else v
+
+
+CONSENT_FIELD = {"hipaa": "u_hipaa_consent", "part2": "u_part2_consent", "tcpa": "u_tcpa_sms_consent"}
+
+
+class ConsentToggle(BaseModel):
+    consent: str          # 'hipaa' | 'part2' | 'tcpa'
+    granted: bool
+    email: Optional[str] = None
+    patientId: Optional[str] = None
+
+
+@router.patch("/patient/consent")
+def toggle_consent(req: ConsentToggle) -> dict:
+    """Patient revokes/grants a consent (updates the u_bhuc_patient snapshot flag)."""
+    field = CONSENT_FIELD.get(req.consent)
+    if not field:
+        raise HTTPException(status_code=400, detail=f"Unknown consent '{req.consent}'")
+    table = get_table_client()
+    rec = _find_by_email(req.email) if req.email else None
+    sys_id = req.patientId or (rec["sys_id"] if rec else "")
+    if not sys_id:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    updated = table.update(PATIENT, sys_id, {field: "true" if req.granted else "false"})
+    return {"registered": True, "profile": _profile(updated)}
+
+
+@router.get("/patient/{patient_id}/chart")
+def patient_chart(patient_id: str, reveal: int = Query(0)) -> dict:
+    """Clinician chart for THIS patient. The 42 CFR Part 2 field is masked unless the
+    clinician reveals AND the patient has consented (u_part2_consent)."""
+    table = get_table_client()
+    rec = table.get(PATIENT, patient_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    part2_consent = _b(rec.get("u_part2_consent"))
+    can_see_part2 = bool(reveal) and part2_consent
+
+    name = f"{rec.get('u_first_name', '')} {rec.get('u_last_name', '')}".strip() or "Unknown patient"
+    insurance = "Self-pay" if _b(rec.get("u_self_pay")) else (rec.get("u_insurance_provider") or "—")
+
+    # latest screening → AI summary + risk
+    scr = table.list(SCREENING, f"u_patient={patient_id}^u_state=scored^ORDERBYDESCsys_updated_on",
+                     fields="u_number,u_instrument,u_risk_band,u_rationale", limit=1)
+    if scr:
+        s = scr[0]
+        band = (s.get("u_risk_band") or "unknown")
+        summary = f"Latest screening ({(s.get('u_instrument') or '').upper()}): risk band {band}. {s.get('u_rationale') or ''}"
+        citations = [{"label": "Screening result", "source": s.get("u_number") or ""}]
+    else:
+        summary = "No scored screening on file for this patient yet."
+        citations = []
+
+    # history from screenings + notes
+    hist = []
+    for s in table.list(SCREENING, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
+                        fields="u_instrument,u_state,sys_created_on", limit=5):
+        hist.append({"date": s.get("sys_created_on") or "", "part2": False,
+                     "note": f"{(s.get('u_instrument') or '').upper()} screening — {s.get('u_state')}"})
+    for c in table.list("u_bhuc_care_plan", f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
+                       fields="u_number,u_signed,sys_created_on", limit=3):
+        signed = str(c.get("u_signed")).lower() in ("true", "1")
+        hist.append({"date": c.get("sys_created_on") or "", "part2": False,
+                     "note": f"Clinical note {c.get('u_number')} — {'signed' if signed else 'draft'}"})
+
+    part2_field = ({"value": "Prior outpatient SUD program, 2024 (sample Part 2 data)", "masked": False}
+                   if can_see_part2 else {"value": None, "masked": True})
+
+    return {
+        "patientId": patient_id,
+        "number": rec.get("u_number") or "",
+        "part2Consent": part2_consent,
+        "name": {"value": name, "masked": False},
+        "dateOfBirth": {"value": rec.get("u_date_of_birth") or "—", "masked": False},
+        "demographics": [
+            {"label": "Insurance", "value": {"value": insurance, "masked": False}},
+            {"label": "Phone", "value": {"value": rec.get("u_phone") or "—", "masked": False}},
+            {"label": "SUD treatment history (42 CFR Part 2)", "value": part2_field},
+        ],
+        "aiSummary": {"text": summary, "citations": citations},
+        "history": hist,
+    }
+
+
 _STAGE = {  # patient-facing stage — NO scores
     ("submitted", None): ("submitted", "Submitted"),
     ("scored", "pending"): ("under_review", "Under clinician review"),
