@@ -4,7 +4,7 @@ import {
   logoutAws, registerAws, completeNewPasswordAws, type AwsAuthTokens, type AwsLoginResponse,
 } from './awsAuth'
 
-export type PortalRole = 'patient' | 'clinician'
+export type PortalRole = 'patient' | 'clinician' | 'governance'
 
 export interface AuthUser {
   username: string
@@ -20,7 +20,7 @@ let accessTokenMemo: string | null = null
 
 export function getAccessToken(): string | null {
   if (accessTokenMemo) return accessTokenMemo
-  for (const role of ['patient', 'clinician'] as PortalRole[]) {
+  for (const role of ['patient', 'clinician', 'governance'] as PortalRole[]) {
     const raw = localStorage.getItem(KEY(role))
     if (raw) { try { accessTokenMemo = (JSON.parse(raw) as StoredAuth).accessToken; return accessTokenMemo } catch { /* */ } }
   }

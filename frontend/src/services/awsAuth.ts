@@ -30,7 +30,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return (await res.json()) as T
 }
 
-export const registerAws = (name: string, email: string, password: string, role: 'patient' | 'clinician') =>
+export const registerAws = (name: string, email: string, password: string, role: 'patient' | 'clinician' | 'governance') =>
   postJson<AwsRegisterResponse>('/aws/register', { name, email, password, role })
 export const loginAws = (username: string, password: string) =>
   postJson<AwsLoginResponse>('/aws/login', { username, password })

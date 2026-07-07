@@ -25,6 +25,7 @@ async function j<T>(path: string, init?: RequestInit): Promise<T> {
 // Live implementation (used only when USE_MOCK=false). Kept thin; extend as backend routes land.
 const live = {
   frontDoorChat: (text: string) => j('/frontdoor/chat', { method: 'POST', body: JSON.stringify({ text }) }),
+  agentChat: (key: string, text: string) => j(`/agent/${key}/chat`, { method: 'POST', body: JSON.stringify({ text }) }),
   getProfile: () => j('/patient/me'),
   getMe: (email: string) => j(`/patient/me?email=${encodeURIComponent(email)}`),
   registerPatient: (data: unknown) => j('/patient/register', { method: 'POST', body: JSON.stringify(data) }),
@@ -86,6 +87,7 @@ const liveAgent2and3 = {
   getMe: live.getMe,
   registerPatient: live.registerPatient,
   getScreeningStatus: live.getScreeningStatus,
+  agentChat: live.agentChat,
 }
 
 const overrides = USE_MOCK

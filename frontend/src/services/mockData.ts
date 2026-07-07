@@ -74,6 +74,11 @@ export const mock = {
       { screeningId: 'BHUC_SCREENING_001', instrument: 'GAD-7', stage: 'submitted', stageLabel: 'Submitted', submittedAt: iso(0) },
     ]
   },
+  async agentChat(key: string, text: string): Promise<{ agent: string; reply: string; state?: string }> {
+    await wait(600)
+    const names: Record<string, string> = { frontdoor: 'BHUC Front-Door Security Agent', risk: 'BHUC Risk Identification Agent', clinicaldoc: 'BHUC Clinical Documentation Agent' }
+    return { agent: names[key] ?? key, reply: `**(demo)** Received: "${text}". In live mode this is relayed to the agent over A2A.`, state: 'completed' }
+  },
   async submitScreeningBatch(_patient: string, screenings: { instrument: Instrument }[]): Promise<BatchScreeningResult> {
     await wait(1200)
     return { ok: true, count: screenings.length, anyEscalate: false, results: screenings.map((s) => ({ instrument: s.instrument, screeningId: 'BHUC_SCREENING_0XX', escalate: false })) }

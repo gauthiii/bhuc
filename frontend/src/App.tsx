@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { usePatientAuth, useClinicianAuth } from './contexts/AuthContext'
+import { usePatientAuth, useClinicianAuth, useGovernanceAuth } from './contexts/AuthContext'
 
 import { RolePicker } from './pages/RolePicker'
 import { PatientSignIn } from './pages/patient/SignIn'
@@ -21,6 +21,8 @@ import { ClinicianDocumentation } from './pages/clinician/Documentation'
 import { ClinicianPriorAuth } from './pages/clinician/PriorAuth'
 import { ClinicianDisposition } from './pages/clinician/Disposition'
 import { ClinicianScheduling } from './pages/clinician/Scheduling'
+import { GovernanceSignIn } from './pages/governance/SignIn'
+import { GovernanceAgentsInventory } from './pages/governance/AgentsInventory'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -29,6 +31,10 @@ function PatientGuard({ children }: { children: ReactNode }) {
 function ClinicianGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useClinicianAuth()
   return isAuthenticated ? <>{children}</> : <Navigate to="/clinician/sign-in" replace />
+}
+function GovernanceGuard({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useGovernanceAuth()
+  return isAuthenticated ? <>{children}</> : <Navigate to="/governance/sign-in" replace />
 }
 
 export default function App() {
@@ -57,6 +63,11 @@ export default function App() {
       <Route path="/clinician/prior-auth/:patientId" element={<ClinicianGuard><ClinicianPriorAuth /></ClinicianGuard>} />
       <Route path="/clinician/disposition/:id" element={<ClinicianGuard><ClinicianDisposition /></ClinicianGuard>} />
       <Route path="/clinician/scheduling" element={<ClinicianGuard><ClinicianScheduling /></ClinicianGuard>} />
+
+      {/* Governance portal */}
+      <Route path="/governance/sign-in" element={<GovernanceSignIn />} />
+      <Route path="/governance" element={<Navigate to="/governance/agents" replace />} />
+      <Route path="/governance/agents" element={<GovernanceGuard><GovernanceAgentsInventory /></GovernanceGuard>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

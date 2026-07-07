@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { UserRound, Stethoscope } from 'lucide-react'
+import { UserRound, Stethoscope, ShieldCheck } from 'lucide-react'
 import { CrisisBanner } from '../components/CrisisBanner'
 
 // Dev/demo entry: choose which portal to view. In production each portal is a separate
@@ -19,7 +19,7 @@ export function RolePicker() {
           <h1 className="font-display text-3xl font-semibold text-slate-900">Behavioral Health Urgent Care</h1>
           <p className="mt-2 text-slate-500">Choose a portal to continue.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <Link to="/patient/sign-in" className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-teal-400 hover:shadow">
             <UserRound className="h-8 w-8 text-teal-700" />
             <h2 className="mt-3 text-lg font-semibold text-slate-800">Patient Portal</h2>
@@ -29,6 +29,11 @@ export function RolePicker() {
             <Stethoscope className="h-8 w-8 text-teal-700" />
             <h2 className="mt-3 text-lg font-semibold text-slate-800">Clinician Portal</h2>
             <p className="mt-1 text-sm text-slate-500">Risk-stratified worklist, chart review, documentation, prior-auth, scheduling.</p>
+          </Link>
+          <Link to="/governance/sign-in" className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-teal-400 hover:shadow">
+            <ShieldCheck className="h-8 w-8 text-teal-700" />
+            <h2 className="mt-3 text-lg font-semibold text-slate-800">Governance Portal</h2>
+            <p className="mt-1 text-sm text-slate-500">Review the BHUC data-model tables and test the AI agents over A2A.</p>
           </Link>
         </div>
       </div>

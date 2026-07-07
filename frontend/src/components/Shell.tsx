@@ -8,10 +8,11 @@ export interface NavItem { to: string; label: string; icon?: ReactNode }
 
 // Portal shell: sticky top bar + persistent 988 banner + optional side nav.
 // Used by both the patient and clinician portals (careatlas PatientShell pattern).
-export function PortalShell({ portal, user, nav, onSignOut, children }: {
-  portal: 'Patient' | 'Clinician'
+export function PortalShell({ portal, user, nav, sidebarExtra, onSignOut, children }: {
+  portal: 'Patient' | 'Clinician' | 'Governance'
   user?: string
   nav?: NavItem[]
+  sidebarExtra?: ReactNode
   onSignOut?: () => void
   children: ReactNode
 }) {
@@ -50,18 +51,23 @@ export function PortalShell({ portal, user, nav, onSignOut, children }: {
       </header>
 
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-6 sm:px-6">
-        {nav && (
-          <nav className="hidden w-52 shrink-0 lg:block">
-            <ul className="sticky top-28 space-y-1">
-              {nav.map((n) => (
-                <li key={n.to}>
-                  <NavLink to={n.to} end
-                    className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${isActive ? 'bg-teal-50 font-semibold text-teal-800' : 'text-slate-600 hover:bg-slate-100'}`}>
-                    {n.icon}{n.label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+        {(nav || sidebarExtra) && (
+          <nav className="hidden w-56 shrink-0 lg:block">
+            <div className="sticky top-28 space-y-4">
+              {nav && (
+                <ul className="space-y-1">
+                  {nav.map((n) => (
+                    <li key={n.to}>
+                      <NavLink to={n.to} end
+                        className={({ isActive }) => `flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${isActive ? 'bg-teal-50 font-semibold text-teal-800' : 'text-slate-600 hover:bg-slate-100'}`}>
+                        {n.icon}{n.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {sidebarExtra}
+            </div>
           </nav>
         )}
         <main className="min-w-0 flex-1">{children}</main>

@@ -1,4 +1,4 @@
-import { Phone, MessageSquare, UserRound, Stethoscope } from 'lucide-react'
+import { Phone, MessageSquare, UserRound, Stethoscope, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 // Persistent 988 crisis banner — plan §3.1: appears on EVERY screen, works even
@@ -26,6 +26,9 @@ export function CrisisBanner() {
         </Link>
         <Link to="/clinician/worklist" className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-white">
           <Stethoscope className="h-3.5 w-3.5" /> Clinician
+        </Link>
+        <Link to="/governance/agents" className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-white">
+          <ShieldCheck className="h-3.5 w-3.5" /> Governance
         </Link>
       </nav>
     </div>

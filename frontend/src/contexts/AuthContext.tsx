@@ -71,8 +71,11 @@ function makeAuth(role: PortalRole) {
 
 const patient = makeAuth('patient')
 const clinician = makeAuth('clinician')
+const governance = makeAuth('governance')
 
 export const PatientAuthProvider = patient.Provider
 export const usePatientAuth = patient.useAuth
 export const ClinicianAuthProvider = clinician.Provider
 export const useClinicianAuth = clinician.useAuth
+export const GovernanceAuthProvider = governance.Provider
+export const useGovernanceAuth = governance.useAuth
