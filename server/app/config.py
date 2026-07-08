@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # Agent 4: BHUC Consent & Data Protection Agent — labels 42 CFR Part 2 / SUD
     # content on the note + consent records. [Verified over A2A 2026-07-08]
     snow_agent_consent: str = "b2eefdaf3b79cb105551369693e45a56"
+    # Agent 5: BHUC Prior-Auth Compliance Agent — cited coverage answers + drafts the
+    # prior-auth packet into u_bhuc_prior_auth (never submits). [Verified over A2A 2026-07-08]
+    snow_agent_priorauth: str = "4fd442e33bfd0f1076f13b64c3e45ad8"
 
     request_timeout: float = 20.0
 

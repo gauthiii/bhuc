@@ -31,6 +31,18 @@ class A2AError(RuntimeError):
     """Raised when the A2A token fetch or agent invocation fails."""
 
 
+def _format_json_reply(obj: dict) -> str:
+    """Render a structured tool result as human-readable reply text (e.g. Agent 4's
+    ``{"sensitivity": "part2", ...}``) for agents whose answer IS a JSON object."""
+    if "sensitivity" in obj:
+        terms = obj.get("matched_terms")
+        out = f"**Sensitivity:** `{obj.get('sensitivity')}`"
+        if terms and terms not in ("[]", "\"[]\""):
+            out += f" · matched: {terms}"
+        return out
+    return "```json\n" + json.dumps(obj, indent=2) + "\n```"
+
+
 class ServiceNowA2AClient:
     """Thin, thread-safe broker to ServiceNow AI agents over A2A."""
 
@@ -181,25 +193,30 @@ class ServiceNowA2AClient:
         # natural-language remains, leave reply empty so the router applies its
         # safe 988 fallback.
         control = {"completed", "task has been completed"}
-        candidates: list[str] = []
+        nl_candidates: list[str] = []      # natural-language answers
+        json_candidates: list[str] = []    # structured tool results (Agent 4 label, etc.)
         crisis = False
         matched = "none"
         for t in texts:
             if t.lower() in control:
                 continue
             if t.startswith("{") and t.endswith("}"):
-                # Internal JSON part — the crisis classifier is ``{"crisis":bool,
-                # "matched":str}``. Never surface it as reply text, but read its flag.
                 try:
                     obj = json.loads(t)
                 except json.JSONDecodeError:
                     continue
                 if isinstance(obj, dict) and "crisis" in obj:
+                    # Front-Door crisis classifier — internal only; read the flag, never surface.
                     crisis = bool(obj.get("crisis"))
                     matched = obj.get("matched") or matched
+                    continue
+                if isinstance(obj, dict):
+                    json_candidates.append(_format_json_reply(obj))
                 continue
-            candidates.append(t)
-        reply = candidates[-1] if candidates else ""
+            nl_candidates.append(t)
+        # Prefer the last natural-language answer; fall back to a structured tool result
+        # only when there is no prose (e.g. Agent 4 returns just a sensitivity JSON).
+        reply = nl_candidates[-1] if nl_candidates else (json_candidates[-1] if json_candidates else "")
 
         context_id = status_msg.get("contextId") or result.get("contextId")
         task_id = status_msg.get("taskId") or result.get("id")

@@ -6,7 +6,7 @@ import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, StatusBadge, Spinner, ErrorState, Button, Textarea, EmptyState } from '../../components/ui'
 import { AgentRunProgress } from '../../components/AgentRunProgress'
 import { api } from '../../services/api'
-import type { DocumentationDraft } from '../../lib/types'
+import type { DocumentationDraft, Part2CheckResult } from '../../lib/types'
 
 type Phase = 'loading' | 'drafting' | 'ready' | 'empty' | 'error'
 
@@ -26,6 +26,7 @@ export function ClinicianDocumentation() {
   const [attested, setAttested] = useState(false)
   const [signing, setSigning] = useState(false)
   const [signed, setSigned] = useState(false)
+  const [part2Check, setPart2Check] = useState<'running' | Part2CheckResult | null>(null)
 
   function apply(d: DocumentationDraft | null) {
     if (!d) { setPhase('empty'); return }
@@ -72,10 +73,17 @@ export function ClinicianDocumentation() {
       const unresolved = lines.filter((l) => !l.verified).map((l) => l.id)
       await api.signNote(data.id, unresolved)
       setSigned(true)
+      // UC3 — the Consent & Data Protection Agent (Agent 4) scans the signed note for
+      // 42 CFR Part 2 / SUD content and labels it; surface the run + result in a modal.
+      setPart2Check('running')
+      try { setPart2Check(await api.checkNotePart2(data.id)) }
+      catch { setPart2Check({ note: data.id, sensitivity: 'unknown', containsPart2: false }) }
     }
     catch { setPhase('error') }
     finally { setSigning(false) }
   }
+
+  const p2 = part2Check && part2Check !== 'running' ? part2Check : null
 
   return (
     <ClinicianShell
@@ -193,6 +201,34 @@ export function ClinicianDocumentation() {
                 <Link to={`/clinician/documentation/${id}?new=1`}><Button variant="ghost" className="w-full text-xs"><PenLine className="h-3.5 w-3.5" /> Start another note</Button></Link>
               </div>
             </Panel>
+          </div>
+        </div>
+      )}
+
+      {part2Check && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-label="Consent & Data Protection Agent">
+          <div className="w-full max-w-lg">
+            <AgentRunProgress
+              runningTitle="Consent & Data Protection Agent"
+              doneTitle={p2?.containsPart2 ? '42 CFR Part 2 / SUD content detected' : 'No Part 2 content found'}
+              statusTexts={[
+                'Scanning the signed note for 42 CFR Part 2 / SUD content…',
+                'Matching against protected substance-use terms…',
+                'Setting the note sensitivity label…',
+                'Applying role-based access restriction…',
+              ]}
+              cardSteps={['Scanning note', 'Matching Part 2 terms', 'Labeling record']}
+              cards={[{ key: 'consent', name: 'Consent & Data Protection Agent' }]}
+              done={!!p2}
+              doneMessage={p2?.containsPart2
+                ? 'This note contains 42 CFR Part 2 / SUD content — it is now labeled and access-gated (masked from unauthorized roles on the chart).'
+                : 'No 42 CFR Part 2 / SUD content found — the note is labeled standard sensitivity.'}
+            />
+            {p2 && (
+              <div className="mt-3 flex justify-end">
+                <Button onClick={() => setPart2Check(null)}>Done</Button>
+              </div>
+            )}
           </div>
         </div>
       )}

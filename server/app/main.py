@@ -21,6 +21,7 @@ from .patient import router as patient_router
 from .agents import router as agents_router
 from .governance import router as governance_router
 from .hallucination import router as hallucination_router
+from .priorauth import router as priorauth_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(agents_router)
     app.include_router(governance_router)
     app.include_router(hallucination_router)
+    app.include_router(priorauth_router)
     return app
 
 

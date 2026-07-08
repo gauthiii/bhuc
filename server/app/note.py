@@ -12,7 +12,6 @@ Endpoints (mounted under /api/x_bhuc):
 
 import json
 import logging
-import threading
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -270,11 +269,34 @@ def sign_note(req: NoteSign) -> dict:
         "u_state": "finalized",
         "u_signed_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
     })
+    # The C5 sign flow calls POST /note/part2-check right after this so the UI can show
+    # the Consent & Data Protection Agent (Agent 4) running and its result.
+    return {"ok": True}
 
-    # UC3 — hand the finalized note to the Consent & Data Protection Agent (Agent 4) to
-    # label its Part 2 / SUD sensitivity. Fire-and-forget so signing never waits on it.
+
+class Part2CheckReq(BaseModel):
+    id: str   # note number or sys_id
+
+
+@router.post("/note/part2-check")
+def part2_check(req: Part2CheckReq) -> dict:
+    """UC3 — run the Consent & Data Protection Agent (Agent 4) on a note and report
+    whether it flagged 42 CFR Part 2 / SUD content. Called by the C5 sign flow so the UI
+    can animate the check and show the outcome. Labels only — never gates the sign."""
+    table = get_table_client()
+    sys_id = req.id
+    if len(sys_id) != 32:
+        found = table.list(TABLE, f"u_number={req.id}", fields="sys_id", limit=1)
+        if not found:
+            raise HTTPException(status_code=404, detail="Note not found")
+        sys_id = found[0]["sys_id"]
+    rec = table.get(TABLE, sys_id)
     note_text = _raw(rec.get("u_draft_note")) or ""
     patient_sys = _raw(rec.get("u_patient")) or ""
-    threading.Thread(target=_label_note_part2, args=(sys_id, patient_sys, note_text),
-                     daemon=True).start()
-    return {"ok": True}
+    _label_note_part2(sys_id, patient_sys, note_text)   # invokes Agent 4 (blocking, best-effort)
+    after = table.get(TABLE, sys_id)
+    return {
+        "note": after.get("u_number") or sys_id,
+        "sensitivity": after.get("u_sensitivity") or "standard",
+        "containsPart2": str(after.get("u_contains_part2")).lower() in ("true", "1"),
+    }

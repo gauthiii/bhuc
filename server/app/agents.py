@@ -23,6 +23,8 @@ def _agent_map() -> dict:
         "frontdoor": ("BHUC Front-Door Security Agent", s.snow_agent_frontdoor),
         "risk": ("BHUC Risk Identification Agent", s.snow_agent_risk),
         "clinicaldoc": ("BHUC Clinical Documentation Agent", s.snow_agent_clinicaldoc),
+        "consent": ("BHUC Consent & Data Protection Agent", s.snow_agent_consent),
+        "priorauth": ("BHUC Prior-Auth Compliance Agent", s.snow_agent_priorauth),
     }
 
 

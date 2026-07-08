@@ -60,7 +60,9 @@ const live = {
   checkHallucination: (agentKey: string, output: string) => j('/hallucination/check', { method: 'POST', body: JSON.stringify({ agentKey, output }) }),
   getPriorAuth: (patientId: string) => j(`/priorauth?patient=${patientId}`),
   askCoverage: (question: string) => j('/priorauth', { method: 'POST', body: JSON.stringify({ question }) }),
+  draftPriorAuth: (req: import('../lib/types').PriorAuthDraftReq) => j('/priorauth/draft', { method: 'POST', body: JSON.stringify(req) }),
   submitPriorAuth: (id: string) => j('/priorauth/submit', { method: 'POST', body: JSON.stringify({ id }) }),
+  checkNotePart2: (id: string) => j('/note/part2-check', { method: 'POST', body: JSON.stringify({ id }) }),
   getScheduling: (patientId: string) => j(`/scheduling?patient=${patientId}`),
   confirmScheduling: (id: string) => j('/scheduling/confirm', { method: 'POST', body: JSON.stringify({ id }) }),
   getDisposition: (id: string) => j(`/disposition/${id}`),
@@ -95,6 +97,11 @@ const liveAgent2and3 = {
   agentChat: live.agentChat,
   getChart: live.getChart,
   setConsent: live.setConsent,
+  checkNotePart2: live.checkNotePart2,
+  getPriorAuth: live.getPriorAuth,
+  askCoverage: live.askCoverage,
+  draftPriorAuth: live.draftPriorAuth,
+  submitPriorAuth: live.submitPriorAuth,
 }
 
 const overrides = USE_MOCK

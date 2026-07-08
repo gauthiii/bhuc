@@ -77,6 +77,24 @@ Per BHUC documentation policy, an adult-onset ADHD diagnosis (F90.9) can be auto
       },
     ],
   },
+  {
+    key: 'consent',
+    name: 'BHUC Consent & Data Protection Agent',
+    subtitle: '',
+    examples: [
+      { label: 'Classify a note', prompt: 'Classify this clinical note for 42 CFR Part 2 / SUD sensitivity and return the label with matched terms. Do not write to any record: "Follow-up for opioid use disorder on buprenorphine/naloxone; cocaine relapse this week; F11.20."' },
+      { label: 'Non-SUD note', prompt: 'Classify this clinical note for 42 CFR Part 2 / SUD sensitivity and return the label. Do not write to any record: "Follow-up for generalized anxiety; sleep improved on sertraline; no substance use concerns."' },
+    ],
+  },
+  {
+    key: 'priorauth',
+    name: 'BHUC Prior-Auth Compliance Agent',
+    subtitle: '',
+    examples: [
+      { label: 'IOP coverage', prompt: 'Using ONLY the payer policy library, does the payer require prior authorization for Intensive Outpatient (IOP) behavioral health treatment, and what are the medical-necessity criteria? Cite the policy id and section. Do not draft or write any record.' },
+      { label: 'MAT coverage', prompt: 'Using ONLY the payer policy library, is prior authorization required for MAT (buprenorphine/naloxone) for opioid use disorder? Cite the policy id and section. Do not draft or write any record.' },
+    ],
+  },
 ]
 
 export function GovernanceAgentsInventory() {

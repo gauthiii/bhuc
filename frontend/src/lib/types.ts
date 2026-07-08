@@ -238,7 +238,9 @@ export interface DocumentationDraft {
 }
 
 export interface CoverageAnswer { answer: string; citation: { policy: string; section: string } }
-export interface PriorAuthPacket { id: string; service: string; status: 'draft' | 'submitted'; part2Gated: boolean; fields: { label: string; value: string; part2: boolean }[] }
+export interface PriorAuthPacket { id: string; sysId?: string; service: string; status: 'draft' | 'submitted'; part2Gated: boolean; draftedByAgent?: boolean; fields: { label: string; value: string; part2: boolean }[] }
+export interface PriorAuthDraftReq { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string }
+export interface Part2CheckResult { note: string; sensitivity: string; containsPart2: boolean }
 
 export interface SchedulingRecommendation {
   patientName: string

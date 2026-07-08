@@ -293,10 +293,10 @@ export const mock = {
       agent3: { label: 'BHUC Clinical Documentation Agent', total: 6, withUnverified: 5, unverifiedRatePct: 83, avgUnverifiedLines: 2, signed: 1, unsigned: 5 },
     }
   },
-  async getPriorAuth(patientId: string): Promise<PriorAuthPacket> {
+  async getPriorAuth(_patientId: string): Promise<PriorAuthPacket | null> {
     await wait()
     return {
-      id: 'pa-01', service: 'Intensive outpatient program (IOP)', status: 'draft', part2Gated: true,
+      id: 'pa-01', service: 'Intensive outpatient program (IOP)', status: 'draft', part2Gated: true, draftedByAgent: true,
       fields: [
         { label: 'Diagnosis', value: 'F32.1 Major depressive disorder', part2: false },
         { label: 'Requested service', value: 'IOP, 3x/week, 4 weeks', part2: false },
@@ -304,11 +304,28 @@ export const mock = {
       ],
     }
   },
+  async draftPriorAuth(req: { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string }): Promise<PriorAuthPacket> {
+    await wait(1600)
+    return {
+      id: 'pa-01', service: req.service || 'Intensive Outpatient (IOP)', status: 'draft', part2Gated: false, draftedByAgent: true,
+      fields: [
+        { label: 'Diagnosis', value: req.diagnosis || 'F33.1', part2: false },
+        { label: 'Requested units', value: req.requestedUnits || '3x/week for 4 weeks', part2: false },
+        { label: 'Payer', value: req.payer || 'Blue Shield', part2: false },
+        { label: 'Coverage determination', value: 'Prior authorization is required; medical-necessity criteria met.', part2: false },
+        { label: 'Citation', value: 'BH-204 · Levels of Care', part2: false },
+      ],
+    }
+  },
   async askCoverage(question: string): Promise<CoverageAnswer> {
     await wait(500)
     return { answer: 'IOP is covered under this plan when a psychiatric diagnostic evaluation and a documented step-up from outpatient are on file. Prior authorization is required.', citation: { policy: 'Blue Shield Behavioral Health Policy BH-204', section: '§3.2 Levels of Care' } }
   },
-  async submitPriorAuth() { await wait(); return { ok: true, submittedAt: iso(0) } },
+  async submitPriorAuth(_id?: string) { await wait(); return { ok: true, status: 'submitted' } },
+  async checkNotePart2(id: string): Promise<{ note: string; sensitivity: string; containsPart2: boolean }> {
+    await wait(1600)
+    return { note: id, sensitivity: 'part2', containsPart2: true }
+  },
   async getScheduling(patientId: string): Promise<SchedulingRecommendation> {
     await wait()
     return {
