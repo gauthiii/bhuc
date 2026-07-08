@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { ExternalLink, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { ExternalLink, ShieldCheck, AlertTriangle, Info, X } from 'lucide-react'
 import { GovernanceShell } from '../../components/portals'
-import { Panel, StatusBadge, Spinner, ErrorState } from '../../components/ui'
+import { Panel, StatusBadge, Spinner, ErrorState, Button } from '../../components/ui'
 import { api } from '../../services/api'
 import type { OutputIntegritySummary } from '../../lib/types'
 
@@ -29,9 +29,86 @@ function AictLink({ href, children }: { href: string; children: React.ReactNode 
   )
 }
 
+// One documented metric: the tile label, its source field(s), and the exact formula.
+function Metric({ name, source, formula }: { name: string; source: string; formula: string }) {
+  return (
+    <div className="rounded-lg border border-slate-100 p-3">
+      <p className="text-sm font-semibold text-slate-800">{name}</p>
+      <p className="mt-1 text-xs text-slate-500"><span className="font-medium text-slate-600">Source:</span> {source}</p>
+      <p className="mt-0.5 text-xs text-slate-500"><span className="font-medium text-slate-600">Formula:</span> {formula}</p>
+    </div>
+  )
+}
+
+function DerivationModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:p-8" onClick={onClose}>
+      <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between border-b border-slate-100 p-5">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
+              <Info className="h-5 w-5 text-teal-700" /> How these metrics are derived
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              All figures are computed live by the backend from your ServiceNow records — no fixed
+              windows, aggregated over up to 1,000 rows per table.
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto p-5">
+          <section>
+            <h3 className="text-sm font-semibold text-slate-800">BHUC Risk Identification Agent (Agent 2)</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Query: <code className="rounded bg-slate-100 px-1">u_bhuc_screening</code> rows where{' '}
+              <code className="rounded bg-slate-100 px-1">u_scored_by_agent = true</code>, reading{' '}
+              <code className="rounded bg-slate-100 px-1">u_confidence</code> and{' '}
+              <code className="rounded bg-slate-100 px-1">u_clinician_action</code>.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Metric name="Scored" source="agent-scored screening rows" formula="row count" />
+              <Metric name="Avg confidence" source="u_confidence" formula="mean across scored rows" />
+              <Metric name="Low confidence" source="u_confidence" formula="count where confidence < 70" />
+              <Metric name="Reviewed / Pending" source="u_clinician_action" formula="reviewed = confirmed + adjusted + rejected; pending = the rest" />
+              <Metric name="Adjusted / Rejected" source="u_clinician_action" formula="count of each value (clinician overrode the AI)" />
+              <Metric name="Disagree rate" source="u_clinician_action" formula="(adjusted + rejected) ÷ reviewed" />
+            </div>
+          </section>
+
+          <section className="mt-6">
+            <h3 className="text-sm font-semibold text-slate-800">BHUC Clinical Documentation Agent (Agent 3)</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Query: <em>all</em> <code className="rounded bg-slate-100 px-1">u_bhuc_care_plan</code> rows,
+              reading <code className="rounded bg-slate-100 px-1">u_unverified_lines</code> (a JSON array of
+              AI-flagged lines) and <code className="rounded bg-slate-100 px-1">u_signed</code>.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Metric name="Notes drafted" source="care-plan rows" formula="row count" />
+              <Metric name="With unverified" source="u_unverified_lines" formula="count of notes whose flagged-line array is non-empty" />
+              <Metric name="Unverified rate" source="u_unverified_lines" formula="with-unverified ÷ total notes" />
+              <Metric name="Avg flagged / note" source="u_unverified_lines" formula="total flagged lines ÷ notes-with-unverified (not ÷ all notes)" />
+              <Metric name="Signed" source="u_signed" formula="count where signed is true (human attested)" />
+              <Metric name="Unsigned" source="u_signed" formula="total − signed" />
+            </div>
+          </section>
+
+          <p className="mt-6 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
+            These are <strong>detective</strong> controls — they measure and surface drift. Harm prevention
+            comes from the human-in-the-loop gates, enforced server-side: a note cannot be signed while any
+            line is unverified, and a risk cannot be confirmed before the agent has scored it. Counts are
+            lifetime aggregates (no date window) capped at 1,000 rows per table. See output_integrity.md §8.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function GovernanceOutputIntegrity() {
   const [data, setData] = useState<OutputIntegritySummary | null>(null)
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [showInfo, setShowInfo] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -51,10 +128,15 @@ export function GovernanceOutputIntegrity() {
 
       {phase === 'ready' && data && (
         <div className="grid gap-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <AictLink href={AICT_HOME}><ShieldCheck className="h-3.5 w-3.5" /> Open AI Control Tower</AictLink>
             <AictLink href={AIRC_RISK}>Open AI Risk register (AIRC)</AictLink>
+            <Button variant="secondary" className="ml-auto px-3 py-1.5 text-sm" onClick={() => setShowInfo(true)}>
+              <Info className="h-4 w-4" /> How are these derived?
+            </Button>
           </div>
+
+          {showInfo && <DerivationModal onClose={() => setShowInfo(false)} />}
 
           {/* Agent 2 — Risk Identification */}
           <Panel
