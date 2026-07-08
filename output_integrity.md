@@ -54,15 +54,31 @@ The platform guardrails **monitor and score** every agent LLM call (evidence on 
 
 *(This is `plan.md` GOV‑Step 2.)*
 
-### A2 — Register Agents 2 & 3 as the UC2 governed pair
-- The two agents **already auto‑appear** in the AICT **AI Asset Inventory** (32 AI systems, 30 Agentic) `[Verified 2026‑07‑07, §0.1 G‑2]`. Open each in the inventory and confirm/assign the governed risk category = **Output Integrity / Hallucination**.
-- One risk statement + one guardrail posture covers **both** phase‑agents of UC2 (`plan.md` §4.1).
+> **Ordering (important):** the impact assessment in A2 **attaches the risk statement** from A3 and generates the per‑agent risk record. So do **A3a + A3b first**, then **A2**, then **A3c + A3d**. `[Doc: "Risk Statements should be configured before any AI systems go through the workflow."]`
 
-### A3 — AIRC Authority Document + risk assessment (governance evidence)
-**Workspace:** AIRC / Risk & Compliance (role `sn_grc_ai_gov.ai_risk_and_compliance_admin` `[Verified]`). *(`plan.md` GOV‑Step 7.)*
-- Create/extend Authority Document **"BHUC Healthcare Compliance — HIPAA & 42 CFR Part 2"** (`sn_compliance_authority_document` `[Verified: present]`).
-- Add a **UC2 risk statement + control‑objective pair**: *risk* = ungrounded/hallucinated clinical output or PHI leakage; *controls* = Data Integrity Incident Detection + Output Screening guardrails **plus** the app‑layer grounding + HITL sign/confirm gates.
-- Run **Advanced Risk** inherent → residual assessment (`sn_risk_advanced_inherent_assessment`, `sn_risk_advanced_residual_assessment` `[Verified: tables present]`) so the Tab 6 residual‑vs‑inherent heatmap populates.
+### A2 — Govern Agents 2 & 3 in AICT (Manage → Assess → classify risk)
+**Role:** `sn_ai_governance.ai_steward` (admin has it). **Nav:** `Workspaces → AI Control Tower → AI assets view`. *(Discovered agents default to **Unmanaged** — governance only applies once Managed.)* `[Doc: "View AI Assets by Life‑Cycle Stage / Enable or Disable Management," pp. 840–854]`
+
+1. **Find the two agents.** Left nav → **AI asset inventory → Unmanaged → AI systems**. Locate **BHUC Risk Identification Agent** and **BHUC Clinical Documentation Agent**. *(If they're already under **Managed**, skip to step 3.)*
+2. **Move to Managed.** Tick both checkboxes → **Move to Managed** → confirm. This **auto‑initiates** the lifecycle review, **risk‑classification**, value calc, and evaluations.
+3. **Start review.** Open each agent → **Start review** → it enters the **Assess** phase.
+4. **Assess → Impact Assessment.** In **Lifecycle tab → Assess**, the flow auto‑creates an **Impact Assessment task** (+ legal / security / architecture collaboration tasks) `[Doc: Govern‑Lifecycle → Assess]`. Complete the Impact Assessment questionnaire (as **AI Asset Owner**). The answers **attach the A3b Risk Statement** and drive the **Risk Classification** (expect Medium/High given clinical stakes). The **AI Risk & Compliance Manager** reviews and closes it → an analyst is auto‑assigned.
+5. **Progress the lifecycle.** **Build and test** (for healthcare, add tasks: security scan, HIPAA checklist, patient‑data handling, fail‑safe verification) → **Deploy**. Result: agent = **Managed, Deployed, Risk‑classified**.
+6. **Repeat for the second agent.** They're governed as a **pair** — the same authority doc + risk statement + guardrail posture (A1) cover both `[plan.md §4.1]`.
+
+> **Note:** *Move to Managed → Unmanaged is a governance regression* (cancels the review + classification). Only unmanage with documented justification.
+
+### A3 — AIRC Authority Document + Risk Statement + Assessment
+**Role:** `sn_grc_ai_gov.ai_risk_and_compliance_admin` (admin has it). Risk Statements are a **pre‑configured library** (cause/event/impact) sourced from an authority document; they auto‑attach to AI systems via the Impact Assessment answers and spawn per‑agent risk records `[Doc: Govern‑Risk‑and‑Controls → Procedure / Overview]`.
+
+- **A3a — Authority Document (do first).** AIRC / Policy & Compliance workspace → **Authority Documents → New** → name **"BHUC Healthcare Compliance — HIPAA & 42 CFR Part 2"** (`sn_compliance_authority_document` `[Verified: present]`). This is the source your risk library cites.
+- **A3b — UC2 Output‑Integrity Risk Statement (do first, before A2 step 4).** In the **AI Risk Statement Library** → **Create Risk Statement** (structured), sourced from A3a:
+  - *Cause:* ungrounded LLM generation by the Risk / Documentation agents.
+  - *Event:* the agent outputs a **fabricated clinical detail** or **leaks PHI** in its response.
+  - *Impact:* patient‑safety harm + HIPAA breach.
+  This entry attaches to both agents via the A2 Impact Assessment and creates a **Risk record** on each.
+- **A3c — Control objective + controls (evidence).** Attach a Control Objective to the statement and map the mitigating **controls**: the native guardrails (**Data Integrity Incident Detection + Output Screening**, from A1) **and** the app‑layer **grounding tagger + HITL sign/confirm gates**. This is the "how we control it" evidence.
+- **A3d — Risk Assessment (inherent → residual).** On the generated Risk records, run the **Risk Assessment Methodology (RAM)**: inherent (`sn_risk_advanced_inherent_assessment`) then residual (`sn_risk_advanced_residual_assessment` `[Verified: tables present]`). Residual (lower, because guardrails + HITL mitigate) vs inherent populates the **Risk & Compliance** heatmap — the governance proof for UC2.
 
 ### A4 — Runtime controls
 - **Kill switch → enforce** — set `sys_properties` `kill_switch.mode = enforce` (UI‑only; ACL‑denied via REST `[Verified]`). Auto‑disables a runaway trigger. *(GOV‑Step 9.)*
