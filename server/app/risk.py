@@ -257,10 +257,16 @@ def confirm_risk(req: RiskConfirm) -> dict:
     table = get_table_client()
     sys_id = req.id
     if len(sys_id) != 32:
-        found = table.list(TABLE, f"u_number={req.id}", fields="sys_id", limit=1)
+        found = table.list(TABLE, f"u_number={req.id}", fields="sys_id,u_scored_by_agent", limit=1)
         if not found:
             raise HTTPException(status_code=404, detail="Screening not found")
-        sys_id = found[0]["sys_id"]
+        rec = found[0]
+        sys_id = rec["sys_id"]
+    else:
+        rec = table.get(TABLE, sys_id)
+    # Output-Integrity gate: can't confirm a score the agent hasn't produced yet.
+    if str(rec.get("u_scored_by_agent")).lower() not in ("true", "1"):
+        raise HTTPException(status_code=422, detail="Cannot confirm: this screening has not been scored yet.")
     table.update(TABLE, sys_id, {
         "u_clinician_action": req.action,
         "u_clinician_rationale": req.rationale,

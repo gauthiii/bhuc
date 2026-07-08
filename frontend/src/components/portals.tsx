@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, ClipboardList, FileText, HeartPulse, Home, ListChecks, MessageCircle, ShieldQuestion, Stethoscope, UserRound, CalendarClock, Bot, Database, ExternalLink } from 'lucide-react'
+import { CalendarDays, ClipboardList, FileText, HeartPulse, Home, ListChecks, MessageCircle, ShieldQuestion, Stethoscope, UserRound, CalendarClock, Bot, Database, ExternalLink, ShieldCheck } from 'lucide-react'
 import { PortalShell, PageHeader, type NavItem } from './Shell'
 import { usePatientAuth, useClinicianAuth, useGovernanceAuth } from '../contexts/AuthContext'
 
@@ -8,6 +8,7 @@ import { usePatientAuth, useClinicianAuth, useGovernanceAuth } from '../contexts
 const SNOW_INSTANCE = 'https://ven04690.service-now.com'
 const GOVERNANCE_NAV: NavItem[] = [
   { to: '/governance/agents', label: 'Agents Inventory', icon: <Bot className="h-4 w-4" /> },
+  { to: '/governance/output-integrity', label: 'Output Integrity', icon: <ShieldCheck className="h-4 w-4" /> },
 ]
 const GOVERNANCE_TABLES: { table: string; label: string }[] = [
   { table: 'u_bhuc_patient', label: 'Patients' },

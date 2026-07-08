@@ -165,6 +165,18 @@ export interface WorklistItem {
   screeningCount?: number
 }
 
+export interface OutputIntegritySummary {
+  agent2: {
+    label: string; total: number; avgConfidence: number; lowConfidence: number
+    reviewed: number; pending: number; confirmed: number; adjusted: number; rejected: number
+    disagreeRatePct: number
+  }
+  agent3: {
+    label: string; total: number; withUnverified: number; unverifiedRatePct: number
+    avgUnverifiedLines: number; signed: number; unsigned: number
+  }
+}
+
 export interface NotesSummary {
   count: number
   signedCount: number

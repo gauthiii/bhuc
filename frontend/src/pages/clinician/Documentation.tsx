@@ -64,7 +64,12 @@ export function ClinicianDocumentation() {
   async function sign() {
     if (!canSign || !data) return
     setSigning(true)
-    try { await api.signNote(data.id); setSigned(true) }
+    try {
+      // Persist the clinician's resolution; server re-checks and rejects (422) if any remain.
+      const unresolved = lines.filter((l) => !l.verified).map((l) => l.id)
+      await api.signNote(data.id, unresolved)
+      setSigned(true)
+    }
     catch { setPhase('error') }
     finally { setSigning(false) }
   }

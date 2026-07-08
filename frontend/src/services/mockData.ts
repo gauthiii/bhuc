@@ -5,7 +5,7 @@ import type {
   DispositionCase, DocumentationDraft, Eligibility, Message, MessageThread, PatientChart,
   PatientProfile, PriorAuthPacket, RiskDetail, SchedulingRecommendation, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
-  MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary,
+  MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary, OutputIntegritySummary,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -266,7 +266,14 @@ export const mock = {
   },
   async getLatestNote(patientId: string): Promise<DocumentationDraft | null> { await wait(); return { ...(await this.getDocumentation(patientId)) } },
   async draftNewNote(patientId: string, _screening?: string): Promise<DocumentationDraft> { await wait(1200); return this.getDocumentation(patientId) },
-  async signNote(_id?: string) { await wait(); return { ok: true } },
+  async signNote(_id?: string, _unverifiedLines?: string[]) { await wait(); return { ok: true } },
+  async getOutputIntegrity(): Promise<OutputIntegritySummary> {
+    await wait()
+    return {
+      agent2: { label: 'BHUC Risk Identification Agent', total: 12, avgConfidence: 91, lowConfidence: 1, reviewed: 8, pending: 4, confirmed: 6, adjusted: 1, rejected: 1, disagreeRatePct: 25 },
+      agent3: { label: 'BHUC Clinical Documentation Agent', total: 6, withUnverified: 5, unverifiedRatePct: 83, avgUnverifiedLines: 2, signed: 1, unsigned: 5 },
+    }
+  },
   async getPriorAuth(patientId: string): Promise<PriorAuthPacket> {
     await wait()
     return {

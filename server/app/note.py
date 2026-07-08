@@ -208,10 +208,15 @@ def get_note(note_id: str) -> dict:
 
 class NoteSign(BaseModel):
     id: str
+    # the lines the clinician has NOT yet verified (should be empty to sign). The
+    # client sends its resolved state; the server persists it and enforces the gate.
+    unverifiedLines: Optional[list] = None
 
 
 @router.post("/note/sign")
 def sign_note(req: NoteSign) -> dict:
+    """Output-Integrity gate (server-enforced): a note cannot be signed while any
+    line is still flagged unverified (grounding/hallucination control, §UC2)."""
     from datetime import datetime, timezone
     table = get_table_client()
     sys_id = req.id
@@ -220,6 +225,22 @@ def sign_note(req: NoteSign) -> dict:
         if not found:
             raise HTTPException(status_code=404, detail="Note not found")
         sys_id = found[0]["sys_id"]
+
+    # persist the clinician's resolution if provided
+    if req.unverifiedLines is not None:
+        table.update(TABLE, sys_id, {"u_unverified_lines": json.dumps(req.unverifiedLines)})
+
+    rec = table.get(TABLE, sys_id)
+    try:
+        remaining = json.loads(rec.get("u_unverified_lines") or "[]")
+    except (json.JSONDecodeError, TypeError):
+        remaining = []
+    if remaining:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Cannot sign: {len(remaining)} unverified line(s) unresolved. "
+                   "Resolve every AI-flagged line before signing (Output-Integrity gate).")
+
     table.update(TABLE, sys_id, {
         "u_signed": "true",
         "u_state": "finalized",
