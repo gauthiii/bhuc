@@ -49,6 +49,12 @@ jobs:
           # to the public site. Set back to "false" (or add Cognito JWT, BE-Step 2) to close.
           VITE_AGENTS_LIVE: "true"
           VITE_API_BASE: "https://bhuc-backend.onrender.com/api/x_bhuc"
+          # The Cognito auth client (awsAuth.ts) reads a SEPARATE base (VITE_AWS_API_BASE),
+          # not VITE_API_BASE. Without it, it falls back to the relative "/api", which
+          # Firebase rewrites to index.html — so /aws/login returns HTML with HTTP 200 and
+          # the JSON parse throws ("Unexpected token '<', <!doctype ..."). Point it at the
+          # same Render backend; the awsAuth client appends /aws/* (→ /api/aws/login).
+          VITE_AWS_API_BASE: "https://bhuc-backend.onrender.com/api"
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
