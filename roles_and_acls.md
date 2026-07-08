@@ -5,15 +5,20 @@ dependencies later. Grounded in `plan.md` §8.1 SN-Steps 3/4/13, `tables.md` (fi
 and `sud_usecase.md` (UC3 enforcement). `[Verified]` = the careatlas analog is confirmed on
 `ven04690`; ✅ = already created; ☐ = to do.
 
+> **STATUS — 2026-07-08:** All **9 roles** and **6 service accounts** (with their least-privilege role
+> grants) are **created via the API** ✅. **Action for you:** set a login password on each of the 6
+> `svc-bhuc-*` accounts (they were made as active password users, mirroring `interface_gautham`).
+> **Still to do:** the field-level **ACLs** (§4) and the **wiring** (§5) — those remain ☐.
+
 ## TL;DR — are the 2 roles enough?
 **No.** `u_bhuc_part2_access` ✅ and `u_bhuc_patient_pii` ✅ are the **data-sensitivity** roles (UC3).
 The complete model is:
 
 | Bucket | Count | Status |
 |---|---|---|
-| Application / persona roles | 2 (+1 reused) | ☐ |
-| Data-access (composable) roles | 7 | 2 ✅ / 5 ☐ |
-| Service accounts (agent identities) | 6 | ☐ |
+| Application / persona roles | 2 (+1 reused) | ✅ created |
+| Data-access (composable) roles | 7 | ✅ 7 created |
+| Service accounts (agent identities) | 6 | ✅ created (set passwords) |
 | Field-level ACLs | ~2 role-gates over ~6 tables | ☐ |
 | Wiring (bind + GlideRecordSecure + integration-acct roles) | — | ☐ |
 | Governance / builder roles | 3 | ✅ already present |
@@ -28,8 +33,8 @@ Scheduling fairness** → `svc-bhuc-scheduling` holds *no* PII/demographic role.
 
 | Role | Purpose | Status |
 |---|---|---|
-| `u_bhuc_patient` | Patient-portal persona | ☐ |
-| `u_bhuc_clinician` | Clinician-portal persona; also the base for "approved case manager" | ☐ |
+| `u_bhuc_patient` | Patient-portal persona | ✅ created |
+| `u_bhuc_clinician` | Clinician-portal persona; also the base for "approved case manager" | ✅ created |
 | `sn_ai_governance.ai_steward` | Governance persona — **reuse the platform role, do NOT create a new one** | ✅ exists |
 
 > Note: the app authenticates via **Cognito** (`bhuc-patient` / `bhuc-clinician` / `bhuc-governance`
@@ -41,13 +46,13 @@ Scheduling fairness** → `svc-bhuc-scheduling` holds *no* PII/demographic role.
 
 | Role | Grants | Primary use case | Status |
 |---|---|---|---|
-| `u_bhuc_ai_agent` | Base marker every BHUC agent identity holds (≈ careatlas `u_careatlas_ai_agent` `[Verified]`) | all agents | ☐ |
-| `u_bhuc_patient_read` | Read **non-PII** patient/clinical fields (≈ `u_patients_user` `[Verified]`) | all agents | ☐ |
+| `u_bhuc_ai_agent` | Base marker every BHUC agent identity holds (≈ careatlas `u_careatlas_ai_agent` `[Verified]`) | all agents | ✅ created |
+| `u_bhuc_patient_read` | Read **non-PII** patient/clinical fields (≈ `u_patients_user` `[Verified]`) | all agents | ✅ created |
 | `u_bhuc_patient_pii` | Read PII (name/DOB/email/phone/insurance) — grant/withhold drives the **PII-denial demo** | UC5 | ✅ created |
 | `u_bhuc_part2_access` | Read/write 42 CFR Part 2 / SUD-labeled fields (approved case-manager scope) | UC3 | ✅ created |
-| `u_bhuc_screening_write` | Narrow write to `u_bhuc_screening` scores | Agent 2 | ☐ |
-| `u_bhuc_doc_write` | Narrow write to `u_bhuc_care_plan` documentation | Agent 3 | ☐ |
-| `u_bhuc_schedule_write` | Narrow write to `u_bhuc_appointment` | Agent 6 | ☐ |
+| `u_bhuc_screening_write` | Narrow write to `u_bhuc_screening` scores | Agent 2 | ✅ created |
+| `u_bhuc_doc_write` | Narrow write to `u_bhuc_care_plan` documentation | Agent 3 | ✅ created |
+| `u_bhuc_schedule_write` | Narrow write to `u_bhuc_appointment` | Agent 6 | ✅ created |
 
 **Create:** `User Administration → Roles → New`, or `POST /api/now/table/sys_user_role {name, description}`.
 
@@ -58,12 +63,16 @@ interactive password). Each active. Least-privilege role set per agent:
 
 | Agent | Service account | Roles | Status |
 |---|---|---|---|
-| 1 Front-Door | `svc-bhuc-frontdoor` | `u_bhuc_ai_agent` **only** (no patient data) | ☐ |
-| 2 Risk Identification | `svc-bhuc-risk` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_screening_write` — **no PII** | ☐ |
-| 3 Clinical Documentation | `svc-bhuc-clinicaldoc` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_doc_write` | ☐ |
-| 4 Consent & Data Protection | `svc-bhuc-consent` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access` | ☐ |
-| 5 Prior-Auth Compliance | `svc-bhuc-priorauth` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access` (read) | ☐ |
-| 6 Scheduling | `svc-bhuc-scheduling` | `u_bhuc_ai_agent`, `u_bhuc_schedule_write` — **no demographic/PII (fairness)** | ☐ |
+| 1 Front-Door | `svc-bhuc-frontdoor` | `u_bhuc_ai_agent` **only** (no patient data) | ✅ created |
+| 2 Risk Identification | `svc-bhuc-risk` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_screening_write` — **no PII** | ✅ created |
+| 3 Clinical Documentation | `svc-bhuc-clinicaldoc` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_doc_write` | ✅ created |
+| 4 Consent & Data Protection | `svc-bhuc-consent` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access` | ✅ created |
+| 5 Prior-Auth Compliance | `svc-bhuc-priorauth` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access` (read) | ✅ created |
+| 6 Scheduling | `svc-bhuc-scheduling` | `u_bhuc_ai_agent`, `u_bhuc_schedule_write` — **no demographic/PII (fairness)** | ✅ created |
+
+> **Created 2026-07-08 (API):** all 6 as **active password users** (`web_service_access_only=false`,
+> mirroring `interface_gautham`) with the role grants above. **Set a password on each** (you said you'll
+> reuse the interface-account password). No password was set by the API.
 
 > The contrast is the demo: `svc-bhuc-risk` lacks `u_bhuc_patient_pii`, so its reads are auto-stripped
 > of PII, while `svc-bhuc-clinicaldoc`/`consent` can read what they need. That IS UC5.
@@ -123,13 +132,11 @@ Creating roles/ACLs is not enough; today the agents and the app **bypass** them.
 
 ## 7. Recommended order (no dependency surprises)
 
-1. **Roles first** — create the 5 remaining data roles (`u_bhuc_ai_agent`, `u_bhuc_patient_read`,
-   `u_bhuc_screening_write`, `u_bhuc_doc_write`, `u_bhuc_schedule_write`) + the 2 persona roles
-   (`u_bhuc_patient`, `u_bhuc_clinician`). *(part2_access + patient_pii already done.)*
-2. **Service accounts** — the 6 `svc-bhuc-*` with the role sets in §3.
-3. **ACLs** — §4 A + B (elevate to `security_admin`).
-4. **Wiring** — §5 (bind agents, `GlideRecordSecure`, grant the integration account, map Cognito).
-5. **Verify** — Access Analyzer + impersonation + the app's C3 reveal (case-manager vs not).
+1. ✅ **Roles** — all 9 created (7 via API 2026-07-08 + the 2 you made earlier).
+2. ✅ **Service accounts** — the 6 `svc-bhuc-*` created with the §3 role sets. **← set passwords.**
+3. ☐ **ACLs** — §4 A + B (elevate to `security_admin`). **← next**
+4. ☐ **Wiring** — §5 (bind agents, `GlideRecordSecure`, grant the integration account, map Cognito).
+5. ☐ **Verify** — Access Analyzer + impersonation + the app's C3 reveal (case-manager vs not).
 
 Everything role/ACL-related for all 6 agents / 4 use cases / 3 portals is on this page — build these and
 you won't hit a role/ACL dependency later.
