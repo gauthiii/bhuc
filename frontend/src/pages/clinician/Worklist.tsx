@@ -73,7 +73,9 @@ export function ClinicianWorklist() {
                   <th className="py-2 pr-4">Patient</th>
                   <th className="py-2 pr-4">Screening</th>
                   <th className="py-2 pr-4">Risk band</th>
+                  {/* Confidence column commented out for now.
                   <th className="py-2 pr-4">Confidence</th>
+                  */}
                   <th className="py-2 pr-4">Wait</th>
                   <th className="py-2 pr-4">Status</th>
                   <th className="py-2 pr-4"></th>
@@ -92,6 +94,7 @@ export function ClinicianWorklist() {
                       <Link to={`/clinician/risk/${r.screeningId}`} className="font-mono text-xs text-slate-600 hover:text-teal-800 hover:underline">{r.screeningId}</Link>
                     </td>
                     <td className="py-3 pr-4"><RiskBadge band={r.riskBand} /></td>
+                    {/* Confidence column commented out for now.
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-2" title="Model confidence in this stratification">
                         <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
@@ -100,6 +103,7 @@ export function ClinicianWorklist() {
                         <span className="tabular-nums text-slate-600">{(r.confidence / 100).toFixed(2)}</span>
                       </div>
                     </td>
+                    */}
                     <td className="py-3 pr-4 tabular-nums text-slate-600">{r.waitMinutes} min</td>
                     <td className="py-3 pr-4">
                       {r.requiresConfirmation

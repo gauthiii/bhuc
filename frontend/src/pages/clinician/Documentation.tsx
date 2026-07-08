@@ -60,6 +60,7 @@ export function ClinicianDocumentation() {
   if (!attested) reasons.push('Check the attestation to sign.')
 
   const verify = (lineId: string) => setLines((ls) => ls.map((l) => (l.id === lineId ? { ...l, verified: true } : l)))
+  const verifyAll = () => setLines((ls) => ls.map((l) => ({ ...l, verified: true })))
   const editLine = (lineId: string, text: string) => setLines((ls) => ls.map((l) => (l.id === lineId ? { ...l, text } : l)))
   const toggleCode = (code: string) => setCodes((cs) => cs.map((c) => (c.code === code ? { ...c, accepted: !c.accepted } : c)))
 
@@ -122,7 +123,16 @@ export function ClinicianDocumentation() {
               subtitle={data.screeningId ? `${data.id} · from ${data.screeningId}` : data.id}
               actions={signed
                 ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Signed &amp; verified</StatusBadge>
-                : <StatusBadge tone="warning">Draft</StatusBadge>}
+                : (
+                  <div className="flex items-center gap-2">
+                    {unverifiedCount > 0 && (
+                      <Button variant="secondary" className="px-3 py-1 text-xs" onClick={verifyAll}>
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Verify all
+                      </Button>
+                    )}
+                    <StatusBadge tone="warning">Draft</StatusBadge>
+                  </div>
+                )}
             >
               <ul className="grid gap-3">
                 {lines.map((l) => (
