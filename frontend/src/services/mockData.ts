@@ -6,6 +6,7 @@ import type {
   PatientProfile, PriorAuthPacket, RiskDetail, SchedulingRecommendation, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
   MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary, OutputIntegritySummary,
+  HallucinationCheck,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -267,6 +268,24 @@ export const mock = {
   async getLatestNote(patientId: string): Promise<DocumentationDraft | null> { await wait(); return { ...(await this.getDocumentation(patientId)) } },
   async draftNewNote(patientId: string, _screening?: string): Promise<DocumentationDraft> { await wait(1200); return this.getDocumentation(patientId) },
   async signNote(_id?: string, _unverifiedLines?: string[]) { await wait(); return { ok: true } },
+  async checkHallucination(agentKey: string, output: string): Promise<HallucinationCheck> {
+    await wait()
+    const claims = output.split(/(?:[.;!?]\s+|\n+)/).map((s) => s.trim()).filter((s) => s.split(/\s+/).length >= 3)
+    const scored = claims.map((text, i) => {
+      const score = Math.max(8, 62 - i * 9)
+      return { text, score, grounded: score >= 20, evidence: score >= 20 ? 'PHQ-9 15–19 → moderately severe; item 9 non-zero triggers the crisis pathway.' : '' }
+    })
+    const grounding = scored.length ? Math.round(scored.reduce((a, c) => a + c.score, 0) / scored.length) : 0
+    const flagged = scored.filter((c) => !c.grounded).length
+    const possible = grounding < 35 || (scored.length > 0 && flagged / scored.length > 0.5)
+    return {
+      agentKey, kbDoc: agentKey === 'risk' ? 'BHUC Screening Scoring Rules' : 'BHUC Clinical Coding and Documentation',
+      kbFile: '', algorithm: 'TF-IDF cosine extractive grounding (claim → best KB sentence)',
+      groundingScore: grounding, hallucinationScore: 100 - grounding, threshold: 35, claimFloor: 20,
+      verdict: possible ? 'possible_hallucination' : 'grounded', possibleHallucination: possible,
+      claimCount: scored.length, flaggedCount: flagged, kbSentenceCount: 42, claims: scored,
+    }
+  },
   async getOutputIntegrity(): Promise<OutputIntegritySummary> {
     await wait()
     return {

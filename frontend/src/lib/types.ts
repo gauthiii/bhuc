@@ -165,6 +165,24 @@ export interface WorklistItem {
   screeningCount?: number
 }
 
+export interface HallucinationClaim { text: string; score: number; grounded: boolean; evidence: string }
+export interface HallucinationCheck {
+  agentKey: string
+  kbDoc: string
+  kbFile: string
+  algorithm: string
+  groundingScore: number      // 0-100
+  hallucinationScore: number  // 0-100
+  threshold: number           // 0-100 overall
+  claimFloor: number          // 0-100 per-claim
+  verdict: 'grounded' | 'possible_hallucination'
+  possibleHallucination: boolean
+  claimCount: number
+  flaggedCount: number
+  kbSentenceCount: number
+  claims: HallucinationClaim[]
+}
+
 export interface OutputIntegritySummary {
   agent2: {
     label: string; total: number; avgConfidence: number; lowConfidence: number
