@@ -66,7 +66,7 @@ export function AgentChat({
   agentKey: string
   agentName: string
   subtitle?: string
-  examples?: { label: string; prompt: string }[]
+  examples?: { label: string; prompt: string; canned?: { reply: string; delayMs?: number } }[]
   groundable?: boolean   // show the "Check hallucination" control (Agents 2 & 3)
 }) {
   const [turns, setTurns] = useState<Turn[]>([])
@@ -91,15 +91,23 @@ export function AgentChat({
 
   useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight }) }, [turns, sending])
 
-  async function send(text: string) {
+  async function send(text: string, canned?: { reply: string; delayMs?: number }) {
     const trimmed = text.trim()
     if (!trimmed || sending) return
     setDraft('')
     setTurns((t) => [...t, { id: 'u-' + Date.now(), role: 'user', text: trimmed }])
     setSending(true)
     try {
-      const res = await api.agentChat(agentKey, trimmed)
-      setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text: res.reply }])
+      if (canned) {
+        // Scripted governance demo: surface a deliberately ungrounded reply after a
+        // realistic think-time (3–5s) so 'Check hallucination' scores it below the
+        // grounding threshold. Bypasses the A2A relay (the real agent stays grounded).
+        await new Promise((r) => setTimeout(r, canned.delayMs ?? 4000))
+        setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text: canned.reply }])
+      } else {
+        const res = await api.agentChat(agentKey, trimmed)
+        setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text: res.reply }])
+      }
     } catch {
       setTurns((t) => [...t, { id: 'e-' + Date.now(), role: 'agent', text: 'The agent could not be reached. Try again.' }])
     } finally {
@@ -116,7 +124,9 @@ export function AgentChat({
           <p className="truncate text-sm font-semibold text-slate-800">{agentName}</p>
           {subtitle && <p className="truncate text-xs text-slate-400">{subtitle}</p>}
         </div>
+        {/* Live · A2A badge removed per governance UI request — kept commented for easy restore.
         <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 ring-1 ring-teal-600/20">Live · A2A</span>
+        */}
       </div>
 
       <div ref={logRef} role="log" aria-live="polite" className="min-h-[13rem] flex-1 space-y-3 overflow-y-auto px-4 py-3">
@@ -161,7 +171,7 @@ export function AgentChat({
       {examples && examples.length > 0 && (
         <div className="flex flex-wrap gap-1.5 border-t border-slate-100 px-4 py-2">
           {examples.map((ex) => (
-            <button key={ex.label} onClick={() => send(ex.prompt)} disabled={sending}
+            <button key={ex.label} onClick={() => send(ex.prompt, ex.canned)} disabled={sending}
               className="rounded-full border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
               {ex.label}
             </button>
