@@ -234,6 +234,9 @@ class NoteSign(BaseModel):
     # the lines the clinician has NOT yet verified (should be empty to sign). The
     # client sends its resolved state; the server persists it and enforces the gate.
     unverifiedLines: Optional[list] = None
+    # the clinician's edited note text (reassembled from the line editors). Persisted so
+    # the signed record — and the Agent 4 Part 2 check — reflect what the clinician wrote.
+    noteText: Optional[str] = None
 
 
 @router.post("/note/sign")
@@ -249,9 +252,14 @@ def sign_note(req: NoteSign) -> dict:
             raise HTTPException(status_code=404, detail="Note not found")
         sys_id = found[0]["sys_id"]
 
-    # persist the clinician's resolution if provided
+    # persist the clinician's edits + resolution before signing
+    updates: dict = {}
+    if req.noteText is not None:
+        updates["u_draft_note"] = req.noteText
     if req.unverifiedLines is not None:
-        table.update(TABLE, sys_id, {"u_unverified_lines": json.dumps(req.unverifiedLines)})
+        updates["u_unverified_lines"] = json.dumps(req.unverifiedLines)
+    if updates:
+        table.update(TABLE, sys_id, updates)
 
     rec = table.get(TABLE, sys_id)
     try:

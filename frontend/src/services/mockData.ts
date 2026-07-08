@@ -267,7 +267,7 @@ export const mock = {
   },
   async getLatestNote(patientId: string): Promise<DocumentationDraft | null> { await wait(); return { ...(await this.getDocumentation(patientId)) } },
   async draftNewNote(patientId: string, _screening?: string): Promise<DocumentationDraft> { await wait(1200); return this.getDocumentation(patientId) },
-  async signNote(_id?: string, _unverifiedLines?: string[]) { await wait(); return { ok: true } },
+  async signNote(_id?: string, _unverifiedLines?: string[], _noteText?: string) { await wait(); return { ok: true } },
   async checkHallucination(agentKey: string, output: string): Promise<HallucinationCheck> {
     await wait()
     const claims = output.split(/(?:[.;!?]\s+|\n+)/).map((s) => s.trim()).filter((s) => s.split(/\s+/).length >= 3)

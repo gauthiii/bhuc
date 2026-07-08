@@ -69,9 +69,11 @@ export function ClinicianDocumentation() {
     if (!canSign || !data) return
     setSigning(true)
     try {
-      // Persist the clinician's resolution; server re-checks and rejects (422) if any remain.
+      // Persist the clinician's edits + resolution; server re-checks and rejects (422) if any
+      // remain. Sending the edited text is what lets Agent 4 scan what the clinician actually wrote.
       const unresolved = lines.filter((l) => !l.verified).map((l) => l.id)
-      await api.signNote(data.id, unresolved)
+      const noteText = lines.map((l) => l.text).join('\n\n')
+      await api.signNote(data.id, unresolved, noteText)
       setSigned(true)
       // UC3 — the Consent & Data Protection Agent (Agent 4) scans the signed note for
       // 42 CFR Part 2 / SUD content and labels it; surface the run + result in a modal.

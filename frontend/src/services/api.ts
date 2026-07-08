@@ -55,7 +55,7 @@ const live = {
   getNotesSummary: (patientId: string) => j(`/notes/summary/${patientId}`),
   getLatestNote: (patientId: string) => j(`/note/latest/${patientId}`),
   draftNewNote: (patientId: string, screening?: string) => j(`/note/new/${patientId}${screening ? `?screening=${encodeURIComponent(screening)}` : ''}`, { method: 'POST', body: '{}' }),
-  signNote: (id: string, unverifiedLines?: string[]) => j('/note/sign', { method: 'POST', body: JSON.stringify({ id, unverifiedLines }) }),
+  signNote: (id: string, unverifiedLines?: string[], noteText?: string) => j('/note/sign', { method: 'POST', body: JSON.stringify({ id, unverifiedLines, noteText }) }),
   getOutputIntegrity: () => j('/governance/output-integrity'),
   checkHallucination: (agentKey: string, output: string) => j('/hallucination/check', { method: 'POST', body: JSON.stringify({ agentKey, output }) }),
   getPriorAuth: (patientId: string) => j(`/priorauth?patient=${patientId}`),
