@@ -5,10 +5,11 @@ dependencies later. Grounded in `plan.md` §8.1 SN-Steps 3/4/13, `tables.md` (fi
 and `sud_usecase.md` (UC3 enforcement). `[Verified]` = the careatlas analog is confirmed on
 `ven04690`; ✅ = already created; ☐ = to do.
 
-> **STATUS — 2026-07-08:** All **9 roles** and **6 service accounts** (with their least-privilege role
-> grants) are **created via the API** ✅. **Action for you:** set a login password on each of the 6
-> `svc-bhuc-*` accounts (they were made as active password users, mirroring `interface_gautham`).
-> **Still to do:** the field-level **ACLs** (§4) and the **wiring** (§5) — those remain ☐.
+> **STATUS — 2026-07-08:** All **9 roles**, **6 service accounts** (passwords set), and the **ACLs**
+> (**4 record-level read** + **9 field-level read**) are done ✅. **Verified enforcing** via API: Part 2
+> fields readable only with `u_bhuc_part2_access`, PII only with `u_bhuc_patient_pii`, all others denied,
+> admin bypasses. **Still to do:** the **wiring** (§5) — bind agents to their `svc-bhuc-*` +
+> `GlideRecordSecure` — and the **GOV-2 DLP guardrail** (both ☐). Optional: a few more field ACLs (§4).
 
 ## TL;DR — are the 2 roles enough?
 **No.** `u_bhuc_part2_access` ✅ and `u_bhuc_patient_pii` ✅ are the **data-sensitivity** roles (UC3).
@@ -19,8 +20,8 @@ The complete model is:
 | Application / persona roles | 2 (+1 reused) | ✅ created |
 | Data-access (composable) roles | 7 | ✅ 7 created |
 | Service accounts (agent identities) | 6 | ✅ created (set passwords) |
-| Field-level ACLs | ~2 role-gates over ~6 tables | ☐ |
-| Wiring (bind + GlideRecordSecure + integration-acct roles) | — | ☐ |
+| Field-level ACLs | 9 field + 4 record read ACLs | ✅ created + verified enforcing |
+| Wiring (bind + GlideRecordSecure + integration-acct roles) | — | ◐ integration-acct roles ✅; bind/GlideRecordSecure ☐ |
 | Governance / builder roles | 3 | ✅ already present |
 
 Which use case each serves: **UC3 Privacy** → `u_bhuc_part2_access` + PII ACLs. **UC5 Excessive
@@ -133,10 +134,13 @@ Creating roles/ACLs is not enough; today the agents and the app **bypass** them.
 ## 7. Recommended order (no dependency surprises)
 
 1. ✅ **Roles** — all 9 created (7 via API 2026-07-08 + the 2 you made earlier).
-2. ✅ **Service accounts** — the 6 `svc-bhuc-*` created with the §3 role sets. **← set passwords.**
-3. ☐ **ACLs** — §4 A + B (elevate to `security_admin`). **← next**
-4. ☐ **Wiring** — §5 (bind agents, `GlideRecordSecure`, grant the integration account, map Cognito).
-5. ☐ **Verify** — Access Analyzer + impersonation + the app's C3 reveal (case-manager vs not).
+2. ✅ **Service accounts** — the 6 `svc-bhuc-*` created + passwords set.
+3. ✅ **ACLs** — 9 field-read + 4 record-read (`u_bhuc_patient`/`_screening`/`_care_plan`/`_prior_auth`,
+   requiring `u_bhuc_clinician` + `u_bhuc_patient_read`). **Verified enforcing** (Part 2 → `part2_access`,
+   PII → `patient_pii`, deny-by-default, admin bypasses). *(Optional: more field ACLs per §4.)*
+4. ☐ **Wiring** — §5: bind agents to `svc-bhuc-*` (13c) + `GlideRecordSecure`; map Cognito→SN roles.
+   *(Integration-account roles already granted.)* Plus **GOV-2** DLP guardrail (`sud_usecase.md` §4 Phase 3).
+5. ◐ **Verify** — API test done ✅; still worth an in-UI impersonation + the app's C3 reveal (case-manager vs not).
 
 Everything role/ACL-related for all 6 agents / 4 use cases / 3 portals is on this page — build these and
 you won't hit a role/ACL dependency later.
