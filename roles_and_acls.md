@@ -5,11 +5,12 @@ dependencies later. Grounded in `plan.md` §8.1 SN-Steps 3/4/13, `tables.md` (fi
 and `sud_usecase.md` (UC3 enforcement). `[Verified]` = the careatlas analog is confirmed on
 `ven04690`; ✅ = already created; ☐ = to do.
 
-> **STATUS — 2026-07-08:** All **9 roles**, **6 service accounts** (passwords set), and the **ACLs**
-> (**4 record-level read** + **9 field-level read**) are done ✅. **Verified enforcing** via API: Part 2
-> fields readable only with `u_bhuc_part2_access`, PII only with `u_bhuc_patient_pii`, all others denied,
-> admin bypasses. **Still to do:** the **wiring** (§5) — bind agents to their `svc-bhuc-*` +
-> `GlideRecordSecure` — and the **GOV-2 DLP guardrail** (both ☐). Optional: a few more field ACLs (§4).
+> **STATUS — 2026-07-08 (roles/ACLs COMPLETE):** All **9 roles**, **6 service accounts** (passwords
+> set), and **33 ACLs** (**25 field-level read** + **8 record-level read**) are done ✅ — verified
+> present with correct roles, none missing/extra, and **verified enforcing** via API (Part 2 →
+> `u_bhuc_part2_access`, PII → `u_bhuc_patient_pii`, deny-by-default, admin bypasses). **Nothing
+> role/ACL-related is pending.** Remaining (NOT roles/ACLs): the **wiring** (§5) — bind agents to their
+> `svc-bhuc-*` + `GlideRecordSecure` — and the **GOV-2 DLP guardrail** (`sud_usecase.md` §4 Phase 3).
 
 ## TL;DR — are the 2 roles enough?
 **No.** `u_bhuc_part2_access` ✅ and `u_bhuc_patient_pii` ✅ are the **data-sensitivity** roles (UC3).
@@ -20,7 +21,7 @@ The complete model is:
 | Application / persona roles | 2 (+1 reused) | ✅ created |
 | Data-access (composable) roles | 7 | ✅ 7 created |
 | Service accounts (agent identities) | 6 | ✅ created (set passwords) |
-| Field-level ACLs | 9 field + 4 record read ACLs | ✅ created + verified enforcing |
+| Field-level ACLs | 25 field + 8 record read ACLs (all incl. optional) | ✅ created + verified enforcing |
 | Wiring (bind + GlideRecordSecure + integration-acct roles) | — | ◐ integration-acct roles ✅; bind/GlideRecordSecure ☐ |
 | Governance / builder roles | 3 | ✅ already present |
 
