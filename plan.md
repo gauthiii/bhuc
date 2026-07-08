@@ -1702,6 +1702,8 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 
 **Governance overlay (shared with Agent 5):** **Sensitive Data Input and Anonymization** guardrail **Active** — catches SUD/PII entering any prompt (inbound); Data Privacy is confirmed present `[Verified]`. This agent's labeling is what the DLP/masking on screens C3 and C6 relies on.
 
+> **As-built (2026-07-08).** Tool B was specced as one Record Operation writing to **both** `u_bhuc_consent` and `u_bhuc_care_plan`, but a CRUD record-op targets a **single table + single op** — and the first cut was a **Create** that inserted junk consent rows and never touched the note table. Replaced with a **custom Script tool** that **updates** both: `u_bhuc_care_plan` (`u_sensitivity` + `u_contains_part2`, resolved by encounter sys_id or `BHUC_CARE_PLAN_` number) and the patient's existing `part2_sud` consent (`u_sensitivity` + `u_labeled_by_agent`). Tool A (keyword classifier) needed **negation + word-boundary** handling so `"no substance use"` / `"a method of coping"` don't false-positive as `part2`. **App wiring is backend, not native:** the Chart (`/patient/{id}/chart`) reads `u_contains_part2`/`u_sensitivity` to drive masking, and `POST /note/sign` invokes Agent 4 over A2A (daemon thread, best-effort) to label the finalized note (action.md AG-4 / BE-Consent). SN-4/SN-13 ACLs deferred — masking is **app-computed, not platform-enforced**.
+
 ---
 
 #### Agent 5 — BHUC Prior-Auth Compliance Agent (Use Case 3, Phase 5 — Treatment & Stabilization)
@@ -1732,6 +1734,8 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 **Step 5–6 — Channels/status + Test.** Test a coverage question → expect a cited answer and a drafted (not submitted) packet; confirm a Part 2 field is access-gated in the draft.
 
 **Governance overlay:** shares Agent 4's posture (Sensitive Data Input and Anonymization Active); additionally **Output Screening → Output Security Vulnerability Active** since the drafted packet is exported downstream `[Doc: → Security & Privacy Guardrail Configuration]`.
+
+> **As-built (2026-07-08).** Tool A (Search Retrieval) configured + verified — hybrid, profile `bhuc_payer_policy_search`, results limit 8, threshold 0.4 → cited answers (e.g. `BH-204`). Tool B (Draft packet) is a **CRUD Create** into `u_bhuc_prior_auth` (single-table create, so CRUD **is** the right tool here — unlike Agent 4's dual-table need); all packet fields mapped, statics `Status=draft` + `Drafted by agent=true`, submit fields left empty. **Execution mode changed Supervised → Autonomous** per the chosen flow: the agent writes the draft directly (status `draft`) and the clinician approves in C6 to advance state (no in-agent approval step). **Gotcha:** the CRUD tool stores a boolean static entered in the UI as `"t"`, which `gr.setValue` reads as `false` — it must be `"true"`/`"1"`. **Limitation:** `part2_gated` is set by the LLM from context, not an automatic lookup of Agent 4's label (a Script-tool variant would auto-gate). SN-4/SN-13 ACLs deferred.
 
 > **Things to consider after this entire project is complete** (Use Case 3 — Consent, Data Protection & Prior-Auth Compliance Copilot)
 > 1. What if the staff needs consent of bulk patients for prior auth and there's a delay because of that as it's the last minute?
