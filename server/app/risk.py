@@ -163,11 +163,14 @@ def submit_batch(req: ScreeningBatch) -> dict:
 @router.get("/worklist")
 def worklist() -> list:
     table = get_table_client()
-    # dot-walk the patient's real name + BHUC number (not the sys_id)
+    # All agent-scored screenings (pending + confirmed + adjusted + rejected) — rows stay
+    # visible after a clinician acts, showing the current band + clinical action. The
+    # "Needs my confirmation" toggle narrows to the pending ones client-side.
     rows = table.list(
-        TABLE, "u_state=scored^u_clinician_action=pending^ORDERBYDESCsys_updated_on",
+        TABLE, "u_scored_by_agent=true^ORDERBYDESCsys_updated_on",
         fields=("sys_id,u_number,u_patient,u_patient.u_first_name,u_patient.u_last_name,"
-                "u_patient.u_number,u_risk_band,u_confidence"),
+                "u_patient.u_number,u_risk_band,u_confidence,u_instrument,u_clinician_action,"
+                "sys_updated_on"),
         display_value="false", limit=50)
 
     def raw(v):  # reference fields come back as {link, value}
@@ -193,6 +196,12 @@ def worklist() -> list:
             conf = 0
         pid = raw(r.get("u_patient")) or ""
         name = f"{r.get('u_patient.u_first_name', '')} {r.get('u_patient.u_last_name', '')}".strip()
+        action = (r.get("u_clinician_action") or "pending").lower()
+        if action not in ("pending", "confirmed", "adjusted", "rejected"):
+            action = "pending"
+        # sys_updated_on comes back as UTC "YYYY-MM-DD HH:MM:SS"; make it a real ISO instant
+        upd = r.get("sys_updated_on") or ""
+        updated_iso = (upd.replace(" ", "T") + "Z") if upd else ""
         out.append({
             "screeningId": r.get("u_number") or r.get("sys_id"),
             "sysId": r.get("sys_id"),
@@ -201,8 +210,10 @@ def worklist() -> list:
             "patientName": name or "Unknown patient",
             "riskBand": band,
             "confidence": conf,
-            "waitMinutes": 0,
-            "requiresConfirmation": band in ("moderate", "high"),
+            "instrument": r.get("u_instrument") or "",
+            "clinicalAction": action,
+            "updatedAt": updated_iso,
+            "requiresConfirmation": action == "pending",
             "noteCount": note_counts.get(pid, 0),
         })
     return out
@@ -250,6 +261,7 @@ class RiskConfirm(BaseModel):
     id: str
     action: str = Field(..., pattern="^(confirmed|adjusted|rejected)$")
     rationale: str = ""
+    band: Optional[str] = None   # the adjusted risk band (required when action == 'adjusted')
 
 
 @router.post("/risk/confirm")
@@ -267,9 +279,14 @@ def confirm_risk(req: RiskConfirm) -> dict:
     # Output-Integrity gate: can't confirm a score the agent hasn't produced yet.
     if str(rec.get("u_scored_by_agent")).lower() not in ("true", "1"):
         raise HTTPException(status_code=422, detail="Cannot confirm: this screening has not been scored yet.")
-    table.update(TABLE, sys_id, {
+    if req.action == "adjusted" and req.band not in ("low", "moderate", "high"):
+        raise HTTPException(status_code=422, detail="Adjusting requires a new risk band (low, moderate, or high).")
+    updates = {
         "u_clinician_action": req.action,
         "u_clinician_rationale": req.rationale,
         "u_state": "confirmed" if req.action != "rejected" else "scored",
-    })
-    return {"ok": True}
+    }
+    if req.action == "adjusted":
+        updates["u_risk_band"] = req.band   # persist the clinician's adjusted band
+    table.update(TABLE, sys_id, updates)
+    return {"ok": True, "action": req.action, "riskBand": req.band}

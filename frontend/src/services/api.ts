@@ -50,7 +50,7 @@ const live = {
   getChart: (patientId: string, reveal = false) => j(`/patient/${patientId}/chart${reveal ? '?reveal=1' : ''}`),
   setConsent: (body: unknown) => j('/patient/consent', { method: 'PATCH', body: JSON.stringify(body) }),
   getRiskDetail: (id: string) => j(`/risk/${id}`),
-  confirmRisk: (id: string, action: string, rationale: string) => j('/risk/confirm', { method: 'POST', body: JSON.stringify({ id, action, rationale }) }),
+  confirmRisk: (id: string, action: string, rationale: string, band?: string) => j('/risk/confirm', { method: 'POST', body: JSON.stringify({ id, action, rationale, band }) }),
   getDocumentation: (id: string) => j(`/note/${id}`),
   getNotesSummary: (patientId: string) => j(`/notes/summary/${patientId}`),
   getLatestNote: (patientId: string) => j(`/note/latest/${patientId}`),

@@ -4,10 +4,18 @@ import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { Panel, RiskBadge, StatusBadge, Spinner, ErrorState, EmptyState, Button } from '../../components/ui'
 import { api } from '../../services/api'
-import { riskTone } from '../../lib/format'
-import type { WorklistItem, RiskBand } from '../../lib/types'
+import { riskTone, timeAgo, formatDateTime } from '../../lib/format'
+import type { WorklistItem, RiskBand, ClinicalAction } from '../../lib/types'
 
 const RISK_RANK: Record<RiskBand, number> = { high: 0, moderate: 1, low: 2, unknown: 3 }
+const INSTRUMENT_LABEL: Record<string, string> = { c_ssrs: 'C-SSRS', phq9: 'PHQ-9', gad7: 'GAD-7' }
+// Status column = the clinician's action on the screening.
+const ACTION_META: Record<ClinicalAction, { tone: 'warning' | 'success' | 'info' | 'danger'; label: string }> = {
+  pending: { tone: 'warning', label: 'Pending' },
+  confirmed: { tone: 'success', label: 'Confirmed' },
+  adjusted: { tone: 'info', label: 'Adjusted' },
+  rejected: { tone: 'danger', label: 'Rejected' },
+}
 
 // C2 — Clinical Worklist. Queue ordered by AI risk stratification.
 export function ClinicianWorklist() {
@@ -76,7 +84,8 @@ export function ClinicianWorklist() {
                   {/* Confidence column commented out for now.
                   <th className="py-2 pr-4">Confidence</th>
                   */}
-                  <th className="py-2 pr-4">Wait</th>
+                  <th className="py-2 pr-4">Instrument</th>
+                  <th className="py-2 pr-4">Updated</th>
                   <th className="py-2 pr-4">Status</th>
                   <th className="py-2 pr-4"></th>
                 </tr>
@@ -104,11 +113,12 @@ export function ClinicianWorklist() {
                       </div>
                     </td>
                     */}
-                    <td className="py-3 pr-4 tabular-nums text-slate-600">{r.waitMinutes} min</td>
+                    <td className="py-3 pr-4 text-slate-600">{INSTRUMENT_LABEL[r.instrument] || (r.instrument || '—').toUpperCase()}</td>
+                    <td className="py-3 pr-4 text-slate-500" title={formatDateTime(r.updatedAt)}>{timeAgo(r.updatedAt)}</td>
                     <td className="py-3 pr-4">
-                      {r.requiresConfirmation
-                        ? <StatusBadge tone="warning" icon={<AlertTriangle className="h-3.5 w-3.5" />}>Confirm risk</StatusBadge>
-                        : <StatusBadge tone="success">Confirmed</StatusBadge>}
+                      <StatusBadge tone={ACTION_META[r.clinicalAction].tone} icon={r.clinicalAction === 'pending' ? <AlertTriangle className="h-3.5 w-3.5" /> : undefined}>
+                        {ACTION_META[r.clinicalAction].label}
+                      </StatusBadge>
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex justify-end gap-2">

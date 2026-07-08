@@ -45,10 +45,15 @@ export function ClinicianRiskConfirm() {
     setSubmitting(true)
     try {
       const action = decision === 'confirm' ? 'confirmed' : decision === 'adjust' ? 'adjusted' : 'rejected'
-      await api.confirmRisk(screeningId!, action, rationale)
-      navigate('/clinician/worklist')
+      await api.confirmRisk(screeningId!, action, rationale, decision === 'adjust' ? adjustedBand : undefined)
+      // Update in place: re-fetch so the page shows the new band + 'reviewed' status
+      // immediately for this screening (no navigation). The worklist reflects it on return.
+      setData(await api.getRiskDetail(screeningId!))
+      setDecision(null)
+      setAttested(false)
     } catch {
       setError('Submitting the decision failed. Try again.')
+    } finally {
       setSubmitting(false)
     }
   }

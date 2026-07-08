@@ -152,6 +152,8 @@ export interface CheckIn { id: string; dueDate?: string; questions: ScreeningQue
 export interface CheckInResult { recorded: boolean; escalate: boolean; nextCheckIn?: string }
 
 // ---- Clinician domain ----
+export type ClinicalAction = 'pending' | 'confirmed' | 'adjusted' | 'rejected'
+
 export interface WorklistItem {
   screeningId: string
   patientId: string
@@ -159,8 +161,11 @@ export interface WorklistItem {
   patientName: string // may be masked
   riskBand: RiskBand
   confidence: number
-  waitMinutes: number
+  instrument: string // c_ssrs | phq9 | gad7
+  updatedAt: string // sys_updated_on (ISO) — drives the "Updated" time-ago column
+  clinicalAction: ClinicalAction // drives the Status column
   requiresConfirmation: boolean
+  waitMinutes?: number // legacy, unused
   noteCount?: number
   screeningCount?: number
 }

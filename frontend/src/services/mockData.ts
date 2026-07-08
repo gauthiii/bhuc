@@ -206,9 +206,9 @@ export const mock = {
   async getWorklist(): Promise<WorklistItem[]> {
     await wait()
     return [
-      { screeningId: 'BHUC_SCREENING_003', patientId: 'BHUC_PATIENT_001', patientName: 'Maya Alvarez', riskBand: 'high', confidence: 89, waitMinutes: 4, requiresConfirmation: true },
-      { screeningId: 'BHUC_SCREENING_002', patientId: 'BHUC_PATIENT_004', patientName: 'J. Okafor', riskBand: 'moderate', confidence: 78, waitMinutes: 12, requiresConfirmation: true },
-      { screeningId: 'BHUC_SCREENING_001', patientId: 'BHUC_PATIENT_007', patientName: 'S. Kim', riskBand: 'low', confidence: 66, waitMinutes: 22, requiresConfirmation: false },
+      { screeningId: 'BHUC_SCREENING_003', patientId: 'BHUC_PATIENT_001', patientName: 'Maya Alvarez', riskBand: 'high', confidence: 89, instrument: 'c_ssrs', updatedAt: iso(-4 / 60), clinicalAction: 'pending', requiresConfirmation: true },
+      { screeningId: 'BHUC_SCREENING_002', patientId: 'BHUC_PATIENT_004', patientName: 'J. Okafor', riskBand: 'moderate', confidence: 78, instrument: 'phq9', updatedAt: iso(-12 / 60), clinicalAction: 'adjusted', requiresConfirmation: false },
+      { screeningId: 'BHUC_SCREENING_001', patientId: 'BHUC_PATIENT_007', patientName: 'S. Kim', riskBand: 'low', confidence: 66, instrument: 'gad7', updatedAt: iso(-1), clinicalAction: 'confirmed', requiresConfirmation: false },
     ]
   },
   async getChart(patientId: string, canSeePart2 = false): Promise<PatientChart> {
@@ -245,7 +245,7 @@ export const mock = {
       status: 'pending',
     }
   },
-  async confirmRisk(_id?: string, _action?: string, _rationale?: string) { await wait(); return { ok: true } },
+  async confirmRisk(_id?: string, _action?: string, _rationale?: string, _band?: string) { await wait(); return { ok: true } },
   async getDocumentation(id: string): Promise<DocumentationDraft> {
     await wait()
     return {
