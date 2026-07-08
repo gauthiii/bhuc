@@ -25,14 +25,14 @@
 | 0 | Pre-flight verification (VER) | 4 | 2 | 0 | ~0.75 | ~0.35 |
 | 1 | Data model & knowledge (DATA) | 4 | 2 | 1 | ~7 | ~1.5 |
 | 1 | ServiceNow platform (SN) | 8 | 1 | 1 | ~7 | ~5.5 |
-| 2 | Agents (AG) | 13 | 3 | 1 | ~15 | ~9.25 |
-| 3 | Governance config (GOV) | 10 | 0 | 0 | ~5 | ~5 |
-| 4 | Backend / FastAPI (BE) | 10 | 1 | 2 | ~10.5 | ~8.5 |
-| 5 | Frontend / React (FE) | 14 | 12 | 0 | ~22 | ~2 |
+| 2 | Agents (AG) | 13 | 4 | 1 | ~14.75 | ~7 |
+| 3 | Governance config (GOV) | 10 | 0 | 0 | ~4.75 | ~4.75 |
+| 4 | Backend / FastAPI (BE) | 11 | 2 | 2 | ~10.75 | ~8.25 |
+| 5 | Frontend / React (FE) | 20 | 18 | 0 | ~24.5 | ~2 |
 | 6 | iframe portal wiring (PORT) | 3 | 1 | 0 | ~2 | ~1.5 |
 | 7 | Demo (DEMO) | 5 | 0 | 0 | ~2.5 | ~2.5 |
-| — | Doc cleanup (DOC) | 6 | 0 | 0 | ~2 | ~2 |
-| | **Total** | **81** | **23** | **5** | **~76 person-days** | **~40 person-days** |
+| — | Doc cleanup (DOC) | 6 | 0 | 0 | ~1.8 | ~1.8 |
+| | **Total** | **88** | **31** | **5** | **~78 person-days** | **~37 person-days** |
 
 > Estimates are single-threaded; with an SN admin + backend dev + frontend dev working in parallel, calendar time compresses substantially (see "Suggested critical path" at the end).
 > **Est. person-days left** counts every not-done (☐) item at full effort and each partially-complete (◐) item at half its estimate (est − done − ½·partial), summed from the per-item estimates in the phase tables below.
