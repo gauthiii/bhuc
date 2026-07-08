@@ -39,7 +39,9 @@ export function ClinicianDocumentation() {
         if (wantNew) {
           setPhase('drafting')
           const d = await api.draftNewNote(id!, screeningParam)   // Agent 3 runs here
-          if (alive) apply(d)
+          // A freshly agent-drafted note starts FULLY UNVERIFIED: the clinician must
+          // review and mark every line verified (nothing is pre-verified by the agent).
+          if (alive) apply(d ? { ...d, lines: d.lines.map((l) => ({ ...l, verified: false })) } : d)
         } else if (noteParam) {
           apply(await api.getDocumentation(noteParam))
         } else {
