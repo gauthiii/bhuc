@@ -36,6 +36,14 @@ The platform guardrails **monitor and score** every agent LLM call (evidence on 
 
 ## 3. Part A — ServiceNow side (native guardrails + governance registration)
 
+> ✅ **PART A — AS‑BUILT (completed 2026‑07‑07):**
+> - **A1 (guardrails)** — configured in AICT (Data Integrity Incident Detection + Output Screening; most settings were already on, adjusted the rest).
+> - **A2 (govern the agents)** — both agents moved to **Managed** → **Start review** → **Assess** → Impact Assessment completed → progressed the lifecycle; **BHUC Risk Identification Agent** taken through Draft → Assess → Review → **Monitor**.
+> - **A3a–A3c (governance records)** — created via REST: Authority Document **`AD0020001`** (`sn_compliance_authority_document`), Risk Statement "UC2 Output Integrity / Hallucination…" (`sn_risk_definition` `9afdc80c…`), Control Objective "Output Integrity Controls — Guardrails + HITL" (`sn_compliance_policy_statement` `1afdc80c…`). **Gotcha fixed:** both needed `functional_domain = AI Risk and Compliance` (`93718fbe…`) to appear in the AICT pickers.
+> - **A3b scoring** — the risk statement's **Impact = 4‑High**, **Likelihood = 3‑Neutral** (inherent) and **Residual Likelihood = 2‑Unlikely** were set (impact/likelihood are refs to `sn_risk_criteria`). A risk created **before** the statement was scored inherits blanks and locks on reaching *Review* — so **remove + re‑add** the risk from the (now‑scored) statement to get a real **inherent‑vs‑residual** delta.
+> - **A3d (assessment)** — risk attached to the agent with the control linked, walked Draft → Assess → Review → **Monitor** (the state machine is the governance record; the separate assessment questionnaire is optional and didn't fire for the qualitative "Risk assessment for AI inventory" methodology).
+> - **Remaining:** repeat the scored risk + control on the **Clinical Documentation Agent**; run the AICT data‑collection job + invoke the agents so the Health / Security & Privacy tabs populate.
+
 > ⚠️ **All of Part A is UI‑only.** The guardrail config lives in a UX‑Framework workspace, not a REST‑writable table (`sn_vsc_security_privacy_capabilities` returns 0 rows; `kill_switch.mode` is ACL‑denied to the interface account) `[Verified]`. Everything below must be done **logged into the AICT workspace UI** as a user holding **`sn_ai_governance.ai_steward`** `[Verified: role present]`.
 
 ### A1 — Configure the Output‑Integrity guardrails (the core step)
@@ -176,4 +184,31 @@ Run each Agent 2/3 test and then check **AICT → Security & Privacy** and **Hea
 3. **Do the ServiceNow Part‑A config now (I can guide you click‑by‑click since it's UI‑only), or build Part B first and configure guardrails after?**
 
 Tell me your call on these and I'll execute.
-</content>
+
+---
+
+## 8. Does this actually protect the agent against hallucination? (detective vs preventive)
+
+**Short answer: No — monitoring *detects and measures* hallucination; it does not *prevent* the model from hallucinating.** This distinction matters for how UC2 is presented to a reviewer.
+
+### The native guardrails are *detective*, not preventive
+`Data Integrity Incident Detection` and `Output Screening` are **monitoring/assurance** controls:
+- They **sample** the agent's LLM output and **flag/score** when it mismatches expected behavior (OWASP LLM + OpenAI spec) or contains PII.
+- They record **incidents**, open **AI Cases**, and feed the **Health / Security & Privacy** dashboards.
+
+But they run **after** the model generates, are **probabilistic + sampling‑based** (even at 100% sampling the docs note "not all occurrences may be identified"), and Data Integrity Incident Detection **does not block** the output — it observes and logs it. So the guardrails tell you **whether / how often / how badly** the agent hallucinates and give you the **audit trail** — they don't stop a given hallucination from being produced.
+
+### What actually *protects* the patient (the real mitigation)
+The protection is the **app‑layer controls** — which is exactly why UC2 is governed as **guardrails + HITL**, not guardrails alone:
+1. **Grounding** — Agent 3's tagger marks each line grounded/**unverified** against the source, so ungrounded (hallucinated) content is *surfaced*.
+2. **Human‑in‑the‑loop gates** — the clinician **must Confirm** the risk score (C4) and **Sign** the note (C5, *blocked* until every unverified line is resolved). The agent **never finalizes**. **No hallucinated content becomes part of the clinical record without a licensed human verifying it** — this is the actual safety net.
+
+### What the residual score is claiming
+- **Inherent = High × Neutral** — LLMs *do* hallucinate; unchecked that's dangerous in behavioral health.
+- **Residual = High × Unlikely** — *impact* stays high, but the *likelihood of harm reaching the patient* drops, because the human gate catches it before anything is committed. The residual delta claims the harm is **contained**, not that hallucination is **eliminated**.
+
+### The reviewer‑facing framing
+> "We can't stop an LLM from ever hallucinating. Our posture is **detect → surface → gate**: the guardrails measure it and create an audit trail, the grounding flags it, and no AI output is finalized without a clinician's verification. Residual risk is reduced because the failure is caught before it harms a patient — not because the model is perfect."
+
+**Bottom line:** the AICT guardrails give **visibility, measurement, and governance evidence**; the **human‑in‑the‑loop sign/confirm gate is what actually protects the patient**. Both together are the UC2 control — which is why the plan pairs the native guardrails with the app‑layer HITL rather than relying on either alone.
+
