@@ -288,6 +288,24 @@ The concrete, deployed artifacts and pipelines. **This is the source of truth fo
 - **Nav (All menu):** application menu **"BHUC AI Fusion Center"** (`sys_app_application`, active, `snc_internal`) → module **"BHUC AI Platform"** (`sys_app_module`, `link_type=DIRECT`, `query=/bhuc_ai_platform`). Search **All → "BHUC AI Fusion Center"**.
 - The fixed full-screen iframe overlays all SP chrome — no ServiceNow header/footer/widgets show, exactly like careatlas. *(This is a single portal pointing at the app root; the plan's original two-page split (§8.1 SN-Step 15) into separate `/patient` and `/clinician` pages remains an optional future refinement.)*
 
+### 2.9.2 As-Built UC2 Output Integrity — App-Side Controls (verified 2026-07-07)
+
+UC2 (Output Integrity for the two **write-back** agents, Agent 2 Risk Identification + Agent 3 Clinical Documentation) is implemented as a **two-layer control** — see `output_integrity.md` for the full plan and §8 detective-vs-preventive analysis. As-built:
+
+**Preventive (server-enforced human-in-the-loop gates)** — the browser is no longer the only enforcement point:
+- **Note sign gate** — `POST /api/x_bhuc/note/sign` (`server/app/note.py`) now accepts the clinician's `unverifiedLines`, persists them to `u_bhuc_care_plan.u_unverified_lines`, re-reads the record, and returns **HTTP 422** if any line is still unverified. A note cannot be signed while an AI-flagged (ungrounded) line is unresolved.
+- **Risk confirm gate** — `POST /api/x_bhuc/risk/confirm` (`server/app/risk.py`) returns **HTTP 422** if the screening's `u_scored_by_agent` is not true (can't confirm a score the agent hasn't produced).
+
+**Detective (Governance "Output Integrity" page)** — new nav item under the Governance portal (`/governance/output-integrity`):
+- Backend `GET /api/x_bhuc/governance/output-integrity` (`server/app/governance.py`) computes a per-agent summary from data the app already owns — Agent 2: total scored, avg/low `u_confidence`, clinician action mix, **disagree rate** = (adjusted+rejected)/reviewed; Agent 3: notes drafted, **unverified rate**, avg flagged lines, signed/unsigned. Lifetime aggregates, ≤1000 rows/table (no date window yet).
+- Frontend page shows stat tiles + an **"How are these derived?"** info modal documenting each metric's source field + formula, plus deep links to the native **AI Control Tower** (`/now/ai-control-tower/home`) and **AIRC risk register** (where the real guardrails/risk statement/control objective live, UI-only).
+
+**Hallucination check (Agents Inventory demo)** — a self-contained grounding verifier for Agent 2/3 output:
+- Backend `POST /api/x_bhuc/hallucination/check` (`server/app/hallucination.py`) runs a **deterministic, dependency-free TF-IDF cosine extractive-grounding** analyzer (unigram+bigram) of the agent's free text against that agent's KB doc (shipped in `server/app/knowledge/` so it deploys on Render — Render root dir is `server/`, so the repo-root `knowledge/` is NOT on the box). Each claim = max cosine similarity to any KB sentence (that sentence = its evidence); overall grounding = token-weighted mean; verdict at threshold **35%** overall / **20%** per-claim → `grounded` vs `possible_hallucination`, with per-claim scores + evidence. Validated: grounded output 56–69%, fabricated 21–31%. **Limitation:** lexical grounding catches off-domain/unsupported fabrication, not a subtle wrong number stated in on-KB language.
+- Frontend: `AgentChat` gets a `groundable` prop → a **"Check hallucination"** button on each agent reply (enabled for Risk + Clinical Documentation on the Agents Inventory page), showing a grounding meter + claim-by-claim panel.
+
+*(Note: the app-side hallucination check is a demo/analyst aid; the authoritative UC2 guardrails — Data Integrity Incident Detection + Output Screening — are configured natively in AICT `Configurations → Data → Security & Privacy`, UI-only. See §5.4 and `output_integrity.md` Part A.)*
+
 ---
 
 ## 3. Frontend & UI/UX Blueprint

@@ -132,6 +132,19 @@ Add to the **Governance portal** (alongside Agents Inventory + Tables):
 - **Risk Confirm (C4):** already shows confidence + rationale + contributing inputs. Optionally add a subtle "AI output — verify before finalizing" integrity note (the HITL banner already implies this).
 - No patient‑facing change (scores stay clinician‑facing; patients see only screening *stages*).
 
+### B4 — Hallucination check (Agents Inventory demo) — **as‑built 2026‑07‑07**
+A self‑contained grounding verifier for Agent 2/3 output, independent of the native (UI‑only) guardrails:
+- **Backend `POST /api/x_bhuc/hallucination/check`** (`server/app/hallucination.py`) — a deterministic, dependency‑free **TF‑IDF cosine extractive‑grounding** analyzer (unigram + bigram). It loads the agent's KB doc, splits both KB and agent output into sentences, scores each output claim by its **max cosine similarity to any KB sentence** (that sentence becomes the claim's evidence), and returns a **token‑weighted overall grounding** %, a per‑claim breakdown, and a verdict at threshold **35%** overall / **20%** per‑claim → `grounded` vs `possible_hallucination`. The two KB docs are copied into `server/app/knowledge/` so they deploy on Render (root dir `server/` ⇒ the repo‑root `knowledge/` is not on the box). Validated: grounded output 56–69%, fabricated 21–31%.
+- **Frontend** — `AgentChat` gains a `groundable` prop → a **"Check hallucination"** button on each agent reply (Risk + Clinical Documentation on the Agents Inventory page), rendering a grounding meter + expandable claim‑by‑claim panel with KB evidence.
+- **Limitation (state honestly):** lexical grounding measures *"is this claim supported by KB text,"* not *"is this arithmetic correct."* It reliably catches off‑domain fabrication and unsupported phrasing; a subtle wrong number stated in perfectly on‑KB language is the hardest case. It is a **detective/analyst aid**, consistent with §8 — the authoritative preventive controls remain the server‑side HITL gates (B1.2) and the native AICT guardrails (Part A).
+
+### ✅ Part B status — as‑built 2026‑07‑07
+- **B1.1** governance summary endpoint — **DONE** (`server/app/governance.py`).
+- **B1.2** server‑side gates — **DONE** (`/note/sign` 422 on unverified lines; `/risk/confirm` 422 unless scored).
+- **B2** Governance **Output Integrity** page + nav + "How are these derived?" info modal + AICT/AIRC deep links — **DONE**.
+- **B3** clinician polish — **SKIPPED** (per decision; C4/C5 already carry the HITL affordances).
+- **B4** hallucination check — **DONE** (added on top of the original plan). See `plan.md` §2.9.2.
+
 ---
 
 ## 5. Part C — How to test it
