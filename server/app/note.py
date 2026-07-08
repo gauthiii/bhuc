@@ -12,6 +12,7 @@ Endpoints (mounted under /api/x_bhuc):
 
 import json
 import logging
+import threading
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -21,6 +22,29 @@ from .config import get_settings
 from .servicenow import A2AError, get_a2a_client, get_table_client
 
 logger = logging.getLogger("bhuc.note")
+
+
+def _label_note_part2(note_sys_id: str, patient_sys_id: str, note_text: str) -> None:
+    """UC3 — invoke the Consent & Data Protection Agent (Agent 4) to classify the note's
+    42 CFR Part 2 / SUD content and label the note + consent records over A2A.
+
+    Best-effort and non-blocking: run in a daemon thread off the sign path so a slow/cold
+    agent never delays signing. The Chart then reads the labels it writes
+    (u_bhuc_care_plan.u_contains_part2 / u_sensitivity)."""
+    settings = get_settings()
+    if not (settings.snow_agent_consent and note_text.strip()):
+        return
+    msg = (
+        "A clinician just finalized clinical documentation. Detect and tag any 42 CFR "
+        "Part 2 / SUD content, then write the sensitivity label to the records.\n\n"
+        f"patient: {patient_sys_id}\nencounter_id: {note_sys_id}\n\n"
+        f"Documentation text (classify this):\n{note_text}"
+    )
+    try:
+        get_a2a_client().execute_agent(settings.snow_agent_consent, msg)
+        logger.info("Agent 4 labeled note %s", note_sys_id)
+    except A2AError as exc:
+        logger.warning("Agent 4 labeling failed for note %s (non-blocking): %s", note_sys_id, exc)
 
 router = APIRouter(prefix="/api/x_bhuc", tags=["Clinical Documentation Agent"])
 
@@ -246,4 +270,11 @@ def sign_note(req: NoteSign) -> dict:
         "u_state": "finalized",
         "u_signed_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
     })
+
+    # UC3 — hand the finalized note to the Consent & Data Protection Agent (Agent 4) to
+    # label its Part 2 / SUD sensitivity. Fire-and-forget so signing never waits on it.
+    note_text = _raw(rec.get("u_draft_note")) or ""
+    patient_sys = _raw(rec.get("u_patient")) or ""
+    threading.Thread(target=_label_note_part2, args=(sys_id, patient_sys, note_text),
+                     daemon=True).start()
     return {"ok": True}

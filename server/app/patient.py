@@ -168,20 +168,35 @@ def patient_chart(patient_id: str, reveal: int = Query(0)) -> dict:
         summary = "No scored screening on file for this patient yet."
         citations = []
 
-    # history from screenings + notes
+    # history from screenings + notes. Care-plan notes carry the Consent & Data Protection
+    # Agent's (Agent 4) label — u_contains_part2 / u_sensitivity — surfaced per row.
     hist = []
     for s in table.list(SCREENING, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
                         fields="u_instrument,u_state,sys_created_on", limit=5):
         hist.append({"date": s.get("sys_created_on") or "", "part2": False,
                      "note": f"{(s.get('u_instrument') or '').upper()} screening — {s.get('u_state')}"})
+
+    part2_notes = []          # notes Agent 4 flagged as containing 42 CFR Part 2 / SUD content
     for c in table.list("u_bhuc_care_plan", f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
-                       fields="u_number,u_signed,sys_created_on", limit=3):
+                       fields="u_number,u_signed,u_contains_part2,u_sensitivity,sys_created_on", limit=5):
+        note_part2 = _b(c.get("u_contains_part2")) or (c.get("u_sensitivity") == "part2")
+        if note_part2:
+            part2_notes.append(c.get("u_number") or "")
         signed = str(c.get("u_signed")).lower() in ("true", "1")
-        hist.append({"date": c.get("sys_created_on") or "", "part2": False,
+        hist.append({"date": c.get("sys_created_on") or "", "part2": note_part2,
                      "note": f"Clinical note {c.get('u_number')} — {'signed' if signed else 'draft'}"})
 
-    part2_field = ({"value": "Prior outpatient SUD program, 2024 (sample Part 2 data)", "masked": False}
-                   if can_see_part2 else {"value": None, "masked": True})
+    # The 42 CFR Part 2 field now reflects Agent 4's labels, not a static sample:
+    #   no flagged note → nothing protected; flagged + gate open (reveal + consent) → show
+    #   which notes are Part 2; flagged + gate closed → masked locked chip.
+    if not part2_notes:
+        part2_field = {"value": "No 42 CFR Part 2 content flagged", "masked": False}
+    elif can_see_part2:
+        part2_field = {"value": f"{len(part2_notes)} note(s) flagged 42 CFR Part 2 by the "
+                                f"Consent & Data Protection Agent ({', '.join(n for n in part2_notes if n)})",
+                       "masked": False}
+    else:
+        part2_field = {"value": None, "masked": True}
 
     return {
         "patientId": patient_id,

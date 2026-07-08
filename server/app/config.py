@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     snow_agent_risk: str = "ac2e79a73b7d0f1076f13b64c3e45af3"
     # Agent 3: BHUC Clinical Documentation Agent. [Verified over A2A 2026-07-07]
     snow_agent_clinicaldoc: str = "59243d673bf5cb105551369693e45aed"
+    # Agent 4: BHUC Consent & Data Protection Agent — labels 42 CFR Part 2 / SUD
+    # content on the note + consent records. [Verified over A2A 2026-07-08]
+    snow_agent_consent: str = "b2eefdaf3b79cb105551369693e45a56"
 
     request_timeout: float = 20.0
 
