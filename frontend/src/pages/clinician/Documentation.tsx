@@ -222,6 +222,7 @@ export function ClinicianDocumentation() {
               cardSteps={['Scanning note', 'Matching Part 2 terms', 'Labeling record']}
               cards={[{ key: 'consent', name: 'Consent & Data Protection Agent' }]}
               done={!!p2}
+              alert={!!p2?.containsPart2}
               doneMessage={p2?.containsPart2
                 ? 'This note contains 42 CFR Part 2 / SUD content — it is now labeled and access-gated (masked from unauthorized roles on the chart).'
                 : 'No 42 CFR Part 2 / SUD content found — the note is labeled standard sensitivity.'}
