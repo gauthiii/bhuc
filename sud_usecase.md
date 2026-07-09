@@ -165,6 +165,16 @@ anonymize/flag sensitive input to any agent. **UI-only** (AICT UXF workspace, no
 User / Setting / Before / After). After running the agents, the **Security & Privacy** tab shows
 sensitive-data-input / anonymization occurrences.
 
+> **As-built (2026-07-09):** the **detection layer is Active** — Data Integrity Incident Detection (100%),
+> Agent goal deviation (100%), Output screening (Output Security Vulnerability + Output Extended PII +
+> Output PII Violation), and Sensitive data input & anonymization. **BUT native redaction is license-gated:**
+> the actual anonymization runs via **Data Privacy → Anonymization** policies (Data Kit / Data
+> Extraction-global) which need a **Data Privacy / Data Discovery license** ("No license — Start Trial") +
+> **Active Data Patterns** selection — unavailable on `ven04690`. So GOV-2 = **detection on, redaction
+> pending license**. Accepted as a gap; **compensating controls = the role+consent app masking + 42 ACLs
+> (Half B) + Agent 4 SUD labeling**. Also: the built-in patterns are generic PII (SSN/DOB/email/card) — there
+> is **no SUD-term pattern** OOB, so SUD-content detection stays Agent 4's job. `AG-8`/`GOV-2` in `action.md`.
+
 ---
 
 ## 5. Part B — React app (make it role-aware)
@@ -191,16 +201,23 @@ the gate for **direct-SN** users.
 >   that Agent 4 flagged Part 2** unless the viewer has role+consent (`_part2_masked`); drafts / non-Part2
 >   notes stay open so the author can write & sign. `Documentation.tsx` renders a locked "Protected note"
 >   banner (`part2Masked`). `notes_summary` now returns `containsPart2` per note.
-> - **C6 prior-auth** (`priorauth.py`): `u_sud_field` un-masks only for role **AND** consent; masked value
->   is not sent to the client. **Backend safety-net:** since Agent 5's record-op maps `u_sud_field ←
->   {{sud_field}}` but the model doesn't reliably fill it, `draft_priorauth` now populates `u_sud_field`
->   + `u_part2_gated` itself when `_looks_sud` and the agent left them empty. Seeded a demo Part 2 packet
->   **`BHUC_PRIOR_AUTH_008`** for Daniel Rivera (`BHUC_PATIENT_005`).
+> - **C6 prior-auth** (`priorauth.py`): on a Part2-gated packet, **ALL SUD-revealing fields** un-mask only
+>   for role **AND** consent — the SUD detail, **Diagnosis, Coverage determination, Citation, and the
+>   service/treatment name** (title + history list row via `serviceMasked`); only Payer + Requested units
+>   stay visible; masked values are not sent to the client. **Backend safety-net:** since Agent 5's record-op
+>   maps `u_sud_field ← {{sud_field}}` but the model doesn't reliably fill it, `draft_priorauth` populates
+>   `u_sud_field`+`u_part2_gated` when `_looks_sud` and the agent left them empty. Also **multi-prior-auth**:
+>   `/priorauth/all` (list) + create + `DELETE /priorauth/{id}` (drafts only) + an AgentChat coverage
+>   assistant. Seeded demo packet **`BHUC_PRIOR_AUTH_008`** for Daniel Rivera (`BHUC_PATIENT_005`).
+> - **Fixed** `patient_has_part2_consent` being passed the Table-API `{link,value}` reference object (not a
+>   bare sys_id) on `get_priorauth`/`draft_priorauth` — it now normalizes both shapes.
 >
-> **Verified live 2026-07-08** for `doctor@doctor.com` (role) vs `dr.finch@bhuc.example` (no role) against
-> Daniel Rivera (consented): C3 reveals 2 notes' real text for the case manager / masks for the other;
-> C5 note `BHUC_CARE_PLAN_015` body visible vs masked; C6 SUD field visible vs locked chip. **Not yet
-> committed/deployed.**
+> **Verified live** for `doctor@doctor.com` (role) vs `dr.finch@bhuc.example` (no role) against Daniel Rivera
+> (consented): C3 reveals the real note text vs masked; C5 note body visible vs masked; C6 all SUD fields
+> visible vs locked. **Committed + pushed to main (`e0f4bb1`, `9caf89c`, `6019d46`) → auto-deployed.** Demo
+> case-manager `doctor@doctor.com` also has a Cognito clinician account. The agents themselves are least-
+> privilege-wired (AG-8): they run as `svc-bhuc-*-ai` + `GlideRecordSecure`, so even agent writes are
+> ACL-gated (see `roles_and_acls.md` §5).
 
 ### B1 — Backend (FastAPI)
 1. **Role check helper** — resolve the clinician and test the role:
