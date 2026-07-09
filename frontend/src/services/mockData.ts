@@ -211,11 +211,11 @@ export const mock = {
       { screeningId: 'BHUC_SCREENING_001', patientId: 'BHUC_PATIENT_007', patientName: 'S. Kim', riskBand: 'low', confidence: 66, instrument: 'gad7', updatedAt: iso(-1), clinicalAction: 'confirmed', requiresConfirmation: false },
     ]
   },
-  async getChart(patientId: string, canSeePart2 = false): Promise<PatientChart> {
+  async getChart(patientId: string, canSeePart2 = false, _clinicianEmail?: string): Promise<PatientChart> {
     await wait()
     const mask = (v: string) => (canSeePart2 ? { value: v, masked: false } : { value: null, masked: true })
     return {
-      patientId, number: 'BHUC_PATIENT_001',
+      patientId, number: 'BHUC_PATIENT_001', part2Consent: true, part2Role: true,
       name: { value: 'Maya Alvarez', masked: false },
       dateOfBirth: { value: '1996-04-12', masked: false },
       demographics: [
@@ -230,6 +230,9 @@ export const mock = {
         { date: iso(-2), note: 'Intake screening submitted; risk flagged for confirmation.', part2: false },
         { date: iso(-24 * 60), note: 'Prior SUD outpatient program referral.', part2: true },
       ],
+      part2Content: canSeePart2
+        ? [{ number: 'BHUC_CARE_PLAN_001', signed: true, signedAt: iso(-24 * 60), summary: 'Prior outpatient SUD program, 2024.', note: 'Chief Complaint: SUD follow-up.\n\nHPI: outpatient program 2024; discussed relapse-prevention plan.' }]
+        : [],
     }
   },
   async getRiskDetail(screeningId: string): Promise<RiskDetail> {
@@ -246,7 +249,7 @@ export const mock = {
     }
   },
   async confirmRisk(_id?: string, _action?: string, _rationale?: string, _band?: string) { await wait(); return { ok: true } },
-  async getDocumentation(id: string): Promise<DocumentationDraft> {
+  async getDocumentation(id: string, _clinicianEmail?: string): Promise<DocumentationDraft> {
     await wait()
     return {
       id, patientName: 'Maya Alvarez', signed: false,
@@ -265,7 +268,7 @@ export const mock = {
     await wait()
     return { count: 1, signedCount: 0, hasNotes: true, latestSigned: false, notes: [{ id: 'BHUC_CARE_PLAN_001', signed: false, state: 'draft', signedAt: '', createdAt: iso(0) }] }
   },
-  async getLatestNote(patientId: string): Promise<DocumentationDraft | null> { await wait(); return { ...(await this.getDocumentation(patientId)) } },
+  async getLatestNote(patientId: string, _clinicianEmail?: string): Promise<DocumentationDraft | null> { await wait(); return { ...(await this.getDocumentation(patientId)) } },
   async draftNewNote(patientId: string, _screening?: string): Promise<DocumentationDraft> { await wait(1200); return this.getDocumentation(patientId) },
   async signNote(_id?: string, _unverifiedLines?: string[], _noteText?: string) { await wait(); return { ok: true } },
   async checkHallucination(agentKey: string, output: string): Promise<HallucinationCheck> {
@@ -293,7 +296,7 @@ export const mock = {
       agent3: { label: 'BHUC Clinical Documentation Agent', total: 6, withUnverified: 5, unverifiedRatePct: 83, avgUnverifiedLines: 2, signed: 1, unsigned: 5 },
     }
   },
-  async getPriorAuth(_patientId: string): Promise<PriorAuthPacket | null> {
+  async getPriorAuth(_patientId: string, _clinicianEmail?: string): Promise<PriorAuthPacket | null> {
     await wait()
     return {
       id: 'pa-01', service: 'Intensive outpatient program (IOP)', status: 'draft', part2Gated: true, draftedByAgent: true,
@@ -304,7 +307,7 @@ export const mock = {
       ],
     }
   },
-  async draftPriorAuth(req: { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string }): Promise<PriorAuthPacket> {
+  async draftPriorAuth(req: { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string; clinicianEmail?: string }): Promise<PriorAuthPacket> {
     await wait(1600)
     return {
       id: 'pa-01', service: req.service || 'Intensive Outpatient (IOP)', status: 'draft', part2Gated: false, draftedByAgent: true,

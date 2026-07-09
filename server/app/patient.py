@@ -7,9 +7,10 @@ the backend maps email -> u_bhuc_patient. Cognito JWT + ACLs come with the gover
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from .access import clinician_email, has_part2_access
 from .servicenow import get_table_client
 
 logger = logging.getLogger("bhuc.patient")
@@ -143,15 +144,24 @@ def toggle_consent(req: ConsentToggle) -> dict:
 
 
 @router.get("/patient/{patient_id}/chart")
-def patient_chart(patient_id: str, reveal: int = Query(0)) -> dict:
+def patient_chart(patient_id: str, reveal: int = Query(0),
+                  clinicianEmail: str = Query(""),
+                  authorization: Optional[str] = Header(None)) -> dict:
     """Clinician chart for THIS patient. The 42 CFR Part 2 field is masked unless the
-    clinician reveals AND the patient has consented (u_part2_consent)."""
+    clinician reveals, the patient has consented (u_part2_consent), AND the clinician
+    holds the approved case-manager role (u_bhuc_part2_access).
+
+    UC3 Part B: the app reads through one integration service account (which holds the
+    role so it can fetch Part 2 data), so the backend re-checks the *specific* signed-in
+    clinician's role here — the old build gated on consent alone. The platform ACLs are
+    the authoritative gate for direct-SN access; this is the app-user gate."""
     table = get_table_client()
     rec = table.get(PATIENT, patient_id)
     if not rec:
         raise HTTPException(status_code=404, detail="Patient not found")
     part2_consent = _b(rec.get("u_part2_consent"))
-    can_see_part2 = bool(reveal) and part2_consent
+    part2_role = has_part2_access(clinician_email(authorization, clinicianEmail))
+    can_see_part2 = bool(reveal) and part2_consent and part2_role
 
     name = f"{rec.get('u_first_name', '')} {rec.get('u_last_name', '')}".strip() or "Unknown patient"
     insurance = "Self-pay" if _b(rec.get("u_self_pay")) else (rec.get("u_insurance_provider") or "—")
@@ -176,32 +186,47 @@ def patient_chart(patient_id: str, reveal: int = Query(0)) -> dict:
         hist.append({"date": s.get("sys_created_on") or "", "part2": False,
                      "note": f"{(s.get('u_instrument') or '').upper()} screening — {s.get('u_state')}"})
 
-    part2_notes = []          # notes Agent 4 flagged as containing 42 CFR Part 2 / SUD content
-    for c in table.list("u_bhuc_care_plan", f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
-                       fields="u_number,u_signed,u_contains_part2,u_sensitivity,sys_created_on", limit=5):
+    # Scan ALL care-plan notes for the Part 2 label (Agent 4), not just the recent few, so no
+    # flagged note is missed. Pull the actual SUD content (u_summary + u_draft_note) so an
+    # approved case manager sees the real substance-use info on reveal — not just a count.
+    care_notes = table.list(
+        "u_bhuc_care_plan", f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
+        fields="u_number,u_signed,u_contains_part2,u_sensitivity,u_summary,u_draft_note,u_signed_at,sys_created_on",
+        limit=50)
+    part2_content = []        # every flagged note's actual SUD content (revealed to role+consent only)
+    for i, c in enumerate(care_notes):
         note_part2 = _b(c.get("u_contains_part2")) or (c.get("u_sensitivity") == "part2")
+        signed = _b(c.get("u_signed"))
         if note_part2:
-            part2_notes.append(c.get("u_number") or "")
-        signed = str(c.get("u_signed")).lower() in ("true", "1")
-        hist.append({"date": c.get("sys_created_on") or "", "part2": note_part2,
-                     "note": f"Clinical note {c.get('u_number')} — {'signed' if signed else 'draft'}"})
+            part2_content.append({
+                "number": c.get("u_number") or "",
+                "signed": signed,
+                "signedAt": c.get("u_signed_at") or c.get("sys_created_on") or "",
+                "summary": c.get("u_summary") or "",
+                "note": c.get("u_draft_note") or "",
+            })
+        if i < 5:             # keep the History timeline to the 5 most recent notes
+            hist.append({"date": c.get("sys_created_on") or "", "part2": note_part2,
+                         "note": f"Clinical note {c.get('u_number')} — {'signed' if signed else 'draft'}"})
 
-    # The 42 CFR Part 2 field now reflects Agent 4's labels, not a static sample:
-    #   no flagged note → nothing protected; flagged + gate open (reveal + consent) → show
-    #   which notes are Part 2; flagged + gate closed → masked locked chip.
-    if not part2_notes:
+    # The SUD field reflects Agent 4's labels + the role+consent gate:
+    #   no flagged note → nothing protected; flagged + gate open (reveal + consent + role) →
+    #   reveal the ACTUAL note content in a dedicated panel; flagged + gate closed → locked chip.
+    n_flagged = len(part2_content)
+    if n_flagged == 0:
         part2_field = {"value": "No 42 CFR Part 2 content flagged", "masked": False}
+        part2_content = []
     elif can_see_part2:
-        part2_field = {"value": f"{len(part2_notes)} note(s) flagged 42 CFR Part 2 by the "
-                                f"Consent & Data Protection Agent ({', '.join(n for n in part2_notes if n)})",
-                       "masked": False}
+        part2_field = {"value": f"{n_flagged} flagged note(s) — SUD content unmasked below", "masked": False}
     else:
         part2_field = {"value": None, "masked": True}
+        part2_content = []    # never send protected content when the gate is closed
 
     return {
         "patientId": patient_id,
         "number": rec.get("u_number") or "",
         "part2Consent": part2_consent,
+        "part2Role": part2_role,
         "name": {"value": name, "masked": False},
         "dateOfBirth": {"value": rec.get("u_date_of_birth") or "—", "masked": False},
         "demographics": [
@@ -211,6 +236,7 @@ def patient_chart(patient_id: str, reveal: int = Query(0)) -> dict:
         ],
         "aiSummary": {"text": summary, "citations": citations},
         "history": hist,
+        "part2Content": part2_content,
     }
 
 

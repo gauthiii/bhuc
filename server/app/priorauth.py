@@ -13,9 +13,10 @@ Endpoints (mounted under /api/x_bhuc):
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from .access import clinician_email, has_part2_access, patient_has_part2_consent
 from .config import get_settings
 from .servicenow import A2AError, get_a2a_client, get_table_client
 
@@ -38,10 +39,13 @@ def _looks_sud(text: str) -> bool:
     return any(term in t for term in _SUD_TERMS)
 
 
-def _packet(rec: dict) -> dict:
+def _packet(rec: dict, part2_role: bool = False, part2_consent: bool = False) -> dict:
     """Map a u_bhuc_prior_auth record → the PriorAuthPacket the C6 screen expects. The SUD
-    field is access-gated (part2:true) when the agent set u_part2_gated."""
+    field is access-gated: when the agent set u_part2_gated it stays a locked chip unless
+    the signed-in clinician holds u_bhuc_part2_access AND the patient has Part 2 consent on
+    file (the consistent UC3 role+consent gate). The masked value is NOT sent to the client."""
     part2 = _b(rec.get("u_part2_gated"))
+    allowed = part2_role and part2_consent
     citation = " · ".join([x for x in [rec.get("u_citation_policy"), rec.get("u_citation_section")] if x])
     fields = [
         {"label": "Diagnosis", "value": rec.get("u_diagnosis") or "—", "part2": False},
@@ -52,25 +56,36 @@ def _packet(rec: dict) -> dict:
     ]
     sud = rec.get("u_sud_field")
     if part2 or sud:
-        fields.append({"label": "SUD detail (42 CFR Part 2)", "value": sud or "—", "part2": part2})
+        masked = part2 and not allowed   # gated SUD detail: locked chip unless case manager + consent
+        fields.append({"label": "SUD detail (42 CFR Part 2)",
+                       "value": "" if masked else (sud or "—"), "part2": masked})
     return {
         "id": rec.get("u_number") or rec.get("sys_id"),
         "sysId": rec.get("sys_id"),
         "service": rec.get("u_service") or "Prior authorization",
         "status": rec.get("u_status") or "draft",
         "part2Gated": part2,
+        "part2Role": part2_role,
+        "part2Consent": part2_consent,
         "draftedByAgent": _b(rec.get("u_drafted_by_agent")),
         "fields": fields,
     }
 
 
 @router.get("/priorauth")
-def get_priorauth(patient: str = Query(...)) -> Optional[dict]:
-    """Latest prior-auth packet for a patient, or null if none has been drafted yet."""
+def get_priorauth(patient: str = Query(...), clinicianEmail: str = Query(""),
+                  authorization: Optional[str] = Header(None)) -> Optional[dict]:
+    """Latest prior-auth packet for a patient, or null if none has been drafted yet.
+    The SUD field un-masks only for a clinician holding u_bhuc_part2_access."""
     table = get_table_client()
     found = table.list(TABLE, f"u_patient={patient}^ORDERBYDESCsys_created_on",
                        display_value="false", limit=1)
-    return _packet(found[0]) if found else None
+    if not found:
+        return None
+    rec = found[0]
+    part2_role = has_part2_access(clinician_email(authorization, clinicianEmail))
+    part2_consent = patient_has_part2_consent(rec.get("u_patient") or "")
+    return _packet(rec, part2_role, part2_consent)
 
 
 class DraftReq(BaseModel):
@@ -79,10 +94,11 @@ class DraftReq(BaseModel):
     diagnosis: str = ""
     requestedUnits: str = ""
     payer: str = Field(..., min_length=1)
+    clinicianEmail: Optional[str] = None
 
 
 @router.post("/priorauth/draft")
-def draft_priorauth(req: DraftReq) -> dict:
+def draft_priorauth(req: DraftReq, authorization: Optional[str] = Header(None)) -> dict:
     """Run Agent 5 to answer the coverage question (cited) and draft the packet into
     u_bhuc_prior_auth (status=draft). Returns the drafted packet."""
     settings = get_settings()
@@ -110,7 +126,28 @@ def draft_priorauth(req: DraftReq) -> dict:
                        display_value="false", limit=1)
     if not found or found[0]["sys_id"] in before:
         raise HTTPException(status_code=502, detail="Prior-Auth agent produced no draft")
-    return _packet(found[0])
+    rec = found[0]
+
+    # Safety-net: Agent 5's record-op maps u_sud_field ← {{sud_field}}, but the model does
+    # not reliably fill that input. If this IS a SUD request and the agent left the SUD field
+    # / gate empty, populate them here so the Part 2 gate always has content to protect.
+    if _looks_sud(f"{req.service} {req.diagnosis}"):
+        patch: dict = {}
+        if not (rec.get("u_sud_field") or "").strip():
+            patch["u_sud_field"] = (
+                f"SUD treatment detail — {req.service}"
+                + (f", diagnosis {req.diagnosis}" if req.diagnosis else "")
+                + ". 42 CFR Part 2 protected; disclose only with patient consent."
+            )
+        if not _b(rec.get("u_part2_gated")):
+            patch["u_part2_gated"] = "true"
+        if patch:
+            table.update(TABLE, rec["sys_id"], patch)
+            rec = table.get(TABLE, rec["sys_id"], display_value="false")
+
+    part2_role = has_part2_access(clinician_email(authorization, req.clinicianEmail))
+    part2_consent = patient_has_part2_consent(rec.get("u_patient") or req.patient)
+    return _packet(rec, part2_role, part2_consent)
 
 
 class CoverageReq(BaseModel):

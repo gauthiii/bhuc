@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Lock, Unlock, FileText, CheckCircle2, PenLine } from 'lucide-react'
+import { Lock, Unlock, FileText, CheckCircle2, PenLine, ShieldAlert } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { Panel, RiskBadge, StatusBadge, Spinner, ErrorState, Button } from '../../components/ui'
+import { useClinicianAuth } from '../../contexts/AuthContext'
 import { api } from '../../services/api'
 import { formatDateTime } from '../../lib/format'
 import type { PatientChart, MaskableField, NotesSummary } from '../../lib/types'
@@ -10,17 +11,23 @@ import type { PatientChart, MaskableField, NotesSummary } from '../../lib/types'
 // C3 — Patient Summary / Chart. Part 2 / SUD fields masked server-side unless reveal re-fetch.
 export function ClinicianChart() {
   const { patientId } = useParams()
+  const { user } = useClinicianAuth()
   const [data, setData] = useState<PatientChart | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [canSeePart2, setCanSeePart2] = useState(false)
   const [consentDenied, setConsentDenied] = useState(false)
+  const [roleDenied, setRoleDenied] = useState(false)
   const [notes, setNotes] = useState<NotesSummary | null>(null)
 
-  // Reveal is gated by BOTH clinician action AND the patient's Part 2 consent.
+  // Reveal is gated by clinician action AND the patient's Part 2 consent AND the
+  // clinician holding the approved case-manager role (u_bhuc_part2_access). The
+  // backend re-checks all three server-side before it un-masks — the client only
+  // decides which "why not" modal to show.
   function onRevealToggle() {
     if (canSeePart2) { setCanSeePart2(false); return }
     if (!data?.part2Consent) { setConsentDenied(true); return }
+    if (!data?.part2Role) { setRoleDenied(true); return }
     setCanSeePart2(true)
   }
 
@@ -28,7 +35,7 @@ export function ClinicianChart() {
     setLoading(true)
     setError(null)
     try {
-      setData(await api.getChart(patientId!, reveal))
+      setData(await api.getChart(patientId!, reveal, user?.username))
     } catch {
       setError("Couldn't load the patient chart.")
     } finally {
@@ -36,7 +43,7 @@ export function ClinicianChart() {
     }
   }
 
-  useEffect(() => { load(canSeePart2) }, [patientId, canSeePart2])
+  useEffect(() => { load(canSeePart2) }, [patientId, canSeePart2, user?.username])
   useEffect(() => {
     api.getNotesSummary(patientId!).then(setNotes).catch(() => setNotes(null))
   }, [patientId])
@@ -94,6 +101,30 @@ export function ClinicianChart() {
             </dl>
           </Panel>
 
+          {data.part2Content && data.part2Content.length > 0 && (
+            <Panel
+              title={<span className="flex items-center gap-2"><Unlock className="h-4 w-4 text-teal-700" /> SUD treatment history (42 CFR Part 2)</span>}
+              actions={<StatusBadge tone="success">Unmasked · role + consent</StatusBadge>}
+            >
+              <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Protected under 42 CFR Part 2. Shown because you hold the case-manager role and the patient has consented. Do not re-disclose without authorization.
+              </div>
+              <ul className="grid gap-3">
+                {data.part2Content.map((n) => (
+                  <li key={n.number} className="rounded-lg border border-slate-200 p-3">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-slate-800">{n.number}</span>
+                      <StatusBadge tone={n.signed ? 'success' : 'warning'}>{n.signed ? 'Signed' : 'Draft'}{n.signedAt ? ` · ${formatDateTime(n.signedAt)}` : ''}</StatusBadge>
+                    </div>
+                    {n.summary && <p className="text-sm text-slate-700">{n.summary}</p>}
+                    {n.note && <pre className="mt-2 whitespace-pre-wrap rounded-md bg-slate-50 p-2 font-sans text-xs leading-relaxed text-slate-600">{n.note}</pre>}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+
           <Panel title={<span className="flex items-center gap-2"><FileText className="h-4 w-4" /> AI chart summary</span>} actions={<StatusBadge tone="warning">Draft — verify against source</StatusBadge>}>
             <p className="text-sm leading-relaxed text-slate-700">{data.aiSummary.text}</p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -150,6 +181,23 @@ export function ClinicianChart() {
             </p>
             <div className="mt-5 flex justify-end">
               <Button onClick={() => setConsentDenied(false)}>Understood</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {roleDenied && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4" role="alertdialog" aria-modal="true" aria-label="Case-manager role required">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-2 text-rose-700">
+              <ShieldAlert className="h-5 w-5" />
+              <h2 className="text-lg font-semibold text-slate-900">Case-manager role required</h2>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">
+              The patient has consented, but 42 CFR Part 2 (substance‑use) data is restricted to approved case managers. Your account does not hold the <span className="font-medium">Part 2 access</span> role, so it stays masked. Ask an administrator to grant access if you are an approved case manager.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <Button onClick={() => setRoleDenied(false)}>Understood</Button>
             </div>
           </div>
         </div>

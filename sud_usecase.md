@@ -34,9 +34,9 @@ enforced" means closing **both** surfaces:
 | **Direct ServiceNow** — native UI, the Governance portal "Tables" links, Table API | anyone with an SN login / the integration account | **ServiceNow ACLs + roles** (Part A, Phase 2) |
 | **The BHUC app** — FastAPI backend → single service account | patients / clinicians / governance in the React app | **App role-gating** (Part B) — the backend must become role-aware |
 
-> **Today's gap (as-built):** the app reveal is gated on **consent only** (any clinician can reveal a
-> consented patient's SUD data — no role check), and there is **no ACL** — so the Governance "Tables"
-> links and the Table API expose `u_draft_note` / `u_sud_field` **unmasked** to anyone. `[Verified]`
+> **~~Today's gap~~ (CLOSED 2026-07-08):** the app reveal *was* gated on consent only (any clinician
+> could reveal a consented patient's SUD data). **Now role-gated** — see the Part B as-built note in §5.
+> The ACL gap is also closed (33 ACLs live + verified, `roles_and_acls.md`).
 
 ## 3. What is already built (do NOT rebuild)
 
@@ -171,6 +171,36 @@ sensitive-data-input / anonymization occurrences.
 
 Chosen model: **SN role lookup by email.** The app is the gate for **app users**; the Phase-2 ACLs are
 the gate for **direct-SN** users.
+
+> **As-built (BUILT 2026-07-08 — B1/B2 done):** `server/app/access.py` implements
+> `has_part2_access(email)` (queries `sys_user` → `sys_user_has_role` for `u_bhuc_part2_access`),
+> `patient_has_part2_consent(patient_sys_id)` (reads `u_bhuc_patient.u_part2_consent`), and
+> `clinician_email(authorization, override)` (explicit `?clinicianEmail=` param wins, else decode the
+> Cognito access-token `username` claim from the `Authorization: Bearer` header — falls back to
+> deny-by-default for the `demo.*` token). Frontend passes `user.username` from `useClinicianAuth`.
+> B3 (governance "Tables" links) not done — covered by the ACLs regardless.
+>
+> **Consistent gate = role AND consent, applied on ALL THREE surfaces (2026-07-08):**
+> - **C3 chart** (`patient.py`): `can_see_part2 = reveal AND part2_consent AND part2_role`; returns
+>   `part2Role`/`part2Consent` so `Chart.tsx` shows distinct **"Consent required"** vs **"Case-manager
+>   role required"** modals. On reveal it now returns **`part2Content[]`** — the *actual* SUD content
+>   (`u_summary` + `u_draft_note`) of **every** flagged note (scan bumped from 5→50, so no flagged note
+>   is missed), rendered in a dedicated unmasked panel. Previously it showed only a "N note(s) flagged"
+>   summary sentence — that was the reported bug.
+> - **C5 ambient documentation** (`note.py`): `get_note`/`latest_note` **mask the body of a SIGNED note
+>   that Agent 4 flagged Part 2** unless the viewer has role+consent (`_part2_masked`); drafts / non-Part2
+>   notes stay open so the author can write & sign. `Documentation.tsx` renders a locked "Protected note"
+>   banner (`part2Masked`). `notes_summary` now returns `containsPart2` per note.
+> - **C6 prior-auth** (`priorauth.py`): `u_sud_field` un-masks only for role **AND** consent; masked value
+>   is not sent to the client. **Backend safety-net:** since Agent 5's record-op maps `u_sud_field ←
+>   {{sud_field}}` but the model doesn't reliably fill it, `draft_priorauth` now populates `u_sud_field`
+>   + `u_part2_gated` itself when `_looks_sud` and the agent left them empty. Seeded a demo Part 2 packet
+>   **`BHUC_PRIOR_AUTH_008`** for Daniel Rivera (`BHUC_PATIENT_005`).
+>
+> **Verified live 2026-07-08** for `doctor@doctor.com` (role) vs `dr.finch@bhuc.example` (no role) against
+> Daniel Rivera (consented): C3 reveals 2 notes' real text for the case manager / masks for the other;
+> C5 note `BHUC_CARE_PLAN_015` body visible vs masked; C6 SUD field visible vs locked chip. **Not yet
+> committed/deployed.**
 
 ### B1 — Backend (FastAPI)
 1. **Role check helper** — resolve the clinician and test the role:

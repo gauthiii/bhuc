@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, PenLine } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, PenLine, ShieldAlert } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, StatusBadge, Spinner, ErrorState, Button, Textarea, EmptyState } from '../../components/ui'
 import { AgentRunProgress } from '../../components/AgentRunProgress'
+import { useClinicianAuth } from '../../contexts/AuthContext'
 import { api } from '../../services/api'
 import type { DocumentationDraft, Part2CheckResult } from '../../lib/types'
 
@@ -14,6 +15,7 @@ type Phase = 'loading' | 'drafting' | 'ready' | 'empty' | 'error'
 // ?note=<id> views a specific note; default views the patient's latest note.
 export function ClinicianDocumentation() {
   const { id } = useParams()          // patientId (or a note id via ?note)
+  const { user } = useClinicianAuth()
   const [sp] = useSearchParams()
   const wantNew = sp.get('new') === '1'
   const noteParam = sp.get('note')
@@ -44,15 +46,15 @@ export function ClinicianDocumentation() {
           // review and mark every line verified (nothing is pre-verified by the agent).
           if (alive) apply(d ? { ...d, lines: d.lines.map((l) => ({ ...l, verified: false })) } : d)
         } else if (noteParam) {
-          apply(await api.getDocumentation(noteParam))
+          apply(await api.getDocumentation(noteParam, user?.username))
         } else {
-          apply(await api.getLatestNote(id!))
+          apply(await api.getLatestNote(id!, user?.username))
         }
       } catch { if (alive) setPhase('error') }
     }
     run()
     return () => { alive = false }
-  }, [id, wantNew, noteParam, screeningParam])
+  }, [id, wantNew, noteParam, screeningParam, user?.username])
 
   const unverifiedCount = lines.filter((l) => !l.verified).length
   const canSign = unverifiedCount === 0 && attested && !signing && !signed
@@ -121,7 +123,19 @@ export function ClinicianDocumentation() {
         </div>
       )}
 
-      {phase === 'ready' && data && (
+      {phase === 'ready' && data?.part2Masked && (
+        <div className="mx-auto max-w-2xl">
+          <Panel title={<span className="flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-rose-600" /> Protected note — 42 CFR Part 2</span>}
+            subtitle={data.id}
+            actions={<StatusBadge tone="danger">Access-gated</StatusBadge>}>
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              This signed note was flagged as containing 42 CFR Part 2 (substance-use) content by the Consent &amp; Data Protection Agent. Its body is withheld because it requires <span className="font-medium">both</span> the approved case-manager role <span className="font-medium">and</span> the patient's Part 2 consent on file. Ask an administrator for access if you are an approved case manager.
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {phase === 'ready' && data && !data.part2Masked && (
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="grid gap-4 lg:col-span-2">
             <HumanInLoopNote>

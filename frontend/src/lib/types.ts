@@ -209,15 +209,18 @@ export interface NotesSummary {
 }
 
 export interface MaskableField { value: string | null; masked: boolean }
+export interface Part2Note { number: string; signed: boolean; signedAt: string; summary: string; note: string }
 export interface PatientChart {
   patientId: string
   number: string
   part2Consent?: boolean
+  part2Role?: boolean
   name: MaskableField
   dateOfBirth: MaskableField
   demographics: { label: string; value: MaskableField }[]
   aiSummary: { text: string; citations: { label: string; source: string }[] }
   history: { date: string; note: string; part2: boolean }[]
+  part2Content?: Part2Note[]
 }
 
 export interface RiskDetail {
@@ -240,11 +243,13 @@ export interface DocumentationDraft {
   lines: { id: string; text: string; verified: boolean }[]
   suggestedCodes: { code: string; type: 'ICD-10' | 'CPT'; description: string; accepted: boolean }[]
   signed: boolean
+  containsPart2?: boolean
+  part2Masked?: boolean
 }
 
 export interface CoverageAnswer { answer: string; citation: { policy: string; section: string } }
-export interface PriorAuthPacket { id: string; sysId?: string; service: string; status: 'draft' | 'submitted'; part2Gated: boolean; draftedByAgent?: boolean; fields: { label: string; value: string; part2: boolean }[] }
-export interface PriorAuthDraftReq { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string }
+export interface PriorAuthPacket { id: string; sysId?: string; service: string; status: 'draft' | 'submitted'; part2Gated: boolean; part2Role?: boolean; part2Consent?: boolean; draftedByAgent?: boolean; fields: { label: string; value: string; part2: boolean }[] }
+export interface PriorAuthDraftReq { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string; clinicianEmail?: string }
 export interface Part2CheckResult { note: string; sensitivity: string; containsPart2: boolean }
 
 export interface SchedulingRecommendation {

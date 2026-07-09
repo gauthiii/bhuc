@@ -14,9 +14,10 @@ import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from .access import clinician_email, has_part2_access, patient_has_part2_consent
 from .config import get_settings
 from .servicenow import A2AError, get_a2a_client, get_table_client
 
@@ -58,8 +59,40 @@ def _raw(v):
     return v["value"] if isinstance(v, dict) else v
 
 
-def _to_draft(rec: dict) -> dict:
-    """Map a u_bhuc_care_plan record → DocumentationDraft the C5 screen expects."""
+def _contains_part2(rec: dict) -> bool:
+    return str(_raw(rec.get("u_contains_part2"))).lower() in ("true", "1") \
+        or _raw(rec.get("u_sensitivity")) == "part2"
+
+
+def _part2_masked(rec: dict, email: str) -> bool:
+    """UC3 (C5) — a SIGNED note that Agent 4 flagged 42 CFR Part 2 is masked on view
+    unless the viewer holds the case-manager role AND the patient has consented.
+    Drafts / non-Part2 notes stay open so the author can write and sign."""
+    signed = str(_raw(rec.get("u_signed"))).lower() in ("true", "1")
+    if not (signed and _contains_part2(rec)):
+        return False
+    patient_sys = _raw(rec.get("u_patient")) or ""
+    return not (has_part2_access(email) and patient_has_part2_consent(patient_sys))
+
+
+def _to_draft(rec: dict, masked: bool = False) -> dict:
+    """Map a u_bhuc_care_plan record → DocumentationDraft the C5 screen expects. When
+    ``masked`` (a gated Part 2 note viewed without role+consent) the note body / codes are
+    withheld — only the shell + part2Masked flag are returned."""
+    base = {
+        "id": _dv(rec.get("u_number")) or _dv(rec.get("sys_id")),
+        "sysId": _dv(rec.get("sys_id")),
+        "patientName": _dv(rec.get("u_patient")) or "Unknown",
+        "screeningId": _dv(rec.get("u_screening")) or "",
+        "signed": str(_raw(rec.get("u_signed"))).lower() in ("true", "1"),
+        "containsPart2": _contains_part2(rec),
+        "part2Masked": masked,
+    }
+    if masked:
+        base["lines"] = []
+        base["suggestedCodes"] = []
+        return base
+
     note = _raw(rec.get("u_draft_note")) or ""
     try:
         unverified = set(json.loads(_raw(rec.get("u_unverified_lines")) or "[]"))
@@ -82,15 +115,9 @@ def _to_draft(rec: dict) -> dict:
     except (json.JSONDecodeError, TypeError):
         pass
 
-    return {
-        "id": _dv(rec.get("u_number")) or _dv(rec.get("sys_id")),
-        "sysId": _dv(rec.get("sys_id")),
-        "patientName": _dv(rec.get("u_patient")) or "Unknown",
-        "screeningId": _dv(rec.get("u_screening")) or "",
-        "lines": lines,
-        "suggestedCodes": codes,
-        "signed": str(_raw(rec.get("u_signed"))).lower() in ("true", "1"),
-    }
+    base["lines"] = lines
+    base["suggestedCodes"] = codes
+    return base
 
 
 class NoteDraft(BaseModel):
@@ -184,13 +211,18 @@ def new_note(patient_id: str, screening: str = Query("")) -> dict:
 
 
 @router.get("/note/latest/{patient_id}")
-def latest_note(patient_id: str):
+def latest_note(patient_id: str, clinicianEmail: str = Query(""),
+                authorization: Optional[str] = Header(None)):
     """Most recent note for a patient (signed or draft), or null if none. View-only —
-    does NOT run the agent (use POST /note/draft to create a new one)."""
+    does NOT run the agent (use POST /note/draft to create a new one). A signed Part 2
+    note is masked unless the viewer holds role + the patient consented."""
     table = get_table_client()
     found = table.list(TABLE, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
                        display_value="all", limit=1)
-    return _to_draft(found[0]) if found else None
+    if not found:
+        return None
+    masked = _part2_masked(found[0], clinician_email(authorization, clinicianEmail))
+    return _to_draft(found[0], masked)
 
 
 @router.get("/notes/summary/{patient_id}")
@@ -198,13 +230,14 @@ def notes_summary(patient_id: str) -> dict:
     """Counts + signed status for a patient's notes (drives the Chart panel + button label)."""
     table = get_table_client()
     rows = table.list(TABLE, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
-                      fields="u_number,u_signed,u_state,u_signed_at,sys_created_on", limit=100)
+                      fields="u_number,u_signed,u_state,u_signed_at,u_contains_part2,u_sensitivity,sys_created_on", limit=100)
     notes = [{
         "id": r.get("u_number"),
         "signed": str(r.get("u_signed")).lower() in ("true", "1"),
         "state": r.get("u_state"),
         "signedAt": r.get("u_signed_at") or "",
         "createdAt": r.get("sys_created_on") or "",
+        "containsPart2": str(r.get("u_contains_part2")).lower() in ("true", "1") or r.get("u_sensitivity") == "part2",
     } for r in rows]
     signed = [n for n in notes if n["signed"]]
     return {
@@ -217,7 +250,8 @@ def notes_summary(patient_id: str) -> dict:
 
 
 @router.get("/note/{note_id}")
-def get_note(note_id: str) -> dict:
+def get_note(note_id: str, clinicianEmail: str = Query(""),
+             authorization: Optional[str] = Header(None)) -> dict:
     table = get_table_client()
     if len(note_id) == 32:
         rec = table.get(TABLE, note_id, display_value="all")
@@ -226,7 +260,8 @@ def get_note(note_id: str) -> dict:
         if not found:
             raise HTTPException(status_code=404, detail="Note not found")
         rec = found[0]
-    return _to_draft(rec)
+    masked = _part2_masked(rec, clinician_email(authorization, clinicianEmail))
+    return _to_draft(rec, masked)
 
 
 class NoteSign(BaseModel):

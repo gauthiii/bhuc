@@ -47,18 +47,25 @@ const live = {
   getCheckIn: (id: string) => j(`/checkin/${id}`),
   submitCheckIn: (id: string, answers: unknown) => j(`/checkin/${id}`, { method: 'POST', body: JSON.stringify(answers) }),
   getWorklist: () => j('/worklist'),
-  getChart: (patientId: string, reveal = false) => j(`/patient/${patientId}/chart${reveal ? '?reveal=1' : ''}`),
+  getChart: (patientId: string, reveal = false, clinicianEmail?: string) => {
+    const qs = new URLSearchParams()
+    if (reveal) qs.set('reveal', '1')
+    if (clinicianEmail) qs.set('clinicianEmail', clinicianEmail)
+    const q = qs.toString()
+    return j(`/patient/${patientId}/chart${q ? `?${q}` : ''}`)
+  },
   setConsent: (body: unknown) => j('/patient/consent', { method: 'PATCH', body: JSON.stringify(body) }),
   getRiskDetail: (id: string) => j(`/risk/${id}`),
   confirmRisk: (id: string, action: string, rationale: string, band?: string) => j('/risk/confirm', { method: 'POST', body: JSON.stringify({ id, action, rationale, band }) }),
-  getDocumentation: (id: string) => j(`/note/${id}`),
+  getDocumentation: (id: string, clinicianEmail?: string) => j(`/note/${id}${clinicianEmail ? `?clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
   getNotesSummary: (patientId: string) => j(`/notes/summary/${patientId}`),
-  getLatestNote: (patientId: string) => j(`/note/latest/${patientId}`),
+  getLatestNote: (patientId: string, clinicianEmail?: string) => j(`/note/latest/${patientId}${clinicianEmail ? `?clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
   draftNewNote: (patientId: string, screening?: string) => j(`/note/new/${patientId}${screening ? `?screening=${encodeURIComponent(screening)}` : ''}`, { method: 'POST', body: '{}' }),
   signNote: (id: string, unverifiedLines?: string[], noteText?: string) => j('/note/sign', { method: 'POST', body: JSON.stringify({ id, unverifiedLines, noteText }) }),
   getOutputIntegrity: () => j('/governance/output-integrity'),
   checkHallucination: (agentKey: string, output: string) => j('/hallucination/check', { method: 'POST', body: JSON.stringify({ agentKey, output }) }),
-  getPriorAuth: (patientId: string) => j(`/priorauth?patient=${patientId}`),
+  getPriorAuth: (patientId: string, clinicianEmail?: string) =>
+    j(`/priorauth?patient=${patientId}${clinicianEmail ? `&clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
   askCoverage: (question: string) => j('/priorauth', { method: 'POST', body: JSON.stringify({ question }) }),
   draftPriorAuth: (req: import('../lib/types').PriorAuthDraftReq) => j('/priorauth/draft', { method: 'POST', body: JSON.stringify(req) }),
   submitPriorAuth: (id: string) => j('/priorauth/submit', { method: 'POST', body: JSON.stringify({ id }) }),

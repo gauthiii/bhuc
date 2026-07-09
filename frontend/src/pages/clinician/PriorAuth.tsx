@@ -5,6 +5,7 @@ import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, StatusBadge, Spinner, ErrorState, Button, Field, Input } from '../../components/ui'
 import { AgentRunProgress } from '../../components/AgentRunProgress'
+import { useClinicianAuth } from '../../contexts/AuthContext'
 import { api } from '../../services/api'
 import type { PriorAuthPacket, CoverageAnswer } from '../../lib/types'
 
@@ -13,6 +14,7 @@ import type { PriorAuthPacket, CoverageAnswer } from '../../lib/types'
 // access-gated under 42 CFR Part 2.
 export function ClinicianPriorAuth() {
   const { patientId } = useParams()
+  const { user } = useClinicianAuth()
   const [data, setData] = useState<PriorAuthPacket | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -33,20 +35,20 @@ export function ClinicianPriorAuth() {
     setLoading(true)
     setError(null)
     try {
-      setData(await api.getPriorAuth(patientId!))
+      setData(await api.getPriorAuth(patientId!, user?.username))
     } catch {
       setError("Couldn't load the prior-auth packet.")
     } finally {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [patientId])
+  useEffect(() => { load() }, [patientId, user?.username])
 
   async function draft() {
     if (!form.service.trim() || !form.payer.trim()) return
     setDrafting(true); setDraftDone(false)
     try {
-      const p = await api.draftPriorAuth({ patient: patientId!, ...form })
+      const p = await api.draftPriorAuth({ patient: patientId!, ...form, clinicianEmail: user?.username })
       setData(p); setDraftDone(true)
     } catch {
       setDrafting(false)
