@@ -1507,6 +1507,16 @@ Two sub-steps, both required:
 > **Documented security warning, quoted directly:** *"To override the role masking requirement for a specific agentic workflow or AI agent, admins with the correct elevated access can... select the 'allow all roles' check box. Taking these steps deactivates the requirement for a role masking approved roles list... Role masking should be applied as security best practice and adherence to the principle of least privilege. **Overriding the role masking requirement isn't recommended.**"* `[Source: same, p.98]`
 >
 > **Recommendation for BHUC — updated for A2A (§2.9):** because the React app consumes these agents over **A2A through the FastAPI backend**, the caller is an **external app, not an interactive ServiceNow user**. There is therefore no "invoking user" whose identity a dynamic-user agent could assume. For that reason, **every A2A-consumed BHUC agent uses the AI-user identity**, bound to its **dedicated non-human service account** (`svc-bhuc-<function>`, §8.1 SN-Step 13), whose roles are scoped to least privilege via composable `u_bhuc_*` data roles (SN-Step 13). Never exercise the "allow all roles" override for any of the six agents. This mirrors the verified careatlas model, where each agent runs under its own `svc-*` account with granular roles (`role_patient_pii`, `u_patients_user`, …) `[Verified, §2.9]`.
+
+> **As-built (DONE + A2A-verified 2026-07-09):** all 6 agents now run as their AI-user identity
+> **`svc-bhuc-<function>-ai`** with least-privilege `u_bhuc_*` roles + `GlideRecordSecure`; verified over A2A
+> that writes land only via the granted roles (`sys_created_by`/`updated_by` = the AI identity, not admin).
+> **Two build gotchas:** (1) the AI-user picker only lists users with `sys_user.identity_type='ai_agent'`,
+> and that field is **403 on UPDATE but settable at CREATE** — so the `svc-bhuc-*-ai` accounts were created
+> fresh (the original unclassified `svc-bhuc-*` are now redundant). (2) `GlideRecordSecure` enforces **reads**
+> too, so each write also needs a matching read path — the write/create ACLs are keyed to per-table `*_write`
+> roles, and record-read ACLs are `clinician`-OR-`patient_read` (OR'd). Full detail: `roles_and_acls.md` §5,
+> `action.md` AG-8, `sud_usecase.md`.
 >
 > **Also update Step 2, point 6 (third-party access):** for A2A-consumed agents, set **"Allow third party to access this AI agent" = ON** — this is required for the A2A OAuth client to invoke the agent from the external app. (The original draft said OFF; that applied only before A2A was in scope.) The Front-Door agent, being public and unauthenticated, is additionally reachable directly; the other five are reached only through the authenticated FastAPI backend.
 
@@ -1771,6 +1781,18 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 **Step 5–6 — Channels/status + Test.** Test that the fairness-check log entry exists *before* any recommendation is returned, and that proposals land in `proposed` status awaiting confirmation.
 
 **Governance overlay:** register under the AICT **Fairness / Discrimination** governed-risk category (§4.1); ensure the fairness-check log is retained as compliance evidence.
+
+> **As-built (BUILT + verified over A2A 2026-07-09):** Agent `2105c6673bf9cb105551369693e45a72`, 3 tools —
+> Search Retrieval (Clinician Directory KB), **fairness Script** `bhuc_scheduling_fairness` (`2fb5062b…`;
+> strips race/ethnicity/gender/zip/insurance from the matching input, `gs.info`-logs the exclusion, returns
+> `fairness_pass`+`excluded_fields`), and **Record-Op Create** on `u_bhuc_appointment` (`f1170e2f…`, status
+> `proposed`). **Security controls: runs as AI user `svc-bhuc-scheduling-ai`** (`u_bhuc_ai_agent` +
+> `u_bhuc_schedule_write`) — the AI-user path was used instead of the planned Dynamic-user+role-masking, to
+> match the other 5 agents' least-privilege wiring; requires the `u_bhuc_appointment` create/write/read ACLs
+> keyed to `schedule_write`. `u_proposed_by_agent=true` is stamped by before-insert BR `bec44b1c…` (the
+> Record-Op checkbox saved `t`→false). **Verified:** fairness excluded `["race","zip","insurance"]`,
+> appointment landed `proposed`, `created_by=svc-bhuc-scheduling-ai` (least-privilege enforced). Detail in
+> `agents.md` Agent 6, `action.md` AG-6. **All 6 agents now built.**
 
 > **Things to consider after this entire project is complete** (Use Case 4 — Scheduling Agent)
 > *(No open questions noted for this use case.)*

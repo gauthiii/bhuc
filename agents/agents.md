@@ -17,6 +17,7 @@ on **2026-07-08**.
 | 3 | BHUC Clinical Documentation Agent | `59243d673bf5cb105551369693e45aed` | 3 | UC2 · Clinical Assessment / Documentation (P4) |
 | 4 | BHUC Consent & Data Protection Agent | `b2eefdaf3b79cb105551369693e45a56` | 2 | UC3 · Documentation (P4) · 42 CFR Part 2 |
 | 5 | BHUC Prior-Auth Compliance Agent | `4fd442e33bfd0f1076f13b64c3e45ad8` | 2 | UC3 · Treatment & Stabilization (P5) |
+| 6 | BHUC Scheduling Agent | `2105c6673bf9cb105551369693e45a72` | 3 | UC4 · Fairness / Discrimination |
 
 ---
 
@@ -359,6 +360,25 @@ on **2026-07-08**.
 
 ---
 
+## Agent 6 — Tool 1: AIA RAG Retriever (Search Retrieval)
+- **Type:** rag · **sys_id:** `8021ddea2b0d52101d72fb466e91bfd1` (shared RAG tool)
+- **What it does:** Retrieves candidate clinicians (credentials, specialty, availability) from the **Clinician Directory** KB/source+profile (`kb` `c23b8c3f3b71cf1076f13b64c3e45adb`). Hybrid; results limit 10; threshold 0.3. Autonomous.
+
+## Agent 6 — Tool 2: Fairness-check Script (`bhuc_scheduling_fairness`)
+- **Type:** script · **sys_id:** `2fb5062b3bf9cb105551369693e45a71` · **Autonomous**
+- **Inputs:** `matching_input` (JSON of candidate-matching fields), `patient` (optional, for the log)
+- **What it does:** Strips protected/proxy fields (`race, ethnicity, gender, zip, insurance, …`) from the matching input, `gs.info` logs the exclusion as compliance evidence **before** any recommendation, and returns `{fairness_pass:true, excluded_fields:[…], clean_input:{…}}`. BHUC-authored (ServiceNow ships no clinician-matching fairness model).
+
+## Agent 6 — Tool 3: Record Operation (propose appointment)
+- **Type:** crud (Record Operation) · **sys_id:** `f1170e2f3bf9cb105551369693e45a57`
+- **Operation:** **Create record** on `u_bhuc_appointment` · **status `proposed`** (human-in-the-loop = the status; app/C8 confirms)
+- **Inputs → field-value mapping:** `u_patient`←`{{patient}}`, `u_clinician`←`{{clinician}}`, `u_visit_type`, `u_modality`, `u_start`, `u_end`, `u_reason_category`, `u_reason_text`, `u_triage_priority`, `u_fairness_pass`←`{{fairness_pass}}`, `u_fairness_excluded_fields`←`{{fairness_excluded_fields}}`, `u_status`=`proposed` *(static)*.
+- **`u_proposed_by_agent`=true** is stamped by a **before-insert business rule** `BHUC - stamp proposed_by_agent` (`sys_script` `bec44b1c3b4e4b5076f13b64c3e45a6e`, fires when `u_fairness_pass` is true) — the Record-Op checkbox saved `t`→false, so the BR is the reliable fix. *(Alt: set the mapping value to literal text `true` and remove the BR.)*
+- **Security controls:** Run as **AI user `svc-bhuc-scheduling-ai`** (roles `u_bhuc_ai_agent`, `u_bhuc_schedule_write`). Requires the `u_bhuc_appointment` **create/write/read ACLs keyed to `u_bhuc_schedule_write`** (created 2026-07-09).
+- **Verified 2026-07-09 over A2A:** fairness tool excluded `["race","zip","insurance"]`; appointment created `status=proposed`, `u_proposed_by_agent=true`, `created_by=svc-bhuc-scheduling-ai` (least-privilege).
+
+---
+
 # Section 3 — Example prompts (testing)
 
 Use these in **AI Agent Studio → Testing**, the app's **Governance → Agents Inventory** chats,
@@ -388,4 +408,7 @@ or a raw A2A `message/send`. Reference records on this instance: patient **BHUC_
 ## Agent 5 — Prior-Auth Compliance
 - **Coverage Q&A (no write):** `Using ONLY the payer policy library, does the payer require prior authorization for Intensive Outpatient (IOP) behavioral health treatment, and what are the medical-necessity criteria? Cite the policy id and section. Do not draft or write any record.` → cites `BH-204`.
 - **Draft a packet:** `Patient sys_id ff1dcb3b3b71835076f13b64c3e45adf, payer Blue Shield. Draft prior authorization for Intensive Outpatient (IOP), 3x/week for 4 weeks, diagnosis F33.1. First answer the IOP coverage question with a citation, then draft the packet (part2_gated=false).` → creates a `u_bhuc_prior_auth` draft.
+
+## Agent 6 — Scheduling
+- **Propose an appointment (fairness):** `Follow-up telehealth appointment for patient sys_id ff1dcb3b3b71835076f13b64c3e45adf, reason medication management, triage moderate, start 2026-07-17 14:00:00. Matching input {"specialty":"psychiatry","race":"white","zip":"78702","insurance":"Aetna"}. Load candidates via search, run the fairness-check tool (must pass + exclude protected fields), recommend the best clinician, then propose the appointment via the record operation with status proposed and the fairness results. Do not book autonomously.` → fairness tool excludes `["race","zip","insurance"]`; creates a `u_bhuc_appointment` in `proposed` status with `u_proposed_by_agent=true`.
 - **Part 2 case:** same as above but `MAT (buprenorphine/naloxone) for opioid use disorder, diagnosis F11.20` and `part2_gated=true` → SUD detail goes in `sud_field`, packet is access-gated.

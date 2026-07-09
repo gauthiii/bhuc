@@ -5,12 +5,15 @@ dependencies later. Grounded in `plan.md` §8.1 SN-Steps 3/4/13, `tables.md` (fi
 and `sud_usecase.md` (UC3 enforcement). `[Verified]` = the careatlas analog is confirmed on
 `ven04690`; ✅ = already created; ☐ = to do.
 
-> **STATUS — 2026-07-08 (roles/ACLs COMPLETE):** All **9 roles**, **6 service accounts** (passwords
-> set), and **33 ACLs** (**25 field-level read** + **8 record-level read**) are done ✅ — verified
-> present with correct roles, none missing/extra, and **verified enforcing** via API (Part 2 →
-> `u_bhuc_part2_access`, PII → `u_bhuc_patient_pii`, deny-by-default, admin bypasses). **Nothing
-> role/ACL-related is pending.** Remaining (NOT roles/ACLs): the **wiring** (§5) — bind agents to their
-> `svc-bhuc-*` + `GlideRecordSecure` — and the **GOV-2 DLP guardrail** (`sud_usecase.md` §4 Phase 3).
+> **STATUS — 2026-07-09 (roles + ACLs + agent least-privilege wiring COMPLETE + A2A-verified):**
+> **12 roles**, **12 service accounts** (6 original `svc-bhuc-*` + **6 `svc-bhuc-*-ai` AI-user identities**),
+> and **42 ACLs** — **33 read** (25 field + 8 record) plus **5 write + 4 create** (on
+> `screening`/`care_plan`/`consent`/`prior_auth`/`escalation`/`appointment` → the `*_write` roles). All
+> verified enforcing via API (deny-by-default, admin bypasses). **Wiring DONE (§5):** every agent (1–6) now
+> runs as its `svc-bhuc-*-ai` identity with `GlideRecordSecure` — verified over A2A that writes land only
+> via the granted roles (`sys_created_by`/`updated_by` = the AI identity, NOT admin). **GOV-2 DLP guardrail:**
+> detection layer active; native anonymization/redaction is license-gated (accepted gap). Nothing
+> role/ACL/wiring-related is pending. Detail: `action.md` AG-8, `sud_usecase.md`.
 
 ## TL;DR — are the 2 roles enough?
 **No.** `u_bhuc_part2_access` ✅ and `u_bhuc_patient_pii` ✅ are the **data-sensitivity** roles (UC3).
@@ -19,10 +22,10 @@ The complete model is:
 | Bucket | Count | Status |
 |---|---|---|
 | Application / persona roles | 2 (+1 reused) | ✅ created |
-| Data-access (composable) roles | 7 | ✅ 7 created |
-| Service accounts (agent identities) | 6 | ✅ created (set passwords) |
-| Field-level ACLs | 25 field + 8 record read ACLs (all incl. optional) | ✅ created + verified enforcing |
-| Wiring (bind + GlideRecordSecure + integration-acct roles) | — | ◐ integration-acct roles ✅; bind/GlideRecordSecure ☐ |
+| Data-access (composable) roles | 10 | ✅ created (7 + 3 write roles added 2026-07-09) |
+| Service accounts (agent identities) | 6 `svc-bhuc-*` + 6 `svc-bhuc-*-ai` (AI-user) | ✅ created |
+| ACLs | 42 (33 read + 5 write + 4 create) | ✅ created + verified enforcing |
+| Wiring (bind AI-user + GlideRecordSecure + integration-acct roles) | — | ✅ **DONE + A2A-verified 2026-07-09** |
 | Governance / builder roles | 3 | ✅ already present |
 
 Which use case each serves: **UC3 Privacy** → `u_bhuc_part2_access` + PII ACLs. **UC5 Excessive
@@ -55,6 +58,13 @@ Scheduling fairness** → `svc-bhuc-scheduling` holds *no* PII/demographic role.
 | `u_bhuc_screening_write` | Narrow write to `u_bhuc_screening` scores | Agent 2 | ✅ created |
 | `u_bhuc_doc_write` | Narrow write to `u_bhuc_care_plan` documentation | Agent 3 | ✅ created |
 | `u_bhuc_schedule_write` | Narrow write to `u_bhuc_appointment` | Agent 6 | ✅ created |
+| `u_bhuc_consent_write` | Narrow write to `u_bhuc_consent` labels | Agent 4 | ✅ created 2026-07-09 |
+| `u_bhuc_priorauth_write` | Narrow write to `u_bhuc_prior_auth` | Agent 5 | ✅ created 2026-07-09 |
+| `u_bhuc_escalation_write` | Narrow write to `u_bhuc_escalation` | Agent 1 | ✅ created 2026-07-09 |
+
+> **Added 2026-07-09** (for the agent least-privilege wiring / write ACLs, §5): the 3 `*_write` roles above.
+> `screening_write`/`doc_write`/`schedule_write` existed already. These make the write/create ACLs (§4C)
+> keyed to a per-table role.
 
 **Create:** `User Administration → Roles → New`, or `POST /api/now/table/sys_user_role {name, description}`.
 
@@ -63,21 +73,25 @@ Scheduling fairness** → `svc-bhuc-scheduling` holds *no* PII/demographic role.
 Create as **integration users** (`User Administration → Users → New`, "Web service access only", no
 interactive password). Each active. Least-privilege role set per agent:
 
-| Agent | Service account | Roles | Status |
+**The bound identities are the `svc-bhuc-*-ai` accounts** (created 2026-07-09) — the Agent Studio "Run as →
+AI user" picker only lists users with **`sys_user.identity_type='ai_agent'`**, and that field is **403 on
+UPDATE but settable at CREATE**, so the original `svc-bhuc-*` (unclassified) were re-created as AI-user
+identities. Final least-privilege role sets (each agent bound to its row → verified over A2A):
+
+| Agent | AI-user identity (bound) | Roles | Status |
 |---|---|---|---|
-| 1 Front-Door | `svc-bhuc-frontdoor` | `u_bhuc_ai_agent` **only** (no patient data) | ✅ created |
-| 2 Risk Identification | `svc-bhuc-risk` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_screening_write` — **no PII** | ✅ created |
-| 3 Clinical Documentation | `svc-bhuc-clinicaldoc` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_doc_write` | ✅ created |
-| 4 Consent & Data Protection | `svc-bhuc-consent` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access` | ✅ created |
-| 5 Prior-Auth Compliance | `svc-bhuc-priorauth` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access` (read) | ✅ created |
-| 6 Scheduling | `svc-bhuc-scheduling` | `u_bhuc_ai_agent`, `u_bhuc_schedule_write` — **no demographic/PII (fairness)** | ✅ created |
+| 1 Front-Door | `svc-bhuc-frontdoor-ai` | `u_bhuc_ai_agent`, `u_bhuc_escalation_write` | ✅ bound + tested |
+| 2 Risk Identification | `svc-bhuc-risk-ai` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_screening_write`, `u_bhuc_part2_access`¹ — **no PII** | ✅ bound + tested |
+| 3 Clinical Documentation | `svc-bhuc-clinicaldoc-ai` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_doc_write` | ✅ bound + tested |
+| 4 Consent & Data Protection | `svc-bhuc-consent-ai` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access`, `u_bhuc_doc_write`, `u_bhuc_consent_write` | ✅ bound + tested |
+| 5 Prior-Auth Compliance | `svc-bhuc-priorauth-ai` | `u_bhuc_ai_agent`, `u_bhuc_patient_read`, `u_bhuc_part2_access`, `u_bhuc_priorauth_write` | ✅ bound + tested |
+| 6 Scheduling | `svc-bhuc-scheduling-ai` | `u_bhuc_ai_agent`, `u_bhuc_schedule_write` — **no demographic/PII (fairness)** | ✅ bound + tested |
 
-> **Created 2026-07-08 (API):** all 6 as **active password users** (`web_service_access_only=false`,
-> mirroring `interface_gautham`) with the role grants above. **Set a password on each** (you said you'll
-> reuse the interface-account password). No password was set by the API.
-
-> The contrast is the demo: `svc-bhuc-risk` lacks `u_bhuc_patient_pii`, so its reads are auto-stripped
-> of PII, while `svc-bhuc-clinicaldoc`/`consent` can read what they need. That IS UC5.
+> ¹ `svc-bhuc-risk-ai` was granted `u_bhuc_part2_access` so it can write the Part 2-classified `u_rationale`
+> field (its own scoring rationale); it still holds **no PII** role (fairness/UC5 intact).
+> The original **`svc-bhuc-*`** (unclassified, password users created 2026-07-08) are now **redundant** — nothing
+> binds to them; safe to delete. The contrast that IS UC5: `risk`/`scheduling` hold no `u_bhuc_patient_pii`,
+> so their reads are auto-stripped of PII, while `clinicaldoc`/`consent` read what they need.
 
 ## 4. Field-level ACLs — `plan.md` SN-Step 4 + 13d (needs `security_admin` elevation; UI-only)
 
@@ -102,19 +116,37 @@ fields readable; gate the actual content.
 | `u_bhuc_patient` | `u_first_name`, `u_last_name`, `u_preferred_name`, `u_date_of_birth`, `u_gender`, `u_email`, `u_phone`, `u_address_line1/2`, `u_insurance_member_id`, `u_cognito_sub` |
 | `u_bhuc_consent` | `u_signature`, `u_phone` |
 
+**C. Write / create ACLs → the per-table `*_write` role** (added 2026-07-09 for the agent least-privilege
+wiring; type `record`, ops `create`/`write`, `admin_overrides` on). Without these, an agent running as a
+non-admin `svc-bhuc-*-ai` gets *"Cannot create record due to security constraints."*
+
+| Table | Ops | Requires role |
+|---|---|---|
+| `u_bhuc_screening` | write | `u_bhuc_screening_write` |
+| `u_bhuc_care_plan` | create + write | `u_bhuc_doc_write` |
+| `u_bhuc_consent` | write | `u_bhuc_consent_write` |
+| `u_bhuc_prior_auth` | create + write | `u_bhuc_priorauth_write` |
+| `u_bhuc_escalation` | create | `u_bhuc_escalation_write` |
+| `u_bhuc_appointment` | create + write (+ `schedule_write` added to its record **read** ACL) | `u_bhuc_schedule_write` |
+
+> `GlideRecordSecure` enforces **reads** too, so an agent must be able to read the record it writes: the
+> 8 record-level read ACLs are `clinician` **OR** `patient_read` (OR'd); `u_bhuc_appointment`'s read ACL also
+> got `schedule_write` so `svc-bhuc-scheduling-ai` (no `patient_read`) can read its own proposed appointment.
+
 Test each with **Test access** (Access Analyzer) and by impersonating an account with/without the role.
 
-## 5. Wiring — so the roles/ACLs actually ENFORCE (not just exist)
+## 5. Wiring — so the roles/ACLs actually ENFORCE (5a/5b DONE + A2A-verified 2026-07-09)
 
-Creating roles/ACLs is not enough; today the agents and the app **bypass** them. To close that:
-
-- **5a — Bind each agent to its service account (SN-13c).** In each agent → *Define security controls →
-  data access* → **AI user** → select its `svc-bhuc-*`. (Currently agents don't run under these scoped
-  identities.)
-- **5b — Switch agent write tools `GlideRecord` → `GlideRecordSecure`.** The as-built Script/CRUD write
-  tools use `GlideRecord` to bypass ACLs during pre-governance testing (see Agent 2 "Write risk score",
-  Agent 4 "Write Sensitivity Label" — both note this). Until they use `GlideRecordSecure`, ACLs don't
-  apply to agent writes.
+- **5a — Bind each agent to its AI-user identity (SN-13c). ✅ DONE.** Each agent → *Define security controls
+  → Define data access → Run as → AI user →* its `svc-bhuc-*-ai` → re-publish. **Gotcha:** the picker only
+  lists users with `sys_user.identity_type='ai_agent'`; that field is **403 on UPDATE but settable at
+  CREATE**, so the AI-user accounts were created fresh (the original `svc-bhuc-*` couldn't be converted).
+- **5b — Switch agent write tools `GlideRecord` → `GlideRecordSecure`. ✅ DONE.** The two Script tools
+  (Agent 2 "Write risk score", Agent 4 "Write Sensitivity Label") were swapped; the CRUD Record-Operation
+  tools (Agents 3/5/6) already run `GlideRecordSecure` under the bound user. **Verified over A2A:** all 6
+  agents' writes land and `sys_created_by`/`updated_by` = the `svc-bhuc-*-ai` identity (not admin) → ACLs
+  enforce. *(Agent 6 CRUD boolean gotcha: `u_proposed_by_agent` checkbox saved `t`→false; stamped via
+  before-insert business rule `BHUC - stamp proposed_by_agent` `bec44b1c…`.)*
 - **5c — Grant the FastAPI integration account (`interface_gautham`) the roles it needs.** The app reads
   ServiceNow through this single account and gates per-clinician in code (UC3 "SN role lookup by email").
   Give it `u_bhuc_patient_read`, `u_bhuc_patient_pii`, `u_bhuc_part2_access` so it can *fetch* data to
@@ -134,14 +166,16 @@ Creating roles/ACLs is not enough; today the agents and the app **bypass** them.
 
 ## 7. Recommended order (no dependency surprises)
 
-1. ✅ **Roles** — all 9 created (7 via API 2026-07-08 + the 2 you made earlier).
-2. ✅ **Service accounts** — the 6 `svc-bhuc-*` created + passwords set.
-3. ✅ **ACLs** — 9 field-read + 4 record-read (`u_bhuc_patient`/`_screening`/`_care_plan`/`_prior_auth`,
-   requiring `u_bhuc_clinician` + `u_bhuc_patient_read`). **Verified enforcing** (Part 2 → `part2_access`,
-   PII → `patient_pii`, deny-by-default, admin bypasses). *(Optional: more field ACLs per §4.)*
-4. ☐ **Wiring** — §5: bind agents to `svc-bhuc-*` (13c) + `GlideRecordSecure`; map Cognito→SN roles.
-   *(Integration-account roles already granted.)* Plus **GOV-2** DLP guardrail (`sud_usecase.md` §4 Phase 3).
-5. ◐ **Verify** — API test done ✅; still worth an in-UI impersonation + the app's C3 reveal (case-manager vs not).
+1. ✅ **Roles** — all **12** created (9 + 3 `*_write` roles added 2026-07-09).
+2. ✅ **Service accounts** — 6 `svc-bhuc-*` + **6 `svc-bhuc-*-ai` AI-user identities** (the bound ones).
+3. ✅ **ACLs** — **42**: 33 read (25 field + 8 record) + 5 write + 4 create (the `*_write`-keyed write/create
+   ACLs of §4C). **Verified enforcing** (deny-by-default, admin bypasses).
+4. ✅ **Wiring** — §5: agents bound to their `svc-bhuc-*-ai` + `GlideRecordSecure`, **A2A-verified** (writes
+   attributed to the AI identity, not admin). *(Integration-account roles already granted.)* **GOV-2** DLP
+   guardrail = detection active; redaction license-gated (`sud_usecase.md` §4 Phase 3). Cognito→SN role
+   mapping (5d) remains for the app-auth pass.
+5. ✅ **Verify** — API + **A2A end-to-end** done for all 6 agents (least-privilege writes land; admin-bypass
+   ruled out). In-UI impersonation + the app's C3 reveal remain a nice belt-and-suspenders check.
 
 Everything role/ACL-related for all 6 agents / 4 use cases / 3 portals is on this page — build these and
 you won't hit a role/ACL dependency later.
