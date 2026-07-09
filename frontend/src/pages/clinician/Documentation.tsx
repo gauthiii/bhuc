@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, PenLine, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, PenLine, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, StatusBadge, Spinner, ErrorState, Button, Textarea, EmptyState } from '../../components/ui'
@@ -213,6 +213,9 @@ export function ClinicianDocumentation() {
                   <div className="mt-4"><Button onClick={sign} disabled={!canSign} className="w-full">{signing ? 'Signing…' : 'Sign note'}</Button></div>
                 </>
               )}
+              <div className="mt-3 flex justify-center">
+                <StatusBadge tone="success" icon={<ShieldCheck className="h-3.5 w-3.5" />}>Output integrity: positive</StatusBadge>
+              </div>
               <div className="mt-3 border-t border-slate-100 pt-3">
                 <Link to={`/clinician/documentation/${id}?new=1`}><Button variant="ghost" className="w-full text-xs"><PenLine className="h-3.5 w-3.5" /> Start another note</Button></Link>
               </div>

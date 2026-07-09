@@ -265,6 +265,11 @@ class TableClient:
         r.raise_for_status()
         return r.json()["result"]
 
+    def delete(self, table: str, sys_id: str) -> None:
+        r = httpx.delete(self._url(table, sys_id), auth=self._auth,
+                         headers={"Accept": "application/json"}, timeout=self._s.request_timeout)
+        r.raise_for_status()
+
     def list(self, table: str, query: str, *, fields: str = "", limit: int = 100,
              display_value: str = "false") -> list:
         params = {"sysparm_query": query, "sysparm_limit": str(limit),

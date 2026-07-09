@@ -66,9 +66,12 @@ const live = {
   checkHallucination: (agentKey: string, output: string) => j('/hallucination/check', { method: 'POST', body: JSON.stringify({ agentKey, output }) }),
   getPriorAuth: (patientId: string, clinicianEmail?: string) =>
     j(`/priorauth?patient=${patientId}${clinicianEmail ? `&clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
+  listPriorAuth: (patientId: string, clinicianEmail?: string) =>
+    j(`/priorauth/all?patient=${patientId}${clinicianEmail ? `&clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
   askCoverage: (question: string) => j('/priorauth', { method: 'POST', body: JSON.stringify({ question }) }),
   draftPriorAuth: (req: import('../lib/types').PriorAuthDraftReq) => j('/priorauth/draft', { method: 'POST', body: JSON.stringify(req) }),
   submitPriorAuth: (id: string) => j('/priorauth/submit', { method: 'POST', body: JSON.stringify({ id }) }),
+  deletePriorAuth: (id: string) => j(`/priorauth/${id}`, { method: 'DELETE' }),
   checkNotePart2: (id: string) => j('/note/part2-check', { method: 'POST', body: JSON.stringify({ id }) }),
   getScheduling: (patientId: string) => j(`/scheduling?patient=${patientId}`),
   confirmScheduling: (id: string) => j('/scheduling/confirm', { method: 'POST', body: JSON.stringify({ id }) }),
@@ -106,9 +109,11 @@ const liveAgent2and3 = {
   setConsent: live.setConsent,
   checkNotePart2: live.checkNotePart2,
   getPriorAuth: live.getPriorAuth,
+  listPriorAuth: live.listPriorAuth,
   askCoverage: live.askCoverage,
   draftPriorAuth: live.draftPriorAuth,
   submitPriorAuth: live.submitPriorAuth,
+  deletePriorAuth: live.deletePriorAuth,
 }
 
 const overrides = USE_MOCK

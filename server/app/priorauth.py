@@ -88,6 +88,23 @@ def get_priorauth(patient: str = Query(...), clinicianEmail: str = Query(""),
     return _packet(rec, part2_role, part2_consent)
 
 
+@router.get("/priorauth/all")
+def list_priorauth(patient: str = Query(...), clinicianEmail: str = Query(""),
+                   authorization: Optional[str] = Header(None)) -> list:
+    """All prior-auth packets for a patient (newest first). A patient can have many —
+    each is drafted and submitted independently — so the C6 screen lists them and lets
+    the clinician start another once the latest is submitted. Each packet's SUD field is
+    Part 2-gated per the viewing clinician's role + the patient's consent."""
+    table = get_table_client()
+    rows = table.list(TABLE, f"u_patient={patient}^ORDERBYDESCsys_created_on",
+                      display_value="false", limit=50)
+    if not rows:
+        return []
+    part2_role = has_part2_access(clinician_email(authorization, clinicianEmail))
+    part2_consent = patient_has_part2_consent(patient)
+    return [_packet(r, part2_role, part2_consent) for r in rows]
+
+
 class DraftReq(BaseModel):
     patient: str = Field(..., min_length=1)   # patient sys_id
     service: str = Field(..., min_length=1)
@@ -168,6 +185,28 @@ def ask_coverage(req: CoverageReq) -> dict:
         raise HTTPException(status_code=502, detail="Prior-Auth agent unavailable") from exc
     answer = out.get("reply") or "No matching payer policy found for that question."
     return {"answer": answer, "citation": {"policy": "Payer policy library", "section": "cited inline"}}
+
+
+@router.delete("/priorauth/{packet_id}")
+def delete_priorauth(packet_id: str) -> dict:
+    """Delete a DRAFT prior-auth packet (record removed from ServiceNow). Submitted
+    packets are immutable for audit and cannot be deleted."""
+    table = get_table_client()
+    sys_id = packet_id
+    if len(sys_id) != 32:
+        found = table.list(TABLE, f"u_number={packet_id}", fields="sys_id,u_status", limit=1)
+        if not found:
+            raise HTTPException(status_code=404, detail="Prior-auth packet not found")
+        sys_id, status = found[0]["sys_id"], found[0].get("u_status")
+    else:
+        rec = table.get(TABLE, sys_id)
+        if not rec:
+            raise HTTPException(status_code=404, detail="Prior-auth packet not found")
+        status = rec.get("u_status")
+    if str(status).lower() == "submitted":
+        raise HTTPException(status_code=409, detail="Submitted prior authorizations cannot be deleted")
+    table.delete(TABLE, sys_id)
+    return {"ok": True, "deleted": sys_id}
 
 
 class SubmitReq(BaseModel):

@@ -307,6 +307,10 @@ export const mock = {
       ],
     }
   },
+  async listPriorAuth(patientId: string, clinicianEmail?: string): Promise<PriorAuthPacket[]> {
+    const p = await this.getPriorAuth(patientId, clinicianEmail)
+    return p ? [p] : []
+  },
   async draftPriorAuth(req: { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string; clinicianEmail?: string }): Promise<PriorAuthPacket> {
     await wait(1600)
     return {
@@ -325,6 +329,7 @@ export const mock = {
     return { answer: 'IOP is covered under this plan when a psychiatric diagnostic evaluation and a documented step-up from outpatient are on file. Prior authorization is required.', citation: { policy: 'Blue Shield Behavioral Health Policy BH-204', section: '§3.2 Levels of Care' } }
   },
   async submitPriorAuth(_id?: string) { await wait(); return { ok: true, status: 'submitted' } },
+  async deletePriorAuth(id: string) { await wait(); return { ok: true, deleted: id } },
   async checkNotePart2(id: string): Promise<{ note: string; sensitivity: string; containsPart2: boolean }> {
     await wait(1600)
     return { note: id, sensitivity: 'part2', containsPart2: true }
