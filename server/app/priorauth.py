@@ -40,29 +40,35 @@ def _looks_sud(text: str) -> bool:
 
 
 def _packet(rec: dict, part2_role: bool = False, part2_consent: bool = False) -> dict:
-    """Map a u_bhuc_prior_auth record → the PriorAuthPacket the C6 screen expects. The SUD
-    field is access-gated: when the agent set u_part2_gated it stays a locked chip unless
-    the signed-in clinician holds u_bhuc_part2_access AND the patient has Part 2 consent on
-    file (the consistent UC3 role+consent gate). The masked value is NOT sent to the client."""
+    """Map a u_bhuc_prior_auth record → the PriorAuthPacket the C6 screen expects. On a
+    Part 2-gated packet, EVERY SUD-revealing field is access-gated unless the signed-in
+    clinician holds u_bhuc_part2_access AND the patient has Part 2 consent on file (the
+    consistent UC3 role+consent gate): the SUD detail, the Diagnosis (e.g. F11.20), the
+    Coverage determination, the Citation (its section can name the treatment), and the
+    requested service/treatment (e.g. "MAT buprenorphine/naloxone") shown in the title +
+    list. Masked values are NOT sent to the client. Generic fields (payer, requested
+    units) stay visible."""
     part2 = _b(rec.get("u_part2_gated"))
     allowed = part2_role and part2_consent
+    masked = part2 and not allowed
     citation = " · ".join([x for x in [rec.get("u_citation_policy"), rec.get("u_citation_section")] if x])
     fields = [
-        {"label": "Diagnosis", "value": rec.get("u_diagnosis") or "—", "part2": False},
+        {"label": "Diagnosis", "value": "" if masked else (rec.get("u_diagnosis") or "—"), "part2": masked},
         {"label": "Requested units", "value": rec.get("u_requested_units") or "—", "part2": False},
         {"label": "Payer", "value": rec.get("u_payer") or "—", "part2": False},
-        {"label": "Coverage determination", "value": rec.get("u_coverage_answer") or "—", "part2": False},
-        {"label": "Citation", "value": citation or "—", "part2": False},
+        {"label": "Coverage determination", "value": "" if masked else (rec.get("u_coverage_answer") or "—"), "part2": masked},
+        {"label": "Citation", "value": "" if masked else (citation or "—"), "part2": masked},
     ]
     sud = rec.get("u_sud_field")
     if part2 or sud:
-        masked = part2 and not allowed   # gated SUD detail: locked chip unless case manager + consent
         fields.append({"label": "SUD detail (42 CFR Part 2)",
                        "value": "" if masked else (sud or "—"), "part2": masked})
+    service = rec.get("u_service") or "Prior authorization"
     return {
         "id": rec.get("u_number") or rec.get("sys_id"),
         "sysId": rec.get("sys_id"),
-        "service": rec.get("u_service") or "Prior authorization",
+        "service": "Protected (42 CFR Part 2)" if masked else service,
+        "serviceMasked": masked,
         "status": rec.get("u_status") or "draft",
         "part2Gated": part2,
         "part2Role": part2_role,

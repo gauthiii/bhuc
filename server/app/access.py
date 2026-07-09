@@ -85,9 +85,12 @@ def has_part2_access(email: str) -> bool:
         return False
 
 
-def patient_has_part2_consent(patient_sys_id: str) -> bool:
+def patient_has_part2_consent(patient_sys_id) -> bool:
     """True iff the patient has 42 CFR Part 2 consent on file
-    (``u_bhuc_patient.u_part2_consent``). Empty id / lookup failure → False."""
+    (``u_bhuc_patient.u_part2_consent``). Accepts a sys_id string or a Table-API
+    reference object (``{"link":..., "value": sys_id}``). Empty / lookup failure → False."""
+    if isinstance(patient_sys_id, dict):        # Table-API reference field shape
+        patient_sys_id = patient_sys_id.get("value", "")
     if not patient_sys_id:
         return False
     try:

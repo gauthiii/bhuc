@@ -153,7 +153,11 @@ export function ClinicianPriorAuth() {
                         className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${active ? 'border-teal-300 bg-teal-50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}
                       >
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-slate-800">{p.service}</div>
+                          <div className="truncate font-medium text-slate-800">
+                            {p.serviceMasked
+                              ? <span className="inline-flex items-center gap-1 text-slate-500"><Lock className="h-3 w-3" /> Protected (42 CFR Part 2)</span>
+                              : p.service}
+                          </div>
                           <div className="truncate text-xs text-slate-400">{p.id}</div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
@@ -189,7 +193,9 @@ export function ClinicianPriorAuth() {
             </Panel>
           ) : selected ? (
             <Panel
-              title={`Prior-auth packet — ${selected.service}`}
+              title={selected.serviceMasked
+                ? <span className="flex items-center gap-2">Prior-auth packet — <span className="inline-flex items-center gap-1 text-slate-500"><Lock className="h-3.5 w-3.5" /> Protected (42 CFR Part 2)</span></span>
+                : `Prior-auth packet — ${selected.service}`}
               subtitle={selected.id}
               actions={selected.status === 'submitted' ? <StatusBadge tone="success">Submitted</StatusBadge> : <StatusBadge tone="warning">Draft</StatusBadge>}
             >
