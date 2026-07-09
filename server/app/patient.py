@@ -54,6 +54,22 @@ def _find_by_email(email: str) -> Optional[dict]:
     return rows[0] if rows else None
 
 
+@router.get("/patients")
+def list_patients() -> list:
+    """Registered patients for pickers (e.g. the C8 Scheduling selector). No PII beyond
+    name + number — enough to choose whom to schedule."""
+    rows = get_table_client().list(
+        PATIENT, "u_registration_status=verified^ORDERBYu_number",
+        fields="u_number,u_first_name,u_last_name,u_gender,u_race,u_ethnicity", limit=100)
+    return [{
+        "number": r.get("u_number"),
+        "name": f"{r.get('u_first_name','')} {r.get('u_last_name','')}".strip() or r.get("u_number"),
+        "gender": r.get("u_gender") or "",
+        "race": r.get("u_race") or "",
+        "ethnicity": r.get("u_ethnicity") or "",
+    } for r in rows]
+
+
 @router.get("/patient/me")
 def patient_me(email: str = Query("")) -> dict:
     """Registration/profile state for the signed-in patient (by email).

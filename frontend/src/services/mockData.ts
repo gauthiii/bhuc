@@ -3,7 +3,7 @@
 import type {
   Appointment, AvailabilitySlot, CarePlan, ChatReply, CheckIn, CheckInResult, CoverageAnswer,
   DispositionCase, DocumentationDraft, Eligibility, Message, MessageThread, PatientChart,
-  PatientProfile, PriorAuthPacket, RiskDetail, SchedulingRecommendation, ScreeningQuestion,
+  PatientProfile, PriorAuthPacket, RiskDetail, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
   MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary, OutputIntegritySummary,
   HallucinationCheck,
@@ -140,9 +140,9 @@ export const mock = {
     await wait()
     return [10, 11, 14, 15].map((h, i) => ({ slotId: `s${i}`, start: iso(24 + h) }))
   },
-  async bookAppointment(slotId: string): Promise<Appointment> {
+  async bookAppointment(req: import('../lib/types').BookReq): Promise<Appointment> {
     await wait()
-    return { id: 'appt-new', number: 'BHUC_APPOINTMENT_002', start: iso(48), visitType: 'Urgent behavioral', modality: 'telehealth', clinician: 'Dr. Finch', status: 'confirmed' }
+    return { id: 'appt-new', number: 'BHUC_APPOINTMENT_002', start: req.start ?? iso(48), visitType: 'Urgent behavioral', modality: 'telehealth', status: 'pending' }
   },
 
   // ---- Care plan ----
@@ -334,18 +334,47 @@ export const mock = {
     await wait(1600)
     return { note: id, sensitivity: 'part2', containsPart2: true }
   },
-  async getScheduling(patientId: string): Promise<SchedulingRecommendation> {
+  async listPatients() {
     await wait()
+    return [
+      { number: 'BHUC_PATIENT_002', name: 'Maya Alvarez', gender: 'female', race: 'white', ethnicity: 'hispanic_or_latino' },
+      { number: 'BHUC_PATIENT_007', name: 'Aisha Rahman', gender: 'female', race: 'asian', ethnicity: 'not_hispanic_or_latino' },
+      { number: 'BHUC_PATIENT_008', name: 'Marcus Johnson', gender: 'male', race: 'black_or_african_american', ethnicity: 'not_hispanic_or_latino' },
+    ]
+  },
+  async getSchedulingQueue() {
+    await wait()
+    const q = (id: string, name: string, num: string, cat: string, label: string, req: string, sug: string, urg: string, status: string) =>
+      ({ id, number: num, patientName: name, patientNumber: num, status, reasonCategory: cat, reasonLabel: label, reasonText: '', requestedStart: req, suggestedStart: sug, urgency: urg, visitType: 'Urgent Behavioral', modality: 'telehealth' })
     return {
-      patientName: 'Maya Alvarez',
-      fairness: { pass: true, excludedFields: ['race', 'ethnicity', 'gender', 'zip', 'insurance_type'] },
-      matches: [
-        { clinician: 'Dr. R. Finch', specialty: 'Addiction psychiatry', availability: 'Tomorrow 10:00 AM', matchReason: 'Credential + availability match for urgent behavioral' },
-        { clinician: 'Dr. L. Osei', specialty: 'Psychiatry', availability: 'Tomorrow 2:00 PM', matchReason: 'Next-available licensed match' },
+      pendingCount: 2,
+      proposed: [
+        q('p1', 'Marcus Johnson', 'BHUC_PATIENT_008', 'crisis', 'Crisis', iso(30), iso(26), 'high', 'proposed'),
+        q('p2', 'Aisha Rahman', 'BHUC_PATIENT_007', 'medication', 'Medication', iso(54), iso(50), 'moderate', 'proposed'),
+      ],
+      pending: [
+        q('q1', 'Wei Chen', 'BHUC_PATIENT_010', 'therapy', 'Therapy', iso(72), '', '', 'pending'),
+        q('q2', 'Sofia Ramirez', 'BHUC_PATIENT_009', 'intake', 'Intake', iso(96), '', '', 'pending'),
       ],
     }
   },
-  async confirmScheduling() { await wait(); return { ok: true } },
+  async runScheduling() {
+    await wait(2600)
+    const b = await mock.getSchedulingQueue()
+    return { ok: true, newProposals: b.pending.length, ...b, pending: [], pendingCount: 0 }
+  },
+  async acceptAppointment(_id: string) { await wait(); return { ok: true, status: 'confirmed' } },
+  async rejectAppointment(_id: string) { await wait(); return { ok: true, status: 'pending' } },
+  async getFairness() {
+    await wait()
+    return {
+      total: 24,
+      byGender: [ { group: 'Female', count: 11, avgWaitDays: 1.6 }, { group: 'Male', count: 10, avgWaitDays: 1.8 }, { group: 'Non-binary', count: 3, avgWaitDays: 1.7 } ],
+      byEthnicity: [ { group: 'Hispanic or Latino', count: 6, avgWaitDays: 1.7 }, { group: 'Not Hispanic or Latino', count: 18, avgWaitDays: 1.7 } ],
+      byAge: [ { group: '18-29', count: 7, avgWaitDays: 1.7 }, { group: '30-44', count: 10, avgWaitDays: 1.6 }, { group: '45-59', count: 5, avgWaitDays: 1.9 }, { group: '60+', count: 2, avgWaitDays: 1.8 } ],
+      fairnessRate: { gender: 89, ethnicity: 100, age: 84, overall: 91 },
+    }
+  },
   async getDisposition(id: string): Promise<DispositionCase> {
     await wait()
     return {

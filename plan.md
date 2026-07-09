@@ -1794,6 +1794,25 @@ Each agent below is specified for **build-immediately** execution: the exact nav
 > appointment landed `proposed`, `created_by=svc-bhuc-scheduling-ai` (least-privilege enforced). Detail in
 > `agents.md` Agent 6, `action.md` AG-6. **All 6 agents now built.**
 
+> **As-built v2 — QUEUE + WAIT-TIME-FAIRNESS REDESIGN (BUILT + verified over A2A 2026-07-09):** the
+> single-patient "recommend a clinician" model above was **replaced** with a **pending-queue processor**.
+> New flow: patient books date+time+**reason** → `u_bhuc_appointment` status **`pending`** → clinician
+> **Run scheduling agent** → the agent processes **only `pending`** rows, fairness-strips, triages urgency
+> by reason, assigns conflict-free **business-hours** slots (Mon–Fri 9–17), and writes them **`proposed`**
+> (preserving `u_requested_start`) → clinician **Accept** (`confirmed`) / **Reject** (→ `pending`). **Tools
+> now = RAG + 2 scripts:** removed the old `Fairness-check Script` (`2fb5062b…`) and `Record Operation
+> (propose appointment)` (`f1170e2f…`); added **`Get pending scheduling queue`** (`20c9b1ac…` — reads
+> pending + patient demographics, runs the fairness strip, returns the queue) and **`Assign & write
+> suggested slots`** (`64c9b1ac…` — business-hours conflict-free assignment by urgency, writes proposed +
+> `u_requested_start`; optional `urgency_overrides` input). Instructions/role/description updated to the
+> queue model; still runs as `svc-bhuc-scheduling-ai`. **Test:** 5 pending → 5 proposed in 26s, crisis
+> earliest, urgency-triaged, `u_requested_start` preserved. New **`u_requested_start`** field on
+> `u_bhuc_appointment` (`tables.md` Table 4). New **Governance → Scheduling Fairness** page monitors
+> **wait-time parity** (`u_start − u_requested_start`) by age/gender/ethnicity (`GET /governance/fairness`).
+> Full scripts + Agent Studio steps + test prompt in **`agents/scheduling_agent_v2.md`**; full use-case
+> writeup in **`fairness_usecase.md`**. Supersedes the single-patient §3.3 C8 "match cards" UI (now a
+> review queue). App endpoints: `/scheduling/{queue,run,accept,reject}`, `/appointments` (books `pending`).
+
 > **Things to consider after this entire project is complete** (Use Case 4 — Scheduling Agent)
 > *(No open questions noted for this use case.)*
 

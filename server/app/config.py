@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     # Agent 5: BHUC Prior-Auth Compliance Agent — cited coverage answers + drafts the
     # prior-auth packet into u_bhuc_prior_auth (never submits). [Verified over A2A 2026-07-08]
     snow_agent_priorauth: str = "4fd442e33bfd0f1076f13b64c3e45ad8"
+    # Agent 6: BHUC Scheduling Agent — fairness-check + proposes u_bhuc_appointment
+    # (status=proposed), runs as svc-bhuc-scheduling-ai. [Verified over A2A 2026-07-09]
+    snow_agent_scheduling: str = "2105c6673bf9cb105551369693e45a72"
 
     request_timeout: float = 20.0
 

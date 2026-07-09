@@ -22,6 +22,12 @@ from .agents import router as agents_router
 from .governance import router as governance_router
 from .hallucination import router as hallucination_router
 from .priorauth import router as priorauth_router
+from .eligibility import router as eligibility_router
+from .appointments import router as appointments_router
+from .careplan import router as careplan_router
+from .messages import router as messages_router
+from .checkin import router as checkin_router
+from .disposition import router as disposition_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -57,6 +63,12 @@ def create_app() -> FastAPI:
     app.include_router(governance_router)
     app.include_router(hallucination_router)
     app.include_router(priorauth_router)
+    app.include_router(eligibility_router)
+    app.include_router(appointments_router)
+    app.include_router(careplan_router)
+    app.include_router(messages_router)
+    app.include_router(checkin_router)
+    app.include_router(disposition_router)
     return app
 
 

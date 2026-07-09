@@ -3,7 +3,10 @@
 // VITE_USE_MOCK=false → live calls to the FastAPI backend at VITE_API_BASE (/api/x_bhuc).
 // The two implementations share the same method signatures, so flipping the flag needs no page changes.
 import { mock } from './mockData'
-import { getAccessToken } from './auth'
+import { getAccessToken, currentEmail } from './auth'
+
+// Signed-in patient email, appended to open/pre-auth patient CRUD calls (email -> u_bhuc_patient).
+const pemail = () => encodeURIComponent(currentEmail('patient'))
 
 const USE_MOCK = (import.meta.env.VITE_USE_MOCK ?? 'true') !== 'false'
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/x_bhuc'
@@ -35,17 +38,17 @@ const live = {
   submitConsent: (c: unknown) => j('/consent', { method: 'POST', body: JSON.stringify(c) }),
   getInstrumentQuestions: mock.getInstrumentQuestions, // static content
   submitScreening: (instrument: string, answers: unknown) => j('/intake/screening', { method: 'POST', body: JSON.stringify({ instrument, answers }) }),
-  getEligibility: () => j('/eligibility'),
-  requestCounselor: () => j('/financial-counselor/request', { method: 'POST', body: '{}' }),
-  getAppointments: () => j('/appointments'),
+  getEligibility: () => j(`/eligibility?email=${pemail()}`),
+  requestCounselor: () => j('/financial-counselor/request', { method: 'POST', body: JSON.stringify({ email: currentEmail('patient') }) }),
+  getAppointments: () => j(`/appointments?email=${pemail()}`),
   getAvailability: () => j('/appointments/availability'),
-  bookAppointment: (slotId: string) => j('/appointments', { method: 'POST', body: JSON.stringify({ slotId }) }),
-  getCarePlan: () => j('/careplan'),
-  getThreads: () => j('/messages/threads'),
+  bookAppointment: (req: import('../lib/types').BookReq) => j('/appointments', { method: 'POST', body: JSON.stringify({ ...req, email: currentEmail('patient') }) }),
+  getCarePlan: () => j(`/careplan?email=${pemail()}`),
+  getThreads: () => j(`/messages/threads?email=${pemail()}`),
   getThread: (id: string) => j(`/messages/threads/${id}`),
-  sendMessage: (threadId: string, body: string) => j('/message', { method: 'POST', body: JSON.stringify({ threadId, body }) }),
-  getCheckIn: (id: string) => j(`/checkin/${id}`),
-  submitCheckIn: (id: string, answers: unknown) => j(`/checkin/${id}`, { method: 'POST', body: JSON.stringify(answers) }),
+  sendMessage: (threadId: string, body: string) => j('/message', { method: 'POST', body: JSON.stringify({ threadId, body, email: currentEmail('patient') }) }),
+  getCheckIn: (id: string) => j(`/checkin/${id}?email=${pemail()}`),
+  submitCheckIn: (id: string, answers: unknown) => j(`/checkin/${id}`, { method: 'POST', body: JSON.stringify({ ...(answers as object), email: currentEmail('patient') }) }),
   getWorklist: () => j('/worklist'),
   getChart: (patientId: string, reveal = false, clinicianEmail?: string) => {
     const qs = new URLSearchParams()
@@ -73,8 +76,13 @@ const live = {
   submitPriorAuth: (id: string) => j('/priorauth/submit', { method: 'POST', body: JSON.stringify({ id }) }),
   deletePriorAuth: (id: string) => j(`/priorauth/${id}`, { method: 'DELETE' }),
   checkNotePart2: (id: string) => j('/note/part2-check', { method: 'POST', body: JSON.stringify({ id }) }),
-  getScheduling: (patientId: string) => j(`/scheduling?patient=${patientId}`),
-  confirmScheduling: (id: string) => j('/scheduling/confirm', { method: 'POST', body: JSON.stringify({ id }) }),
+  listPatients: () => j('/patients'),
+  // Scheduling review queue (Agent 6 v2)
+  getSchedulingQueue: () => j('/scheduling/queue'),
+  runScheduling: () => j('/scheduling/run', { method: 'POST', body: '{}' }),
+  acceptAppointment: (id: string) => j('/scheduling/accept', { method: 'POST', body: JSON.stringify({ id }) }),
+  rejectAppointment: (id: string) => j('/scheduling/reject', { method: 'POST', body: JSON.stringify({ id }) }),
+  getFairness: () => j('/governance/fairness'),
   getDisposition: (id: string) => j(`/disposition/${id}`),
 }
 
@@ -114,6 +122,26 @@ const liveAgent2and3 = {
   draftPriorAuth: live.draftPriorAuth,
   submitPriorAuth: live.submitPriorAuth,
   deletePriorAuth: live.deletePriorAuth,
+  // Care-team CRUD screens now wired live (BE-6): Coverage/P5, Appointments/P6,
+  // Care plan/P7, Messages/P8, Check-in/P9, Scheduling/C8 (Agent 6), Disposition/C7.
+  getEligibility: live.getEligibility,
+  requestCounselor: live.requestCounselor,
+  getAppointments: live.getAppointments,
+  getAvailability: live.getAvailability,
+  bookAppointment: live.bookAppointment,
+  getCarePlan: live.getCarePlan,
+  getThreads: live.getThreads,
+  getThread: live.getThread,
+  sendMessage: live.sendMessage,
+  getCheckIn: live.getCheckIn,
+  submitCheckIn: live.submitCheckIn,
+  listPatients: live.listPatients,
+  getSchedulingQueue: live.getSchedulingQueue,
+  runScheduling: live.runScheduling,
+  acceptAppointment: live.acceptAppointment,
+  rejectAppointment: live.rejectAppointment,
+  getFairness: live.getFairness,
+  getDisposition: live.getDisposition,
 }
 
 const overrides = USE_MOCK

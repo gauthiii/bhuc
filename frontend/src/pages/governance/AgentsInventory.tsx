@@ -95,6 +95,15 @@ Per BHUC documentation policy, an adult-onset ADHD diagnosis (F90.9) can be auto
       { label: 'MAT coverage', prompt: 'Using ONLY the payer policy library, is prior authorization required for MAT (buprenorphine/naloxone) for opioid use disorder? Cite the policy id and section. Do not draft or write any record.' },
     ],
   },
+  {
+    key: 'scheduling',
+    name: 'BHUC Scheduling Agent',
+    subtitle: '',
+    examples: [
+      { label: 'Explain fairness check', prompt: 'What protected or proxy attributes does your fairness check exclude from clinician matching, and why? Do not write to any record.' },
+      { label: 'Fair clinician match', prompt: 'Recommend a clinician match for an urgent behavioral-health visit, and run the fairness check. List which protected attributes were excluded from matching. Do not write to any record.' },
+    ],
+  },
 ]
 
 export function GovernanceAgentsInventory() {

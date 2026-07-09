@@ -24,6 +24,7 @@ import { ClinicianScheduling } from './pages/clinician/Scheduling'
 import { GovernanceSignIn } from './pages/governance/SignIn'
 import { GovernanceAgentsInventory } from './pages/governance/AgentsInventory'
 import { GovernanceOutputIntegrity } from './pages/governance/OutputIntegrity'
+import { GovernanceFairness } from './pages/governance/Fairness'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -70,6 +71,7 @@ export default function App() {
       <Route path="/governance" element={<Navigate to="/governance/agents" replace />} />
       <Route path="/governance/agents" element={<GovernanceGuard><GovernanceAgentsInventory /></GovernanceGuard>} />
       <Route path="/governance/output-integrity" element={<GovernanceGuard><GovernanceOutputIntegrity /></GovernanceGuard>} />
+      <Route path="/governance/fairness" element={<GovernanceGuard><GovernanceFairness /></GovernanceGuard>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

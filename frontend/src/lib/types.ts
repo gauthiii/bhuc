@@ -252,6 +252,27 @@ export interface PriorAuthPacket { id: string; sysId?: string; service: string; 
 export interface PriorAuthDraftReq { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string; clinicianEmail?: string }
 export interface Part2CheckResult { note: string; sensitivity: string; containsPart2: boolean }
 
+export interface PatientListItem { number: string; name: string; gender?: string; race?: string; ethnicity?: string }
+
+export interface BookReq { slotId?: string; start?: string; reasonCategory: string; reasonText?: string; visitType?: string; modality?: string }
+
+// ---- Scheduling review queue (Agent 6 v2) ----
+export interface SchedulingQueueItem {
+  id: string; number: string; patientName: string; patientNumber: string; status: string
+  reasonCategory: string; reasonLabel: string; reasonText: string
+  requestedStart: string; suggestedStart: string; urgency: string; visitType: string; modality: string
+}
+export interface SchedulingBoard { pendingCount: number; proposed: SchedulingQueueItem[]; pending: SchedulingQueueItem[] }
+export interface SchedulingRunResult extends SchedulingBoard { ok: boolean; newProposals: number; error?: string }
+
+// ---- Scheduling fairness (governance) ----
+export interface FairnessGroup { group: string; count: number; avgWaitDays: number }
+export interface FairnessMetrics {
+  total: number
+  byGender: FairnessGroup[]; byEthnicity: FairnessGroup[]; byAge: FairnessGroup[]
+  fairnessRate: { gender: number; ethnicity: number; age: number; overall: number }
+}
+
 export interface SchedulingRecommendation {
   patientName: string
   fairness: { pass: boolean; excludedFields: string[] }

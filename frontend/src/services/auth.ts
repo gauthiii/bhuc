@@ -33,6 +33,12 @@ export function loadStored(role: PortalRole): AuthUser | null {
   try { return (JSON.parse(raw) as StoredAuth).user } catch { return null }
 }
 
+// Current signed-in email (== Cognito username) for the given portal role. Used by the
+// service layer to identify the patient on open/pre-auth CRUD endpoints (email -> u_bhuc_patient).
+export function currentEmail(role: PortalRole = 'patient'): string {
+  return loadStored(role)?.username ?? ''
+}
+
 function persist(role: PortalRole, tokens: AwsAuthTokens, username: string, displayName: string): AuthUser {
   const user: AuthUser = { username, displayName, role, mfa: role === 'clinician' }
   localStorage.setItem(KEY(role), JSON.stringify({ user, accessToken: tokens.access_token, idToken: tokens.id_token, refreshToken: tokens.refresh_token } satisfies StoredAuth))

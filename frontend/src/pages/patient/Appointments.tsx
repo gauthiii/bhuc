@@ -3,8 +3,16 @@ import { Video } from 'lucide-react'
 import { api } from '../../services/api'
 import type { Appointment, AvailabilitySlot } from '../../lib/types'
 import { PatientShell } from '../../components/portals'
-import { Panel, Button, StatusBadge, Spinner, ErrorState, EmptyState, type Tone } from '../../components/ui'
+import { Panel, Button, StatusBadge, Spinner, ErrorState, EmptyState, Select, Textarea, Field, type Tone } from '../../components/ui'
 import { formatDateTime, formatTime } from '../../lib/format'
+
+const REASONS = [
+  { value: 'crisis', label: 'Urgent / crisis' },
+  { value: 'medication', label: 'Medication' },
+  { value: 'therapy', label: 'Therapy' },
+  { value: 'intake', label: 'New patient / intake' },
+  { value: 'other', label: 'Other' },
+]
 
 const STATUS_TONE: Record<string, Tone> = { confirmed: 'success', pending: 'warning', proposed: 'warning', cancelled: 'neutral', completed: 'neutral', no_show: 'neutral' }
 
@@ -38,6 +46,8 @@ export function PatientAppointments() {
   const [slots, setSlots] = useState<AvailabilitySlot[] | null>(null)
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
+  const [reasonCategory, setReasonCategory] = useState('crisis')
+  const [reasonText, setReasonText] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -68,12 +78,15 @@ export function PatientAppointments() {
     if (!selected) return
     setConfirming(true)
     try {
-      const appt = await api.bookAppointment(selected)
+      const slot = slots?.find((s) => s.slotId === selected)
+      const appt = await api.bookAppointment({ slotId: selected, start: slot?.start, reasonCategory, reasonText })
       setData((d) => d ? { ...d, upcoming: [appt, ...d.upcoming] } : d)
       setBooking(false)
       setTab('upcoming')
-      setToast(`You’re booked for ${formatDateTime(appt.start)}.`)
-      setTimeout(() => setToast(null), 5000)
+      setReasonText('')
+      // Booked as a request: the care team's scheduling agent proposes a confirmed time.
+      setToast(`Request submitted for ${formatDateTime(appt.start)}. Your care team will confirm a time.`)
+      setTimeout(() => setToast(null), 6000)
     } catch {
       setError('That time just changed. Please pick another slot.')
     } finally {
@@ -93,7 +106,18 @@ export function PatientAppointments() {
 
       <div className="mx-auto max-w-3xl space-y-5">
         {booking && (
-          <Panel title="Book a visit" subtitle="Pick a time that works for you." actions={<Button variant="ghost" onClick={() => setBooking(false)}>Cancel</Button>}>
+          <Panel title="Request a visit" subtitle="Tell us why and pick a preferred time — your care team confirms the final slot." actions={<Button variant="ghost" onClick={() => setBooking(false)}>Cancel</Button>}>
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              <Field label="Reason for visit" required>
+                <Select value={reasonCategory} onChange={(e) => setReasonCategory(e.target.value)}>
+                  {REASONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </Select>
+              </Field>
+              <Field label="Anything else? (optional)">
+                <Textarea rows={2} maxLength={500} value={reasonText} onChange={(e) => setReasonText(e.target.value)} placeholder="e.g. medication side effects since last visit" />
+              </Field>
+            </div>
+            <p className="mb-2 text-sm font-medium text-slate-700">Preferred time</p>
             {slotsLoading && <Spinner label="Finding available times…" />}
             {!slotsLoading && slots && slots.length === 0 && (
               <EmptyState title="No times available for this date" hint="Try another day, or if you need help sooner, call or text 988." />
@@ -114,7 +138,7 @@ export function PatientAppointments() {
                   ))}
                 </div>
                 <div className="mt-5 flex justify-end">
-                  <Button onClick={confirm} disabled={!selected || confirming}>{confirming ? 'Booking…' : 'Confirm appointment'}</Button>
+                  <Button onClick={confirm} disabled={!selected || confirming}>{confirming ? 'Submitting…' : 'Submit request'}</Button>
                 </div>
               </>
             )}

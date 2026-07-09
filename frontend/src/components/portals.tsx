@@ -9,6 +9,7 @@ const SNOW_INSTANCE = 'https://ven04690.service-now.com'
 const GOVERNANCE_NAV: NavItem[] = [
   { to: '/governance/agents', label: 'Agents Inventory', icon: <Bot className="h-4 w-4" /> },
   { to: '/governance/output-integrity', label: 'Output Integrity', icon: <ShieldCheck className="h-4 w-4" /> },
+  { to: '/governance/fairness', label: 'Scheduling Fairness', icon: <CalendarClock className="h-4 w-4" /> },
 ]
 const GOVERNANCE_TABLES: { table: string; label: string }[] = [
   { table: 'u_bhuc_patient', label: 'Patients' },

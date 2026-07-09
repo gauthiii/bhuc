@@ -1,6 +1,6 @@
-# BHUC Data Model — Table & Field Specification (6 Core Tables)
+# BHUC Data Model — Table & Field Specification (12 Tables)
 
-**Status:** SPEC — awaiting approval before live creation via curl.
+**Status:** LIVE — all 12 tables created on `ven04690`. Tables 1–8 built 2026-07-06; **Tables 9–12 (eligibility, check-in, disposition, order) created 2026-07-09 (DATA-2 completion)** and functionally verified (auto-numbering `BHUC_<TABLE>_001`, references + choices accepted, test records deleted).
 **Scope decision:** global-scope tables, `u_bhuc_*` prefix (curl-creatable, mirrors the verified careatlas `u_*` pattern). `plan.md` and `action.md` have been aligned to `u_bhuc_*` for all ServiceNow objects (tables + roles + SP pages/widgets); the FastAPI URL namespace `/api/x_bhuc/` and the bare `x_bhuc` product identifier are intentionally kept.
 **Record-ID convention:** every table has a friendly **Number** field (`u_number`) that auto-generates `BHUC_<TABLE>_001`, `BHUC_<TABLE>_002`, … via a per-table Number Maintenance prefix, alongside ServiceNow's internal `sys_id`.
 **Instance:** `ven04690.service-now.com` · **Derived from:** `plan.md` v3.0 §8.1 SN-Step 1, §4.4 (agent record-ops), §3.2/§3.3 (screen endpoints).
@@ -53,6 +53,10 @@
 | 28 | `u_privacy_notice_version` | Privacy notice version | string | 20 | N | v1 | — | — |
 | 29 | `u_risk_band` | Latest confirmed risk band | choice | 20 | N | unknown | low, moderate, high, unknown | — |
 | 30 | `u_confidence_score` | Latest confidence | integer | — | N | — | 0–100 | — |
+| 31 | `u_race` | Race | choice | 40 | N | — | white, black_or_african_american, asian, american_indian_or_alaska_native, native_hawaiian_or_pacific_islander, two_or_more, other, prefer_not_to_say | PII |
+| 32 | `u_ethnicity` | Ethnicity | choice | 40 | N | — | hispanic_or_latino, not_hispanic_or_latino, prefer_not_to_say | PII |
+
+> **Added 2026-07-09 (Agent 6 fairness demo):** `u_race` + `u_ethnicity` so the Scheduling Agent's fairness check excludes **real** protected attributes (not just gender/zip/insurance). Populated on the 12 diverse demo patients (`BHUC_PATIENT_007`–`018`).
 
 ## Table 2 — `u_bhuc_screening` (Intake Screening & Instrument Scores)
 
@@ -126,6 +130,9 @@
 | 16 | `u_fairness_excluded_fields` | Fairness excluded fields | string | 500 | N | — | audit of excluded inputs | — |
 | 17 | `u_cancel_reason` | Cancel reason | choice | 40 | N | — | no_longer_needed, conflict, feeling_better, other | — |
 | 18 | `u_cancel_note` | Cancel note | string | 500 | N | — | — | — |
+| 19 | `u_requested_start` | Requested start | glide_date_time | — | N | — | patient's originally-requested time (agent may move `u_start`); drives wait-time fairness | — |
+
+> **Added 2026-07-09 (scheduling v2):** `u_requested_start` preserves the patient's requested time when the Scheduling Agent assigns a different suggested slot. Wait-time = `u_start − u_requested_start`, the governance Scheduling-Fairness metric. New status flow: patient books → `pending` → agent → `proposed` → clinician accept `confirmed` / reject → `pending`.
 
 ## Table 5 — `u_bhuc_message` (Secure Messaging)
 
@@ -227,6 +234,110 @@
 
 ---
 
+## Tables 9–12 — DATA-2 undeclared-table completion (created live 2026-07-09)
+
+> These four tables back app entities that had **live frontend pages/endpoints but no ServiceNow table** (mock-only until now). Scope confirmed with the user 2026-07-09: **orders → own table** (future-proofs C6, UI not yet built); **disposition → own table** (not folded into care_plan); **referral → folded as fields on disposition** (no separate table). All created via `create_tables.py` (idempotent) with the same conventions as Tables 1–8. **Sensitivity ACLs deferred** to SN-4/AG-8 (same build-first/govern-later precedent as the other tables — deny-by-default is app-computed today).
+
+## Table 9 — `u_bhuc_eligibility` (Insurance Eligibility & Cost Estimate)
+
+**Label:** BHUC Eligibility · **Number prefix:** `BHUC_ELIGIBILITY_` → `BHUC_ELIGIBILITY_001` · **Purpose:** insurance eligibility verification result + per-visit cost estimate + financial-counselor request (§3.2 P5 Coverage.tsx). Backs `GET /eligibility`, `POST /eligibility/verify`, `POST /financial-counselor/request`. One row per verification (latest per patient drives the P5 card). · **sys_id `<see instance>`**
+
+| # | Field (column) | Label | Type | Len | Mand. | Default | Choices / Reference | Sens. |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `u_number` | Number | string | 40 | Y | auto | prefix `BHUC_ELIGIBILITY_` | — |
+| 2 | `u_patient` | Patient | reference | — | Y | — | → `u_bhuc_patient` | PII |
+| 3 | `u_status` | Status | choice | 20 | N | pending | active, pending, self_pay, none | — |
+| 4 | `u_payer` | Payer | string | 120 | N | — | — | — |
+| 5 | `u_plan` | Plan | string | 120 | N | — | — | — |
+| 6 | `u_effective_date` | Effective date | glide_date | — | N | — | — | — |
+| 7 | `u_member_id` | Member ID | string | 80 | N | — | — | PII |
+| 8 | `u_visit_type` | Visit type | choice | 40 | N | — | urgent_behavioral, follow_up, intake, telehealth_consult | — |
+| 9 | `u_allowed_amount` | Estimated allowed amount | decimal | — | N | — | — | — |
+| 10 | `u_patient_responsibility` | Patient responsibility | decimal | — | N | — | — | — |
+| 11 | `u_currency` | Currency | string | 10 | N | USD | — | — |
+| 12 | `u_estimate_as_of` | Estimate as of | glide_date | — | N | — | — | — |
+| 13 | `u_verified_at` | Verified at | glide_date_time | — | N | — | — | — |
+| 14 | `u_verified_by_agent` | Verified by agent | boolean | — | N | false | — | — |
+| 15 | `u_counselor_requested` | Counselor requested | boolean | — | N | false | — | — |
+| 16 | `u_counselor_requested_at` | Counselor requested at | glide_date_time | — | N | — | — | — |
+| 17 | `u_counselor_note` | Counselor note | string | 500 | N | — | patient's optional note | — |
+
+## Table 10 — `u_bhuc_check_in` (Post-Discharge Follow-Up Check-In)
+
+**Label:** BHUC Check-In · **Number prefix:** `BHUC_CHECK_IN_` → `BHUC_CHECK_IN_001` · **Purpose:** post-discharge follow-up check-in prompt + patient response with distress/self-harm escalation (§3.2 P9 CheckIn.tsx). Backs `GET /checkin/{id}`, `POST /checkin/{id}`. One row per check-in instance.
+
+| # | Field (column) | Label | Type | Len | Mand. | Default | Choices / Reference | Sens. |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `u_number` | Number | string | 40 | Y | auto | prefix `BHUC_CHECK_IN_` | — |
+| 2 | `u_patient` | Patient | reference | — | Y | — | → `u_bhuc_patient` | PII |
+| 3 | `u_care_plan` | Care plan | reference | — | N | — | → `u_bhuc_care_plan` (the discharge it follows) | — |
+| 4 | `u_status` | Status | choice | 20 | N | pending | pending, completed, missed | — |
+| 5 | `u_due_date` | Due date | glide_date | — | N | — | — | — |
+| 6 | `u_questions` | Questions (JSON) | string | 4000 | N | — | prompt questions | — |
+| 7 | `u_responses` | Responses (JSON) | string | 4000 | N | — | patient answers | Part2 |
+| 8 | `u_wellbeing_score` | Wellbeing score | integer | — | N | — | 0–10 | — |
+| 9 | `u_med_adherence` | Medication adherence | choice | 20 | N | — | yes, mostly, no, na | — |
+| 10 | `u_self_harm` | Self-harm thoughts | choice | 10 | N | — | no, yes | — |
+| 11 | `u_escalate` | Escalate | boolean | — | N | false | self-harm/low-wellbeing trip | — |
+| 12 | `u_distress_level` | Distress level | choice | 20 | N | none | none, elevated, crisis | — |
+| 13 | `u_next_check_in` | Next check-in | glide_date | — | N | — | — | — |
+| 14 | `u_completed_at` | Completed at | glide_date_time | — | N | — | — | — |
+
+## Table 11 — `u_bhuc_disposition` (Disposition & Discharge Decision)
+
+**Label:** BHUC Disposition · **Number prefix:** `BHUC_DISPOSITION_` → `BHUC_DISPOSITION_001` · **Purpose:** the C7 disposition/discharge decision — decision, AI-drafted (clinician-edited) discharge instructions + safety plan, and **routed referrals folded in as fields** (§3.3 C7 Disposition.tsx). Backs `GET /disposition/{id}`, `POST /disposition`, `POST /referral`. Gate: finalize blocked until risk confirmed (C4) + note signed (C5).
+
+| # | Field (column) | Label | Type | Len | Mand. | Default | Choices / Reference | Sens. |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `u_number` | Number | string | 40 | Y | auto | prefix `BHUC_DISPOSITION_` | — |
+| 2 | `u_patient` | Patient | reference | — | Y | — | → `u_bhuc_patient` | PII |
+| 3 | `u_care_plan` | Care plan | reference | — | N | — | → `u_bhuc_care_plan` | — |
+| 4 | `u_appointment` | Appointment | reference | — | N | — | → `u_bhuc_appointment` | — |
+| 5 | `u_clinician` | Clinician | reference | — | N | — | → `sys_user` | — |
+| 6 | `u_screening` | Screening | reference | — | N | — | → `u_bhuc_screening` | — |
+| 7 | `u_disposition` | Disposition decision | choice | 40 | N | — | discharge_home, discharge_with_referral, iop, partial_hospitalization, inpatient, transfer_ed, crisis | — |
+| 8 | `u_status` | Status | choice | 20 | N | draft | draft, finalized | — |
+| 9 | `u_discharge_instructions` | Discharge instructions | string | 8000 | N | — | clinician-finalized | Part2 |
+| 10 | `u_ai_discharge_instructions` | AI discharge instructions (draft) | string | 8000 | N | — | original AI draft (audit) | Part2 |
+| 11 | `u_safety_plan` | Safety plan | string | 8000 | N | — | clinician-finalized (Stanley-Brown) | Part2 |
+| 12 | `u_ai_safety_plan_template` | AI safety plan template | string | 8000 | N | — | original AI draft | Part2 |
+| 13 | `u_referrals` | Referrals (selected) | string | 1000 | N | — | routed referral ids/labels (folded referral field) | — |
+| 14 | `u_referral_status` | Referral status | choice | 20 | N | none | none, routed, pending, accepted | — |
+| 15 | `u_referral_urgency` | Referral urgency | choice | 20 | N | — | routine, 48h, 24h, urgent | — |
+| 16 | `u_drafted_by_agent` | Drafted by agent | boolean | — | N | false | — | — |
+| 17 | `u_finalized` | Finalized | boolean | — | N | false | — | — |
+| 18 | `u_finalized_by` | Finalized by | reference | — | N | — | → `sys_user` | — |
+| 19 | `u_finalized_at` | Finalized at | glide_date_time | — | N | — | — | — |
+| 20 | `u_contains_part2` | Contains Part 2 data | boolean | — | N | false | — | Part2 |
+| 21 | `u_sensitivity` | Sensitivity label | choice | 20 | N | standard | standard, part2 | Part2 |
+
+## Table 12 — `u_bhuc_order` (Clinical Orders)
+
+**Label:** BHUC Order · **Number prefix:** `BHUC_ORDER_` → `BHUC_ORDER_001` · **Purpose:** clinician order-entry — medication / lab / referral / level-of-care (§3.3 C6). Backs `POST /orders`. **Created for completeness (DATA-2): the C6 order-entry UI is not yet built**, so this table has no live app writer yet; it future-proofs the order workflow and links prior-auth (Agent 5) + disposition.
+
+| # | Field (column) | Label | Type | Len | Mand. | Default | Choices / Reference | Sens. |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `u_number` | Number | string | 40 | Y | auto | prefix `BHUC_ORDER_` | — |
+| 2 | `u_patient` | Patient | reference | — | Y | — | → `u_bhuc_patient` | PII |
+| 3 | `u_appointment` | Appointment | reference | — | N | — | → `u_bhuc_appointment` | — |
+| 4 | `u_clinician` | Clinician | reference | — | N | — | → `sys_user` | — |
+| 5 | `u_disposition` | Disposition | reference | — | N | — | → `u_bhuc_disposition` | — |
+| 6 | `u_order_type` | Order type | choice | 30 | N | — | medication, lab, referral, level_of_care | — |
+| 7 | `u_code` | Code | string | 100 | N | — | drug/lab/CPT code | — |
+| 8 | `u_description` | Description | string | 500 | N | — | — | — |
+| 9 | `u_dose` | Dose | string | 100 | N | — | e.g. 150mg | — |
+| 10 | `u_route` | Route | string | 60 | N | — | e.g. PO, IV | — |
+| 11 | `u_frequency` | Frequency | string | 100 | N | — | e.g. daily, bid | — |
+| 12 | `u_quantity` | Quantity | string | 60 | N | — | — | — |
+| 13 | `u_status` | Status | choice | 20 | N | draft | draft, ordered, active, discontinued, completed | — |
+| 14 | `u_priority` | Priority | choice | 20 | N | routine | routine, urgent, stat | — |
+| 15 | `u_prior_auth` | Prior authorization | reference | — | N | — | → `u_bhuc_prior_auth` | — |
+| 16 | `u_ordered_by` | Ordered by | reference | — | N | — | → `sys_user` | — |
+| 17 | `u_ordered_at` | Ordered at | glide_date_time | — | N | — | — | — |
+| 18 | `u_notes` | Notes | string | 1000 | N | — | — | — |
+
+---
+
 ## Relationship map
 
 ```
@@ -236,10 +347,18 @@ u_bhuc_patient (1) ──< (M) u_bhuc_appointment    [u_patient]
 u_bhuc_patient (1) ──< (M) u_bhuc_message        [u_patient]
 u_bhuc_patient (1) ──< (M) u_bhuc_care_plan      [u_patient]
 u_bhuc_patient (1) ──< (M) u_bhuc_prior_auth     [u_patient]
+u_bhuc_patient (1) ──< (M) u_bhuc_eligibility    [u_patient]
+u_bhuc_patient (1) ──< (M) u_bhuc_check_in       [u_patient]
+u_bhuc_patient (1) ──< (M) u_bhuc_disposition    [u_patient]
+u_bhuc_patient (1) ──< (M) u_bhuc_order          [u_patient]
 u_bhuc_appointment (1) ──< (M) u_bhuc_care_plan  [u_appointment]
 u_bhuc_appointment (1) ──< (M) u_bhuc_prior_auth [u_appointment]
 u_bhuc_screening (1) ──< (M) u_bhuc_care_plan    [u_screening]
-sys_user (clinician) referenced by screening/appointment/message/care_plan/prior_auth
+u_bhuc_care_plan (1) ──< (M) u_bhuc_check_in     [u_care_plan]
+u_bhuc_care_plan (1) ──< (M) u_bhuc_disposition  [u_care_plan]
+u_bhuc_disposition (1) ──< (M) u_bhuc_order       [u_disposition]
+u_bhuc_prior_auth (1) ──< (M) u_bhuc_order        [u_prior_auth]
+sys_user (clinician) referenced by screening/appointment/message/care_plan/prior_auth/disposition/order
 ```
 
 ## Field-count summary
@@ -253,7 +372,11 @@ sys_user (clinician) referenced by screening/appointment/message/care_plan/prior
 | `u_bhuc_message` | 14 | 2 | 1 |
 | `u_bhuc_care_plan` | 20 | 2 (ref) | 3 |
 | `u_bhuc_prior_auth` | 19 | 1 (ref) | 2 |
-| **Total** | **135** | — | — |
+| `u_bhuc_eligibility` | 17 | 2 | 0 |
+| `u_bhuc_check_in` | 14 | 1 (ref) | 1 |
+| `u_bhuc_disposition` | 21 | 1 (ref) | 5 |
+| `u_bhuc_order` | 18 | 1 (ref) | 0 |
+| **Total (12 tables)** | **205** | — | — |
 
 ---
 

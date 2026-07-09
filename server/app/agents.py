@@ -25,6 +25,7 @@ def _agent_map() -> dict:
         "clinicaldoc": ("BHUC Clinical Documentation Agent", s.snow_agent_clinicaldoc),
         "consent": ("BHUC Consent & Data Protection Agent", s.snow_agent_consent),
         "priorauth": ("BHUC Prior-Auth Compliance Agent", s.snow_agent_priorauth),
+        "scheduling": ("BHUC Scheduling Agent", s.snow_agent_scheduling),
     }
 
 
