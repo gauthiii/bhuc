@@ -251,8 +251,12 @@ export interface DocumentationDraft {
 }
 
 export interface CoverageAnswer { answer: string; citation: { policy: string; section: string } }
-export interface PriorAuthPacket { id: string; sysId?: string; service: string; serviceMasked?: boolean; status: 'draft' | 'submitted'; part2Gated: boolean; part2Role?: boolean; part2Consent?: boolean; draftedByAgent?: boolean; fields: { label: string; value: string; part2: boolean }[] }
-export interface PriorAuthDraftReq { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string; clinicianEmail?: string }
+export interface PriorAuthField { id: string; label: string; value: string; editable: boolean; redacted: boolean; multiline: boolean }
+export interface PriorAuthSection { id: string; title: string; fields: PriorAuthField[] }
+export interface PriorAuthDoc { sections: PriorAuthSection[]; attachments: string[] }
+export interface PriorAuthPacket { id: string; sysId?: string; service: string; serviceMasked?: boolean; status: 'draft' | 'submitted'; part2Gated: boolean; part2Role?: boolean; part2Consent?: boolean; draftedByAgent?: boolean; document: PriorAuthDoc }
+export interface DxOption { code: string; label: string }
+export interface PriorAuthDraftReq { patient: string; service: string; diagnosis: string; secondaryDiagnoses?: string[]; requestedUnits: string; payer: string; clinicianEmail?: string }
 export interface Part2CheckResult { note: string; sensitivity: string; containsPart2: boolean }
 
 export interface PatientListItem { number: string; name: string; gender?: string; race?: string; ethnicity?: string }

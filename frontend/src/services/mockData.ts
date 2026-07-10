@@ -36,6 +36,33 @@ const upcomingAppt: Appointment = {
   status: 'confirmed', telehealthUrl: '#',
 }
 
+function mockPaPacket(o: { service?: string; dx?: string; units?: string; payer?: string }): PriorAuthPacket {
+  const fld = (id: string, label: string, value = '', editable = true, redacted = false, multiline = false) =>
+    ({ id, label, value, editable, redacted, multiline })
+  return {
+    id: 'BHUC_PRIOR_AUTH_001', service: o.service ?? 'Intensive Outpatient (IOP)', status: 'draft', part2Gated: false, draftedByAgent: true,
+    document: {
+      sections: [
+        { id: 'request', title: 'Request Summary', fields: [
+          fld('request_type', 'Request Type', 'Initial Authorization'),
+          fld('service', 'Service Requested', o.service ?? 'Intensive Outpatient (IOP)'),
+          fld('primary_dx', 'Primary Diagnosis', o.dx ?? 'F33.1'),
+          fld('units', 'Units Requested', o.units ?? '3x/week for 4 weeks'),
+        ] },
+        { id: 'member', title: 'Member Information', fields: [
+          fld('member_name', 'Member Name', 'Maya R. Alvarez', false),
+          fld('member_id', 'Member ID', 'HFC-4471', false),
+        ] },
+        { id: 'coverage', title: 'Coverage Determination', fields: [
+          fld('coverage_determination', 'Coverage determination', 'Prior authorization required; medical-necessity criteria met.', true, false, true),
+          fld('citation', 'Policy citation', 'BH-204 · Levels of Care'),
+        ] },
+      ],
+      attachments: ['PHQ-9 screening (BHUC_SCREENING_023)', 'Clinical note BHUC_CARE_PLAN_024 — signed'],
+    },
+  }
+}
+
 export const mock = {
   // ---- Front door ----
   async frontDoorChat(text: string): Promise<ChatReply> {
@@ -330,37 +357,30 @@ export const mock = {
   },
   async getPriorAuth(_patientId: string, _clinicianEmail?: string): Promise<PriorAuthPacket | null> {
     await wait()
-    return {
-      id: 'pa-01', service: 'Intensive outpatient program (IOP)', status: 'draft', part2Gated: true, draftedByAgent: true,
-      fields: [
-        { label: 'Diagnosis', value: 'F32.1 Major depressive disorder', part2: false },
-        { label: 'Requested service', value: 'IOP, 3x/week, 4 weeks', part2: false },
-        { label: 'SUD treatment history (Part 2)', value: '•••••• (access-gated)', part2: true },
-      ],
-    }
+    return mockPaPacket({})
   },
   async listPriorAuth(patientId: string, clinicianEmail?: string): Promise<PriorAuthPacket[]> {
     const p = await this.getPriorAuth(patientId, clinicianEmail)
     return p ? [p] : []
   },
-  async draftPriorAuth(req: { patient: string; service: string; diagnosis: string; requestedUnits: string; payer: string; clinicianEmail?: string }): Promise<PriorAuthPacket> {
+  async getPriorAuthDxOptions(_patientId: string): Promise<{ code: string; label: string }[]> {
+    await wait()
+    return [
+      { code: 'F33.1', label: 'Major depressive disorder, recurrent, moderate' },
+      { code: 'F41.1', label: 'Generalized anxiety disorder' },
+      { code: 'F10.20', label: 'Alcohol dependence, uncomplicated' },
+    ]
+  },
+  async draftPriorAuth(req: { patient: string; service: string; diagnosis: string; secondaryDiagnoses?: string[]; requestedUnits: string; payer: string; clinicianEmail?: string }): Promise<PriorAuthPacket> {
     await wait(1600)
-    return {
-      id: 'pa-01', service: req.service || 'Intensive Outpatient (IOP)', status: 'draft', part2Gated: false, draftedByAgent: true,
-      fields: [
-        { label: 'Diagnosis', value: req.diagnosis || 'F33.1', part2: false },
-        { label: 'Requested units', value: req.requestedUnits || '3x/week for 4 weeks', part2: false },
-        { label: 'Payer', value: req.payer || 'Blue Shield', part2: false },
-        { label: 'Coverage determination', value: 'Prior authorization is required; medical-necessity criteria met.', part2: false },
-        { label: 'Citation', value: 'BH-204 · Levels of Care', part2: false },
-      ],
-    }
+    return mockPaPacket({ service: req.service || 'Intensive Outpatient (IOP)', dx: req.diagnosis || 'F33.1', units: req.requestedUnits || '3x/week for 4 weeks', payer: req.payer || 'Blue Shield' })
   },
   async askCoverage(question: string): Promise<CoverageAnswer> {
     await wait(500)
     return { answer: 'IOP is covered under this plan when a psychiatric diagnostic evaluation and a documented step-up from outpatient are on file. Prior authorization is required.', citation: { policy: 'Blue Shield Behavioral Health Policy BH-204', section: '§3.2 Levels of Care' } }
   },
-  async submitPriorAuth(_id?: string) { await wait(); return { ok: true, status: 'submitted' } },
+  async savePriorAuth(_id: string, _edits: Record<string, string>, _clinicianEmail?: string) { await wait(); return mockPaPacket({}) },
+  async submitPriorAuth(_id?: string, _edits?: Record<string, string>, _clinicianEmail?: string) { await wait(); return { ok: true, status: 'submitted' } },
   async deletePriorAuth(id: string) { await wait(); return { ok: true, deleted: id } },
   async checkNotePart2(id: string): Promise<{ note: string; sensitivity: string; containsPart2: boolean }> {
     await wait(1600)

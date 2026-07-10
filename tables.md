@@ -222,6 +222,9 @@
 | 17 | `u_submitted_by` | Submitted by (human) | reference | — | N | — | → `sys_user` | — |
 | 18 | `u_submitted_at` | Submitted at | glide_date_time | — | N | — | — | — |
 | 19 | `u_agent_execution_id` | A2A execution id | string | 64 | N | — | links A2A request_id | — |
+| 20 | `u_packet_json` | Packet document (JSON) | string | 8000 | N | — | clinician-edited packet-document field values `{field_id: value}` | Part2* |
+
+> **Added 2026-07-10 (`u_packet_json`):** holds the clinician's edits to the sample-style prior-auth **document** (C6). The backend builds a sectioned document (Request Summary, Member, Provider, Clinical Justification, Coverage, Treatment Plan, SUD Detail, Payer Use Only) from the record + patient chart + eligibility + auto-attached screenings/notes; editable-field edits persist here (merged by field id, never storing SUD-field edits from an unauthorized viewer). Field sys_id `b8b95c783b02cf5076f13b64c3e45aa3`. *Part2\* = SUD-revealing fields inside are redacted (black bars) without role + consent.
 
 ## Table 8 — `u_bhuc_escalation` (Crisis Escalation Log)
 
@@ -383,7 +386,7 @@ sys_user (clinician) referenced by screening/appointment/message/care_plan/prior
 | `u_bhuc_appointment` | 18 | 1 (ref) | 0 |
 | `u_bhuc_message` | 14 | 2 | 1 |
 | `u_bhuc_care_plan` | 21 | 2 (ref) | 3 |
-| `u_bhuc_prior_auth` | 19 | 1 (ref) | 2 |
+| `u_bhuc_prior_auth` | 20 | 1 (ref) | 2 |
 | `u_bhuc_eligibility` | 17 | 2 | 0 |
 | `u_bhuc_check_in` | 14 | 1 (ref) | 1 |
 | `u_bhuc_disposition` | 21 | 1 (ref) | 5 |
