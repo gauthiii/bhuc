@@ -8,6 +8,11 @@ import type { FairnessMetrics, FairnessGroup } from '../../lib/types'
 const rateText = (r: number) => (r >= 90 ? 'text-teal-700' : r >= 75 ? 'text-amber-600' : 'text-rose-600')
 const rateBar = (r: number) => (r >= 90 ? 'bg-teal-500' : r >= 75 ? 'bg-amber-500' : 'bg-rose-500')
 
+// Distribution bar color by fill fraction (count / largest group):
+// >= 3/4 green, >= 1/2 yellow, >= 1/4 orange, < 1/4 red.
+const barColor = (frac: number) =>
+  frac >= 0.75 ? 'bg-teal-500' : frac >= 0.5 ? 'bg-yellow-400' : frac >= 0.25 ? 'bg-orange-500' : 'bg-rose-500'
+
 // One demographic axis: a horizontal bar per group (count) + avg wait, and the parity rate.
 function Dimension({ title, groups, rate }: { title: string; groups: FairnessGroup[]; rate: number }) {
   const maxCount = Math.max(1, ...groups.map((g) => g.count))
@@ -17,17 +22,20 @@ function Dimension({ title, groups, rate }: { title: string; groups: FairnessGro
         <p className="text-sm text-slate-500">No scheduled appointments yet.</p>
       ) : (
         <ul className="space-y-3">
-          {groups.map((g) => (
-            <li key={g.group}>
-              <div className="mb-1 flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-700">{g.group}</span>
-                <span className="text-slate-500">{g.count} appt{g.count === 1 ? '' : 's'} · avg wait {g.avgWaitDays}d</span>
-              </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-teal-500" style={{ width: `${Math.round((g.count / maxCount) * 100)}%` }} />
-              </div>
-            </li>
-          ))}
+          {groups.map((g) => {
+            const frac = g.count / maxCount
+            return (
+              <li key={g.group}>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="font-medium text-slate-700">{g.group}</span>
+                  <span className="text-slate-500">{g.count} appt{g.count === 1 ? '' : 's'} · avg wait {g.avgWaitDays}d</span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className={`h-full rounded-full ${barColor(frac)}`} style={{ width: `${Math.round(frac * 100)}%` }} />
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
     </Panel>
