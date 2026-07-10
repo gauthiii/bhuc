@@ -122,19 +122,30 @@ def _to_draft(rec: dict, masked: bool = False) -> dict:
 
 class NoteDraft(BaseModel):
     patient: str                      # patient sys_id
-    encounter: str                    # the recorded encounter text to ground against
+    encounter: str                    # the recorded source text to ground against
     encounterId: Optional[str] = None
+    sourceScreenings: Optional[list] = None   # screening numbers the summary was built from
+    fromScreenings: bool = False              # True when `encounter` is a screening summary
 
 
 @router.post("/note/draft")
 def draft_note(req: NoteDraft) -> dict:
     settings = get_settings()
     table = get_table_client()
+    if req.fromScreenings:
+        source_intro = (
+            "Source — the patient's latest screening results (one per instrument). Synthesize "
+            "ACROSS instruments into one coherent note; map each score/band to interpretation and "
+            "candidate ICD-10 codes using the scoring/coding knowledge base; treat any SUD-battery "
+            "instrument (NIDA, AUDIT, DAST-10, Craving, SOWS, BAM, SOCRATES) as 42 CFR Part 2. "
+            "Ground every line against these results:")
+    else:
+        source_intro = "Encounter data (source — ground every line against this):"
     msg = (
         "Draft the clinical note for this behavioral-health encounter, then write it as a "
         "DRAFT to the documentation record. Do not sign or finalize.\n\n"
         f"patient: {req.patient}\nencounter_id: {req.encounterId or 'ENC-0001'}\n\n"
-        f"Encounter data (source — ground every line against this):\n{req.encounter}\n\n"
+        f"{source_intro}\n{req.encounter}\n\n"
         "Tasks: 1) Draft the note in sections Chief Complaint, HPI, MSE, Assessment, Plan. "
         "2) Use the grounding tool to tag each line grounded or unverified. 3) Suggest ICD-10/CPT "
         "codes with supporting text. 4) Write the draft (draft_note, unverified_lines, "
@@ -151,11 +162,19 @@ def draft_note(req: NoteDraft) -> dict:
                        display_value="all", limit=1)
     if not found:
         raise HTTPException(status_code=502, detail="Agent produced no documentation record")
+    # Traceability: record which screenings this draft was synthesized from.
+    if req.sourceScreenings:
+        try:
+            table.update(TABLE, _raw(found[0].get("sys_id")),
+                         {"u_source_screenings": json.dumps(req.sourceScreenings)})
+            found[0]["u_source_screenings"] = json.dumps(req.sourceScreenings)
+        except Exception as exc:  # non-fatal — draft still returned
+            logger.warning("Could not set u_source_screenings: %s", exc)
     return _to_draft(found[0])
 
 
-# A canned encounter used when the clinician opens a note for a patient but the app has
-# no ambient-transcript source yet. Idempotent: returns an existing unsigned draft first.
+# Fallback used only when a patient has NO scored screenings yet (so a clinician can still
+# open a draft). The real source is the screening summary built by _screening_summary().
 _CANNED_ENCOUNTER = (
     "Follow-up behavioral-health visit. Patient reports depressed mood most days for "
     "about three weeks, low energy, poor concentration, and initial insomnia. Endorses "
@@ -164,17 +183,84 @@ _CANNED_ENCOUNTER = (
     "well. Discussed outpatient therapy referral."
 )
 
+_INSTRUMENT_LABEL = {"c_ssrs": "C-SSRS", "phq9": "PHQ-9", "gad7": "GAD-7",
+                     "nida_qs": "NIDA Quick Screen", "audit": "AUDIT", "dast10": "DAST-10",
+                     "craving": "Craving & Triggers", "sows": "SOWS", "bam": "BAM",
+                     "socrates8": "SOCRATES"}
+# Clinical order for the summary (safety spine first, then SUD battery).
+_INSTRUMENT_ORDER = ["c_ssrs", "phq9", "gad7", "nida_qs", "audit", "dast10",
+                     "craving", "sows", "bam", "socrates8"]
+
+
+def _screening_summary(table, patient_sys_id: str) -> tuple:
+    """Build the structured screening summary Agent 3 documents from: the latest scored
+    screening per instrument (preferring the clinician-confirmed one, else the latest scored).
+    Returns (summary_text, [screening_numbers]) — ("", []) if the patient has no scored screenings."""
+    rows = table.list(
+        SCREENING, f"u_patient={patient_sys_id}^u_scored_by_agent=true^ORDERBYDESCsys_created_on",
+        fields=("u_number,u_instrument,u_raw_score,u_risk_band,u_confidence,u_flags,"
+                "u_subscores,u_rationale,u_clinician_action"),
+        display_value="false", limit=100)
+    latest_scored: dict = {}
+    latest_confirmed: dict = {}
+    for r in rows:
+        inst = r.get("u_instrument") or ""
+        if not inst:
+            continue
+        latest_scored.setdefault(inst, r)
+        if (r.get("u_clinician_action") or "").lower() in ("confirmed", "adjusted"):
+            latest_confirmed.setdefault(inst, r)
+    chosen = {inst: latest_confirmed.get(inst, row) for inst, row in latest_scored.items()}
+    if not chosen:
+        return "", []
+
+    lines, numbers = [], []
+    for inst in _INSTRUMENT_ORDER:
+        r = chosen.get(inst)
+        if not r:
+            continue
+        numbers.append(r.get("u_number") or "")
+        label = _INSTRUMENT_LABEL.get(inst, inst)
+        score = r.get("u_raw_score") or "n/a"
+        band = r.get("u_risk_band") or "n/a"
+        flags = r.get("u_flags") or "none"
+        subs = r.get("u_subscores") or ""
+        action = (r.get("u_clinician_action") or "pending").lower()
+        rationale = (r.get("u_rationale") or "").strip()
+        parts = [f"score={score}", f"risk band={band}", f"flags=[{flags}]"]
+        if subs:
+            parts.append(f"subscores={subs}")
+        parts.append(f"clinician action={action}")
+        line = f"- {label} ({r.get('u_number')}): " + ", ".join(parts) + "."
+        if rationale:
+            line += f" Rationale: {rationale}"
+        lines.append(line)
+    header = ("STRUCTURED SCREENING SUMMARY — latest result per instrument "
+              "(one per instrument; no duplicate instruments):")
+    return header + "\n" + "\n".join(lines), [n for n in numbers if n]
+
+
+def _draft_from_screenings(table, patient_id: str, encounter_id: str = "ENC-APP") -> dict:
+    """Draft a note from the patient's screening summary, falling back to the canned
+    encounter only if the patient has no scored screenings."""
+    summary, numbers = _screening_summary(table, patient_id)
+    if summary:
+        return draft_note(NoteDraft(patient=patient_id, encounter=summary,
+                                    encounterId=encounter_id, sourceScreenings=numbers,
+                                    fromScreenings=True))
+    return draft_note(NoteDraft(patient=patient_id, encounter=_CANNED_ENCOUNTER,
+                                encounterId=encounter_id))
+
 
 @router.get("/note/for-patient/{patient_id}")
 def note_for_patient(patient_id: str) -> dict:
-    """Latest unsigned draft for a patient; if none, draft one (Agent 3)."""
+    """Latest unsigned draft for a patient; if none, draft one from their screenings (Agent 3)."""
     table = get_table_client()
     existing = table.list(TABLE, f"u_patient={patient_id}^u_signed=false^ORDERBYDESCsys_created_on",
                           display_value="all", limit=1)
     if existing:
         return _to_draft(existing[0])
-    return draft_note(NoteDraft(patient=patient_id, encounter=_CANNED_ENCOUNTER,
-                                encounterId="ENC-APP"))
+    return _draft_from_screenings(table, patient_id)
 
 
 def _screening_sys_id(table, screening: str) -> str:
@@ -197,8 +283,7 @@ def new_note(patient_id: str, screening: str = Query("")) -> dict:
     Links the note to a screening (u_screening): the one passed from the UI (Risk
     Confirm), else the patient's most recent screening (same rule as the backfill)."""
     table = get_table_client()
-    draft = draft_note(NoteDraft(patient=patient_id, encounter=_CANNED_ENCOUNTER,
-                                 encounterId="ENC-APP"))
+    draft = _draft_from_screenings(table, patient_id)
     sid = _screening_sys_id(table, screening)
     if not sid:
         latest = table.list(SCREENING, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",

@@ -191,7 +191,9 @@
 | 18 | `u_contains_part2` | Contains Part 2 data | boolean | — | N | false | — | Part2 |
 | 19 | `u_sensitivity` | Sensitivity label | choice | 20 | N | standard | standard, part2 | Part2 |
 | 20 | `u_screening` | Screening ID | reference | — | N | — | → `u_bhuc_screening` | — |
+| 21 | `u_source_screenings` | Source screenings | string | 1000 | N | — | JSON array of screening numbers the draft was synthesized from | — |
 
+> **Added 2026-07-10 (`u_source_screenings`):** traceability for screening-driven documentation — the JSON list of screening numbers (latest-per-instrument) the Clinical Documentation Agent (§4.4 Agent 3) synthesized the draft from. Written by the backend after the agent creates the note (`note.py` `_screening_summary`/`_draft_from_screenings`). Field sys_id `e5b7fb643b0a8f5076f13b64c3e45afd`.
 > **Added 2026-07-07 (Agent 4 record-op alignment):** `u_sensitivity` mirrors `u_bhuc_consent.u_sensitivity` so the **Consent & Data Protection Agent** (§4.4 Agent 4) can write its `standard\|part2` label to the note table, not just a boolean. `u_contains_part2` is retained as the quick boolean flag used by DLP/masking on C3/C6.
 > **Added 2026-07-07 (`u_screening`):** links a documentation note to the screening it stems from (`→ u_bhuc_screening`). Set by the backend on note creation (`POST /note/new/{patientId}?screening=…` from Risk Confirm, else defaults to the patient's most recent screening). Existing notes backfilled with the most-recent-screening-before-the-note rule.
 
@@ -380,7 +382,7 @@ sys_user (clinician) referenced by screening/appointment/message/care_plan/prior
 | `u_bhuc_consent` | 14 | 3 | 2 |
 | `u_bhuc_appointment` | 18 | 1 (ref) | 0 |
 | `u_bhuc_message` | 14 | 2 | 1 |
-| `u_bhuc_care_plan` | 20 | 2 (ref) | 3 |
+| `u_bhuc_care_plan` | 21 | 2 (ref) | 3 |
 | `u_bhuc_prior_auth` | 19 | 1 (ref) | 2 |
 | `u_bhuc_eligibility` | 17 | 2 | 0 |
 | `u_bhuc_check_in` | 14 | 1 (ref) | 1 |

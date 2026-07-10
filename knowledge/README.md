@@ -14,7 +14,7 @@ AI Search source + profile steps below are **UI-only** (REST is business-rule-bl
 | --- | --- | --- | --- | --- |
 | BHUC Facility Information | 1 (Front-Door) | `11c6b5a73bf90f1076f13b64c3e45a0b` | 11 (Published) | `bhuc-facility-information.md` |
 | BHUC Screening Scoring Rules | 2 (Risk ID) | `532b483f3b71cf1076f13b64c3e45a68` | 12 (5 Published + 7 Draft) | `bhuc-screening-scoring-rules.md` |
-| BHUC Clinical Coding and Documentation | 3 (Clinical Doc) | `103b883f3b71cf1076f13b64c3e45afa` | 5 (Published) | `bhuc-clinical-coding-and-documentation.md` |
+| BHUC Clinical Coding and Documentation | 3 (Clinical Doc) | `103b883f3b71cf1076f13b64c3e45afa` | 8 (5 Published + 3 Draft) | `bhuc-clinical-coding-and-documentation.md` |
 | BHUC Payer Policy Library | 5 (Prior-Auth) | `c93bc83f3b71cf1076f13b64c3e45af7` | 6 (Published) | `bhuc-payer-policy-library.md` |
 | BHUC Clinician Directory | 6 (Scheduling) | `c23b8c3f3b71cf1076f13b64c3e45adb` | 6 (Published) | `bhuc-clinician-directory.md` |
 | BHUC Consent and 42 CFR Part 2 Reference | 4 (Consent) — reference only | `fa3b4cb33b3d4f105551369693e45ae1` | 5 (Published) | `bhuc-consent-and-42-cfr-part-2-reference.md` |
@@ -65,6 +65,8 @@ Confirm `workflow_state = published`.
 > KB0010045 SOCRATES. The AI Search source + profile (`bhuc_screening_search`) already cover the KB,
 > so no source/profile change is needed — published articles appear in retrieval within minutes.
 - Clinical Coding: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=103b883f3b71cf1076f13b64c3e45afa`
+
+> **Clinical Coding update (2026-07-10).** Found **4 of 5 articles held router help-text placeholders** (KB0010018 CPT, KB0010019 template, KB0010020 grounding, KB0010021 SUD) — re-pushed correct content from the mirror (`scratchpad/push_coding_kb.py`). Expanded KB0010017 (ICD-10 + SUD F10–F19) and KB0010018 (CPT + screening/SBIRT). **3 new Draft articles to publish in the UI:** KB0010046 (instrument→interpretation/ICD-10 map), KB0010047 (multi-instrument synthesis), KB0010048 (screening-to-narrative template). Supports Agent 3's screening-driven documentation (`agents/agent3_screening_update.md`).
 - Payer Policy: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=c93bc83f3b71cf1076f13b64c3e45af7`
 - Clinician Directory: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=c23b8c3f3b71cf1076f13b64c3e45adb`
 - Consent/Part 2: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=fa3b4cb33b3d4f105551369693e45ae1`
