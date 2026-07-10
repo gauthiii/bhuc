@@ -12,7 +12,8 @@ Endpoints (mounted under /api/x_bhuc):
 
 import json
 import logging
-from datetime import datetime, timezone
+import re
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -38,8 +39,8 @@ _SUD_TERMS = ("sud", "opioid", "alcohol", "substance", "mat ", "buprenorphine", 
 # Field ids that reveal SUD → redacted (black bars) when the packet is Part 2-gated and the
 # viewer lacks role+consent. Everything else (administrative/member/provider) stays visible.
 _PART2_FIELDS = {
-    "service", "primary_dx", "secondary_dx", "cpt_hcpcs", "coverage_determination", "citation",
-    "sud_detail", "presenting_problem", "why_loc", "why_not_lower", "why_not_higher",
+    "service", "primary_dx", "secondary_dx", "cpt_hcpcs", "level_of_care", "coverage_determination",
+    "citation", "sud_detail", "presenting_problem", "why_loc", "why_not_lower", "why_not_higher",
     "asam", "goals", "modalities", "discharge",
 }
 
@@ -47,6 +48,199 @@ _INSTRUMENT_LABEL = {"c_ssrs": "C-SSRS", "phq9": "PHQ-9", "gad7": "GAD-7",
                      "nida_qs": "NIDA Quick Screen", "audit": "AUDIT", "dast10": "DAST-10",
                      "craving": "Craving & Triggers", "sows": "SOWS", "bam": "BAM",
                      "socrates8": "SOCRATES"}
+
+# ── Field-seeding knowledge (closes the 12-field clinician gap) ────────────────────────
+# Level-of-care defaults keyed by a canonical service key. Seeds CPT/HCPCS, ASAM Level of
+# Care, Modalities and Discharge criteria deterministically from the requested service.
+_LOC_DEFAULTS = {
+    "iop": {
+        "cpt": "H0015", "loc": "ASAM 2.1 — Intensive Outpatient (IOP)",
+        "modalities": "Structured group therapy (9+ hours/week), weekly individual therapy, "
+                      "psychoeducation, relapse-prevention skills, and medication management as indicated.",
+        "discharge": "Sustained symptom reduction and functional stability at a lower intensity; "
+                     "step-down to standard outpatient once ASAM Dimension criteria for IOP are no longer met.",
+    },
+    "php": {
+        "cpt": "H0035", "loc": "ASAM 2.5 — Partial Hospitalization (PHP)",
+        "modalities": "Full-day structured programming (20+ hours/week): group and individual therapy, "
+                      "psychiatric medication management, and coordinated ancillary services.",
+        "discharge": "Stabilization sufficient for a lower level of care; step-down to IOP or outpatient "
+                     "when daily structured monitoring is no longer clinically required.",
+    },
+    "residential": {
+        "cpt": "H0018", "loc": "ASAM 3.5 — Clinically Managed High-Intensity Residential",
+        "modalities": "24-hour clinically managed residential treatment: daily individual and group "
+                      "therapy, medication management, and structured milieu.",
+        "discharge": "Resolution of the acute needs requiring 24-hour support; transition to PHP/IOP "
+                     "with an established aftercare and relapse-prevention plan.",
+    },
+    "mat": {
+        "cpt": "H0033", "loc": "ASAM OTP / Office-Based MAT (Opioid Treatment)",
+        "modalities": "Medication for opioid use disorder (buprenorphine/naltrexone) with counseling, "
+                      "recovery support, and periodic toxicology monitoring.",
+        "discharge": "Sustained remission and medication stability; continued maintenance per shared "
+                     "decision-making, tapering only when clinically appropriate.",
+    },
+    "outpatient": {
+        "cpt": "H0004", "loc": "ASAM 1.0 — Outpatient",
+        "modalities": "Weekly individual and/or group psychotherapy with medication management as indicated.",
+        "discharge": "Achievement of treatment goals and stable functioning; transition to maintenance "
+                     "or as-needed follow-up.",
+    },
+}
+# service-string keyword → canonical key above (checked in order; first hit wins).
+_SERVICE_KEYWORDS = [
+    ("intensive outpatient", "iop"), ("iop", "iop"),
+    ("partial hospital", "php"), ("php", "php"),
+    ("residential", "residential"), ("inpatient", "residential"),
+    ("medication-assisted", "mat"), ("medication assisted", "mat"), ("mat", "mat"),
+    ("buprenorphine", "mat"), ("suboxone", "mat"), ("methadone", "mat"), ("naltrexone", "mat"),
+    ("outpatient", "outpatient"),
+]
+
+# Agent 3 writes notes in these sections; used to seed Presenting problem / Goals.
+_NOTE_SECTIONS = ["chief complaint", "history of present illness", "hpi",
+                  "mental status exam", "mental status", "mse", "assessment", "plan"]
+_SECTION_ALIAS = {"history of present illness": "hpi",
+                  "mental status exam": "mse", "mental status": "mse"}
+
+
+def _service_coding(service: str) -> dict:
+    """Map the requested service to its CPT/HCPCS, ASAM level of care, modalities and
+    discharge defaults. Unknown services get empty seeds (clinician fills manually)."""
+    s = (service or "").lower()
+    for kw, key in _SERVICE_KEYWORDS:
+        if kw in s:
+            return _LOC_DEFAULTS[key]
+    return {"cpt": "", "loc": "", "modalities": "", "discharge": ""}
+
+
+def _auth_period(units: str, start: datetime) -> str:
+    """Derive an authorization window from the requested-units duration text
+    ('… for 4 weeks' → start … start+28d). Falls back to a standard 90-day window."""
+    m = re.search(r"(\d+)\s*(day|week|month)", (units or "").lower())
+    if m:
+        n, unit = int(m.group(1)), m.group(2)
+        days = n * (1 if unit == "day" else 7 if unit == "week" else 30)
+    else:
+        days = 90
+    end = start + timedelta(days=days)
+    return f"{start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} ({days} days)"
+
+
+def _json_list(v) -> list:
+    try:
+        parsed = json.loads(v) if isinstance(v, str) and v.strip() else v
+    except (json.JSONDecodeError, TypeError):
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _parse_note_sections(note: str) -> dict:
+    """Split Agent 3's sectioned note (Chief Complaint / HPI / MSE / Assessment / Plan) into
+    a dict keyed by a normalized section name. Tolerant of '**Header**', 'Header:' and
+    'Header: inline content' forms."""
+    out: dict = {}
+    current, buf = None, []
+
+    def flush():
+        if current and buf:
+            prev = out.get(current, "")
+            joined = "\n".join(buf).strip()
+            out[current] = (prev + "\n" + joined).strip() if prev else joined
+
+    for raw in (note or "").split("\n"):
+        stripped = raw.strip().lstrip("*#-• ").strip()
+        low = stripped.lower()
+        matched = None
+        for sec in _NOTE_SECTIONS:
+            if low == sec or low.startswith(sec + ":") or (low.startswith(sec) and len(stripped) <= len(sec) + 2):
+                matched = sec
+                break
+        if matched:
+            flush()
+            current, buf = _SECTION_ALIAS.get(matched, matched), []
+            rest = stripped[len(matched):].lstrip(":*# ").strip()
+            if rest:
+                buf.append(rest)
+        elif current:
+            buf.append(raw.strip())
+    flush()
+    return out
+
+
+def _presenting(sections: dict, note_text: str) -> str:
+    """Presenting problem ← the note's Chief Complaint + HPI, else its first lines."""
+    combined = "\n".join([x for x in [sections.get("chief complaint", ""), sections.get("hpi", "")] if x]).strip()
+    if combined:
+        return combined
+    lines = [ln.strip() for ln in (note_text or "").split("\n") if ln.strip()][:2]
+    return " ".join(lines)
+
+
+def _overall_severity(bands: dict) -> str:
+    """A one-phrase severity read across the screening bands, for the LOC rationale."""
+    joined = " ".join([b.get("band", "") for b in bands.values()]).lower()
+    for level in ("severe", "high", "moderate", "mild", "low"):
+        if level in joined:
+            return f"{level} severity across screening instruments"
+    return "per clinical assessment"
+
+
+def _loc_rationale(loc: str, service: str, bands: dict) -> dict:
+    """Templated medical-necessity rationale for this / lower / higher level of care."""
+    loc_name = loc or service or "the requested level of care"
+    sev = _overall_severity(bands)
+    return {
+        "why_loc": f"The patient's presentation and screening results ({sev}) meet ASAM criteria for "
+                   f"{loc_name}: structured, multi-dimensional treatment with clinical monitoring is "
+                   f"required beyond what standard outpatient care can provide.",
+        "why_not_lower": "A lower level of care (standard outpatient) is insufficient: symptom severity, "
+                         "relapse / continued-use potential, and the need for structured hours would not be "
+                         "adequately addressed at reduced intensity.",
+        "why_not_higher": "A higher level of care (inpatient / residential) is not indicated: the patient is "
+                          "medically stable, without acute withdrawal or safety needs requiring 24-hour "
+                          "supervision, and can be safely treated in this setting.",
+    }
+
+
+def _asam_summary(bands: dict) -> str:
+    """A six-dimension ASAM summary synthesized from the latest screening bands per instrument."""
+    if not bands:
+        return ""
+
+    def band_of(*insts):
+        for i in insts:
+            if i in bands and bands[i].get("band"):
+                return bands[i]["band"]
+        return ""
+
+    sud = band_of("audit", "dast10", "nida_qs", "sows")
+    mood = band_of("phq9", "gad7")
+    ssrs = band_of("c_ssrs")
+    read = band_of("socrates8", "bam")
+    d3 = ", ".join([x for x in [f"mood/anxiety {mood}" if mood else "",
+                                f"suicide risk {ssrs}" if ssrs else ""] if x])
+    return "\n".join([
+        f"D1 Intoxication/Withdrawal: {sud or 'no acute withdrawal reported'}.",
+        "D2 Biomedical Conditions: no unstable biomedical condition documented (see chart).",
+        f"D3 Emotional/Behavioral: {d3 or 'stable'}.",
+        f"D4 Readiness to Change: {read or 'engaged in treatment planning'}.",
+        f"D5 Relapse/Continued-Use Potential: {sud or 'monitored'}.",
+        "D6 Recovery Environment: assessed; supports and stressors documented in the chart.",
+    ])
+
+
+def _goals_seed(sections: dict, next_steps) -> str:
+    """Measurable goals ← the note's Plan section plus the care plan's next steps."""
+    parts = []
+    if sections.get("plan"):
+        parts.append(sections["plan"])
+    for st in _json_list(next_steps):
+        text = st.get("text") if isinstance(st, dict) else str(st)
+        if text:
+            parts.append(f"- {text}")
+    return "\n".join(parts)
 
 
 def _b(v) -> bool:
@@ -68,20 +262,31 @@ def _ctx(table, patient: str) -> dict:
     elig = table.list(ELIG, f"u_patient={patient}^ORDERBYDESCsys_created_on",
                       fields="u_status,u_payer,u_plan", display_value="false", limit=1)
     screens = table.list(SCREEN, f"u_patient={patient}^u_scored_by_agent=true^ORDERBYDESCsys_created_on",
-                         fields="u_number,u_instrument", display_value="false", limit=100)
+                         fields="u_number,u_instrument,u_raw_score,u_risk_band,u_flags",
+                         display_value="false", limit=100)
     notes = table.list(CARE, f"u_patient={patient}^ORDERBYDESCsys_created_on",
                        fields="u_number,u_signed", display_value="false", limit=50)
-    # latest screening per instrument (deduped), for supporting docs
-    seen, screen_docs = set(), []
+    # latest screening per instrument (deduped) — for supporting docs AND the band map that
+    # seeds the ASAM summary / medical-necessity rationale.
+    seen, screen_docs, bands = set(), [], {}
     for s in screens:
         inst = s.get("u_instrument") or ""
         if inst and inst not in seen:
             seen.add(inst)
             screen_docs.append(f"{_INSTRUMENT_LABEL.get(inst, inst)} screening ({s.get('u_number')})")
+            bands[inst] = {"score": s.get("u_raw_score") or "", "band": s.get("u_risk_band") or "",
+                           "flags": s.get("u_flags") or ""}
     note_docs = [f"Clinical note {n.get('u_number')} — {'signed' if _b(n.get('u_signed')) else 'draft'}"
                  for n in notes]
+    # Source clinical narrative for Justification / Treatment seeds: latest SIGNED note (else
+    # latest draft), fetched once WITH its body + structured fields.
+    src = table.list(CARE, f"u_patient={patient}^u_signed=true^ORDERBYDESCsys_created_on",
+                     fields="u_draft_note,u_next_steps,u_medications", display_value="false", limit=1) \
+        or table.list(CARE, f"u_patient={patient}^ORDERBYDESCsys_created_on",
+                      fields="u_draft_note,u_next_steps,u_medications", display_value="false", limit=1)
     return {"patient": prec, "elig": (elig[0] if elig else {}),
-            "attachments": screen_docs + note_docs}
+            "attachments": screen_docs + note_docs,
+            "bands": bands, "note": (src[0] if src else {})}
 
 
 def _build_document(rec: dict, ctx: dict, redact: bool, clinician: str, saved: dict) -> dict:
@@ -94,7 +299,18 @@ def _build_document(rec: dict, ctx: dict, redact: bool, clinician: str, saved: d
     citation = " · ".join([x for x in [rec.get("u_citation_policy"), rec.get("u_citation_section")] if x])
     member_name = f"{p.get('u_first_name', '')} {p.get('u_last_name', '')}".strip() or (rec.get("u_patient") or "—")
     elig_verified = "Yes — active" if (elig.get("u_status") == "active") else (elig.get("u_status") or "Not verified")
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+
+    # ── Seed the 12 fields the agent leaves empty, from data we already have ──────────────
+    # Deterministic (service → coding) + reused note/screening/care-plan data. Every seed is
+    # an editable pre-fill the clinician still reviews + attests; SUD-revealing fields remain
+    # redacted via _PART2_FIELDS below (the seed is dropped, never leaked, when redact=True).
+    coding = _service_coding(rec.get("u_service") or "")
+    note = ctx.get("note") or {}
+    bands = ctx.get("bands") or {}
+    parsed = _parse_note_sections(note.get("u_draft_note") or "")
+    rationale = _loc_rationale(coding["loc"], rec.get("u_service") or "", bands)
 
     def f(fid, label, value="", editable=True, multiline=False):
         sensitive = fid in _PART2_FIELDS
@@ -109,13 +325,13 @@ def _build_document(rec: dict, ctx: dict, redact: bool, clinician: str, saved: d
             f("date_of_request", "Date of Request", today, editable=False),
             f("urgency", "Urgency", "Standard (non-expedited)"),
             f("service", "Service Requested", rec.get("u_service") or ""),
-            f("cpt_hcpcs", "Requested CPT/HCPCS", ""),
+            f("cpt_hcpcs", "Requested CPT/HCPCS", coding["cpt"]),
             f("primary_dx", "Primary Diagnosis", rec.get("u_diagnosis") or ""),
             f("secondary_dx", "Secondary Diagnosis", ""),
-            f("level_of_care", "Level of Care Requested", ""),
+            f("level_of_care", "Level of Care Requested", coding["loc"]),
             f("units", "Units Requested", rec.get("u_requested_units") or ""),
-            f("requested_start", "Requested Start Date", ""),
-            f("auth_period", "Authorization Period", ""),
+            f("requested_start", "Requested Start Date", today),
+            f("auth_period", "Authorization Period", _auth_period(rec.get("u_requested_units") or "", now)),
         ]},
         {"id": "member", "title": "Member Information", "fields": [
             f("member_name", "Member Name", member_name, editable=False),
@@ -131,20 +347,20 @@ def _build_document(rec: dict, ctx: dict, redact: bool, clinician: str, saved: d
             f("provider_contact", "Contact", "(see facility)", editable=False),
         ]},
         {"id": "justification", "title": "Clinical Justification (Medical Necessity)", "fields": [
-            f("presenting_problem", "Presenting problem", "", multiline=True),
-            f("why_loc", "Why this level of care", "", multiline=True),
-            f("why_not_lower", "Why not a lower level of care", "", multiline=True),
-            f("why_not_higher", "Why not a higher level of care", "", multiline=True),
-            f("asam", "ASAM dimension summary (1–6)", "", multiline=True),
+            f("presenting_problem", "Presenting problem", _presenting(parsed, note.get("u_draft_note") or ""), multiline=True),
+            f("why_loc", "Why this level of care", rationale["why_loc"], multiline=True),
+            f("why_not_lower", "Why not a lower level of care", rationale["why_not_lower"], multiline=True),
+            f("why_not_higher", "Why not a higher level of care", rationale["why_not_higher"], multiline=True),
+            f("asam", "ASAM dimension summary (1–6)", _asam_summary(bands), multiline=True),
         ]},
         {"id": "coverage", "title": "Coverage Determination", "fields": [
             f("coverage_determination", "Coverage determination", rec.get("u_coverage_answer") or "", multiline=True),
             f("citation", "Policy citation", citation or ""),
         ]},
         {"id": "plan", "title": "Treatment Plan & Goals", "fields": [
-            f("goals", "Measurable goals", "", multiline=True),
-            f("modalities", "Modalities", "", multiline=True),
-            f("discharge", "Discharge criteria", "", multiline=True),
+            f("goals", "Measurable goals", _goals_seed(parsed, note.get("u_next_steps")), multiline=True),
+            f("modalities", "Modalities", coding["modalities"], multiline=True),
+            f("discharge", "Discharge criteria", coding["discharge"], multiline=True),
         ]},
     ]
     if _b(rec.get("u_part2_gated")) or rec.get("u_sud_field"):
