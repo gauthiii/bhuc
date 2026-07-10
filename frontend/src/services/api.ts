@@ -78,6 +78,7 @@ const live = {
   checkNotePart2: (id: string) => j('/note/part2-check', { method: 'POST', body: JSON.stringify({ id }) }),
   listPatients: () => j('/patients'),
   // Scheduling review queue (Agent 6 v2)
+  getClinicianCalendar: () => j('/clinician/calendar'),
   getSchedulingQueue: () => j('/scheduling/queue'),
   runScheduling: () => j('/scheduling/run', { method: 'POST', body: '{}' }),
   acceptAppointment: (id: string) => j('/scheduling/accept', { method: 'POST', body: JSON.stringify({ id }) }),
@@ -136,6 +137,7 @@ const liveAgent2and3 = {
   getCheckIn: live.getCheckIn,
   submitCheckIn: live.submitCheckIn,
   listPatients: live.listPatients,
+  getClinicianCalendar: live.getClinicianCalendar,
   getSchedulingQueue: live.getSchedulingQueue,
   runScheduling: live.runScheduling,
   acceptAppointment: live.acceptAppointment,

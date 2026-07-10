@@ -8,7 +8,7 @@ on **2026-07-08**.
 - **Instance:** `https://ven04690.service-now.com`
 - **A2A endpoint (per agent):** `POST /api/sn_aia/a2a/v2/agent/id/{agent_sys_id}` (JSON-RPC `message/send`, OAuth `a2aauthscope`)
 - **Agent card:** `GET /api/sn_aia/a2a/v2/agent_card/id/{agent_sys_id}`
-- Agent 6 (Scheduling) is **not built yet** and is out of scope here.
+- Agent 6 (Scheduling) is **built + verified over A2A**. It was **redesigned to v2 (queue processor)** 2026-07-09 — the tool detail below (§ "Agent 6 — Tool 1/2/3") documents the **superseded v1** build. The authoritative v2 spec (2 scripts + RAG; removed the old Fairness-check Script + Record-Op; queue → proposed slots) + Agent Studio steps + test prompt live in **`agents/scheduling_agent_v2.md`**; the full use case is in **`fairness_usecase.md`**.
 
 | # | Agent | sys_id | Tools | Use case / phase |
 | --- | --- | --- | --- | --- |
@@ -360,7 +360,14 @@ on **2026-07-08**.
 
 ---
 
-## Agent 6 — Tool 1: AIA RAG Retriever (Search Retrieval)
+> ⚠️ **SUPERSEDED (v1) — Agent 6 was redesigned to v2 on 2026-07-09.** The three tools below are the
+> original single-patient "recommend a clinician" build. **v2** keeps **Tool 1 (RAG)** but **removed
+> Tool 2 (Fairness-check Script `2fb5062b…`) and Tool 3 (Record Operation propose appointment `f1170e2f…`)**
+> and added two scripts — **Get pending scheduling queue** (`20c9b1ac…`) and **Assign & write suggested
+> slots** (`64c9b1ac…`) — that process the **pending** queue → **proposed** slots. See
+> **`agents/scheduling_agent_v2.md`** (scripts + Agent Studio steps + test prompt) and **`fairness_usecase.md`**.
+
+## Agent 6 — Tool 1: AIA RAG Retriever (Search Retrieval)  *(v1 — kept in v2)*
 - **Type:** rag · **sys_id:** `8021ddea2b0d52101d72fb466e91bfd1` (shared RAG tool)
 - **What it does:** Retrieves candidate clinicians (credentials, specialty, availability) from the **Clinician Directory** KB/source+profile (`kb` `c23b8c3f3b71cf1076f13b64c3e45adb`). Hybrid; results limit 10; threshold 0.3. Autonomous.
 

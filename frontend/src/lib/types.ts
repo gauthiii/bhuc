@@ -265,6 +265,13 @@ export interface SchedulingQueueItem {
 export interface SchedulingBoard { pendingCount: number; proposed: SchedulingQueueItem[]; pending: SchedulingQueueItem[] }
 export interface SchedulingRunResult extends SchedulingBoard { ok: boolean; newProposals: number; error?: string }
 
+// ---- Clinician calendar / dashboard ----
+export interface CalendarAppointment {
+  id: string; number: string; patientId: string; patientName: string; patientNumber: string
+  start: string; status: string; reasonCategory: string; reasonLabel: string; visitType: string; modality: string
+}
+export interface ClinicianCalendar { pendingCount: number; appointments: CalendarAppointment[] }
+
 // ---- Scheduling fairness (governance) ----
 export interface FairnessGroup { group: string; count: number; avgWaitDays: number }
 export interface FairnessMetrics {

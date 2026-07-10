@@ -342,6 +342,23 @@ export const mock = {
       { number: 'BHUC_PATIENT_008', name: 'Marcus Johnson', gender: 'male', race: 'black_or_african_american', ethnicity: 'not_hispanic_or_latino' },
     ]
   },
+  async getClinicianCalendar() {
+    await wait()
+    const a = (id: string, name: string, num: string, hrs: number, status: string, cat: string, label: string) =>
+      ({ id, number: 'BHUC_APPOINTMENT_' + id, patientId: num, patientName: name, patientNumber: num, start: iso(hrs), status, reasonCategory: cat, reasonLabel: label, visitType: 'Follow Up', modality: 'telehealth' })
+    return {
+      pendingCount: 5,
+      appointments: [
+        a('101', 'Maya Alvarez', 'BHUC_PATIENT_002', -72, 'completed', 'therapy', 'Therapy'),
+        a('102', 'Marcus Johnson', 'BHUC_PATIENT_008', -24, 'completed', 'medication', 'Medication'),
+        a('103', 'Aisha Rahman', 'BHUC_PATIENT_007', 6, 'confirmed', 'crisis', 'Crisis'),
+        a('104', 'Wei Chen', 'BHUC_PATIENT_010', 30, 'confirmed', 'therapy', 'Therapy'),
+        a('105', 'Sofia Ramirez', 'BHUC_PATIENT_009', 54, 'confirmed', 'intake', 'Intake'),
+        a('106', 'Grace Kim', 'BHUC_PATIENT_015', 120, 'confirmed', 'medication', 'Medication'),
+        a('107', 'Nia Okafor', 'BHUC_PATIENT_018', -120, 'completed', 'intake', 'Intake'),
+      ],
+    }
+  },
   async getSchedulingQueue() {
     await wait()
     const q = (id: string, name: string, num: string, cat: string, label: string, req: string, sug: string, urg: string, status: string) =>

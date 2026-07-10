@@ -28,11 +28,11 @@
 | 2 | Agents (AG) | 13 | 11 | 1 | ~14.75 | ~0.75 |
 | 3 | Governance config (GOV) | 10 | 3 | 0 | ~4.75 | ~3.75 |
 | 4 | Backend / FastAPI (BE) | 11 | 4 | 2 | ~10.75 | ~3.75 |
-| 5 | Frontend / React (FE) | 23 | 21 | 0 | ~26.3 | ~2 |
+| 5 | Frontend / React (FE) | 24 | 22 | 0 | ~27 | ~2 |
 | 6 | iframe portal wiring (PORT) | 3 | 1 | 0 | ~2 | ~1.5 |
 | 7 | Demo (DEMO) | 5 | 0 | 0 | ~2.5 | ~2.5 |
 | — | Doc cleanup (DOC) | 6 | 0 | 0 | ~1.8 | ~1.8 |
-| | **Total** | **91** | **56** | **5** | **~80 person-days** | **~19 person-days** |
+| | **Total** | **92** | **57** | **5** | **~81 person-days** | **~19 person-days** |
 
 > Estimates are single-threaded; with an SN admin + backend dev + frontend dev working in parallel, calendar time compresses substantially (see "Suggested critical path" at the end).
 > **Est. person-days left** counts every not-done (☐) item at full effort and each partially-complete (◐) item at half its estimate (est − done − ½·partial), summed from the per-item estimates in the phase tables below.
@@ -153,6 +153,7 @@
 | FE-9h | **Ambient doc "Verify all" + Worklist Confidence hidden (done 2026-07-07):** (1) Added a **"Verify all"** button to the session-note panel header (shown while the note is a Draft with ≥1 Unverified line) that marks every line verified in one click — companion to the per-line "Mark verified" now that FE-9g starts all lines Unverified. (2) **Worklist**: commented out the **Confidence** column (header + per-row cell) for now — kept in-comment for easy restore; the `confidence` sort tiebreaker is untouched. Frontend-only (`Documentation.tsx`, `Worklist.tsx`). | §3.3 C2/C5; §4.4 Agent 3 | S | 0.1 | FE-9g | ☑ |
 | FE-9 | Build **9 Patient screens** (P1–P9) | §3.2 | XL | 6 | FE-1, FE-3 | ☑ |
 | FE-10 | Build **8 Clinician screens** (C1–C8) | §3.3 | XL | 5 | FE-1, FE-3 | ☑ |
+| FE-10b | **Clinician Calendar / dashboard (done 2026-07-09):** new sidebar page `/clinician/calendar` (`Calendar.tsx`, nav "Calendar" after Scheduling; Worklist stays default). Shows **confirmed + completed** appointments only. Metric cards: **Pending** (→ Scheduling) + This week + Completed this month + Confirmed upcoming. **This week's appointments** list, a **month calendar grid** (6×7 cells, appointment chips + "+N more", today/selected highlight, prev/next/Today nav), a **selected-day detail** panel (→ patient Chart), and a **Recently completed** list. Backend `GET /clinician/calendar` (confirmed+completed clinic-wide + pendingCount) in `appointments.py`; `getClinicianCalendar` in api/mock. Modeled on CareAtlas `DoctorDashboardPage` (BHUC design language). tsc-clean + smoke-tested; seeded July completed/confirmed rows for a full month. | §3.3 | M | 0.75 | FE-10 | ☑ |
 | FE-11 | Do NOT build governance dashboard (guard against scope creep) | §8.3 FE-Step 9 | S | 0 | — | ☑ |
 | FE-12 | WCAG 2.1 AA audit + accessibility pass across both portals | §3.1; per-screen a11y notes | M | 1 | FE-9, FE-10 | ☐ |
 

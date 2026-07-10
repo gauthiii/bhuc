@@ -14,7 +14,7 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-from .common import find_patient_by_email, patient_sys_id
+from .common import find_patient_by_email, patient_sys_id, raw
 from .config import get_settings
 from .servicenow import get_a2a_client, get_table_client
 
@@ -174,6 +174,39 @@ def scheduling_run() -> dict:
     board = scheduling_queue()
     after = len(board["proposed"])
     return {"ok": True, "newProposals": max(0, after - before), **board}
+
+
+# ---- Clinician calendar / dashboard ----
+_CAL_FIELDS = ("u_number,u_status,u_start,u_reason_category,u_reason_text,u_visit_type,"
+               "u_modality,u_patient,u_patient.u_number,u_patient.u_first_name,"
+               "u_patient.u_last_name,sys_id")
+
+
+@router.get("/clinician/calendar")
+def clinician_calendar() -> dict:
+    """All confirmed + completed appointments (clinic-wide) for the calendar/dashboard,
+    plus the count of pending requests (drives the 'Pending' card -> Scheduling)."""
+    table = get_table_client()
+    rows = table.list(APPT, "u_statusINconfirmed,completed^ORDERBYu_start",
+                      fields=_CAL_FIELDS, limit=500)
+    appts = []
+    for r in rows:
+        fn, ln = r.get("u_patient.u_first_name", ""), r.get("u_patient.u_last_name", "")
+        appts.append({
+            "id": r.get("sys_id"),
+            "number": r.get("u_number") or "",
+            "patientId": raw(r.get("u_patient")) or "",   # reference -> sys_id (not the {link,value} object)
+            "patientName": f"{fn} {ln}".strip() or r.get("u_patient.u_number") or "Patient",
+            "patientNumber": r.get("u_patient.u_number") or "",
+            "start": _iso(r.get("u_start")),
+            "status": r.get("u_status") or "",
+            "reasonCategory": r.get("u_reason_category") or "other",
+            "reasonLabel": _REASON_LABEL.get(r.get("u_reason_category") or "other", "Other"),
+            "visitType": (r.get("u_visit_type") or "").replace("_", " ").title(),
+            "modality": r.get("u_modality") or "telehealth",
+        })
+    pending = len(table.list(APPT, "u_status=pending", fields="sys_id", limit=200))
+    return {"pendingCount": pending, "appointments": appts}
 
 
 class ApptActionReq(BaseModel):

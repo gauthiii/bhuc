@@ -21,6 +21,7 @@ import { ClinicianDocumentation } from './pages/clinician/Documentation'
 import { ClinicianPriorAuth } from './pages/clinician/PriorAuth'
 import { ClinicianDisposition } from './pages/clinician/Disposition'
 import { ClinicianScheduling } from './pages/clinician/Scheduling'
+import { ClinicianCalendarPage } from './pages/clinician/Calendar'
 import { GovernanceSignIn } from './pages/governance/SignIn'
 import { GovernanceAgentsInventory } from './pages/governance/AgentsInventory'
 import { GovernanceOutputIntegrity } from './pages/governance/OutputIntegrity'
@@ -65,6 +66,7 @@ export default function App() {
       <Route path="/clinician/prior-auth/:patientId" element={<ClinicianGuard><ClinicianPriorAuth /></ClinicianGuard>} />
       <Route path="/clinician/disposition/:id" element={<ClinicianGuard><ClinicianDisposition /></ClinicianGuard>} />
       <Route path="/clinician/scheduling" element={<ClinicianGuard><ClinicianScheduling /></ClinicianGuard>} />
+      <Route path="/clinician/calendar" element={<ClinicianGuard><ClinicianCalendarPage /></ClinicianGuard>} />
 
       {/* Governance portal */}
       <Route path="/governance/sign-in" element={<GovernanceSignIn />} />

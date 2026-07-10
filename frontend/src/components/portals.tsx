@@ -58,6 +58,7 @@ const PATIENT_NAV: NavItem[] = [
 const CLINICIAN_NAV: NavItem[] = [
   { to: '/clinician/worklist', label: 'Worklist', icon: <ListChecks className="h-4 w-4" /> },
   { to: '/clinician/scheduling', label: 'Scheduling', icon: <CalendarClock className="h-4 w-4" /> },
+  { to: '/clinician/calendar', label: 'Calendar', icon: <CalendarDays className="h-4 w-4" /> },
 ]
 
 export function PatientShell({ title, intro, actions, children }: { title: string; intro?: string; actions?: ReactNode; children: ReactNode }) {
