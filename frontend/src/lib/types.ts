@@ -3,7 +3,10 @@
 
 export type RiskBand = 'low' | 'moderate' | 'high' | 'unknown'
 export type DistressLevel = 'none' | 'elevated' | 'crisis'
-export type Instrument = 'c_ssrs' | 'phq9' | 'gad7'
+export type Instrument =
+  | 'c_ssrs' | 'phq9' | 'gad7'                                   // core mental-health spine
+  | 'nida_qs'                                                    // SUD gateway screen
+  | 'audit' | 'dast10' | 'craving' | 'sows' | 'bam' | 'socrates8'  // SUD battery (42 CFR Part 2)
 export type ConsentType = 'hipaa' | 'part2_sud' | 'tcpa_sms'
 
 // ---- Patient domain ----

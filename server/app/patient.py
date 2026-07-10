@@ -277,7 +277,10 @@ def screening_status(email: str = Query(""), patient: str = Query("")) -> list:
         SCREENING, f"u_patient={patient_id}^ORDERBYDESCsys_created_on",
         fields="u_number,u_instrument,u_state,u_clinician_action,sys_created_on", limit=50)
 
-    names = {"c_ssrs": "C-SSRS", "phq9": "PHQ-9", "gad7": "GAD-7"}
+    names = {"c_ssrs": "C-SSRS", "phq9": "PHQ-9", "gad7": "GAD-7",
+             "nida_qs": "NIDA Quick Screen", "audit": "AUDIT", "dast10": "DAST-10",
+             "craving": "Craving & Triggers", "sows": "SOWS (Withdrawal)",
+             "bam": "BAM", "socrates8": "SOCRATES (Readiness)"}
     out = []
     for r in rows:
         state = r.get("u_state")

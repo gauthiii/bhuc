@@ -27,7 +27,20 @@ logger = logging.getLogger("bhuc.risk")
 router = APIRouter(prefix="/api/x_bhuc", tags=["Risk Identification Agent"])
 
 TABLE = "u_bhuc_screening"
-NEXT_INSTRUMENT = {"c_ssrs": "phq9", "phq9": "gad7", "gad7": None}
+
+# Fixed spine every patient completes; SUD instruments branch off the NIDA Quick Screen
+# (SBIRT model — see KB "Instrument selection and administration order").
+CORE_SEQUENCE = ["c_ssrs", "phq9", "gad7", "nida_qs"]
+
+# Instruments whose responses are 42 CFR Part 2 (SUD) data — rows get the part2_sud flag.
+SUD_INSTRUMENTS = {"nida_qs", "audit", "dast10", "craving", "sows", "bam", "socrates8"}
+
+# Instruments scored as a simple sum of numeric answer values. (DAST-10 item 3 is
+# reverse-scored in the option values themselves; AUDIT items 9-10 carry 0/2/4.)
+# BAM and SOCRATES are excluded: they have no meaningful total — only subscales
+# (BAM: Use/Risk/Protective; SOCRATES: Recognition/Ambivalence/Taking Steps), which
+# Agent 2 computes from the raw responses per the scoring-rules KB.
+SUM_SCORED = {"phq9", "gad7", "nida_qs", "audit", "dast10", "craving", "sows"}
 
 
 def _severity(instrument: str, score: Optional[int]) -> Optional[str]:
@@ -39,7 +52,110 @@ def _severity(instrument: str, score: Optional[int]) -> Optional[str]:
     if instrument == "gad7":
         return ("severe" if score >= 15 else "moderate" if score >= 10
                 else "mild" if score >= 5 else "minimal")
+    if instrument == "audit":  # WHO zones I-IV
+        return ("possible_dependence" if score >= 20 else "harmful" if score >= 15
+                else "hazardous" if score >= 8 else "low_risk")
+    if instrument == "dast10":
+        return ("severe" if score >= 9 else "substantial" if score >= 6
+                else "moderate" if score >= 3 else "low" if score >= 1 else "none")
+    if instrument == "sows":  # Handelsman bands
+        return ("severe" if score >= 21 else "moderate" if score >= 11
+                else "mild" if score >= 1 else "none")
+    if instrument == "craving":  # custom module, sum 0–28; operational bands
+        return ("high_craving" if score >= 20 else "moderate_craving" if score >= 10
+                else "low_craving")
     return "na"
+
+
+def _num(v) -> float:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _sud_flags(instrument: str, answers: dict, score: Optional[int]) -> list:
+    """Instrument-specific flags for the SUD battery (all rows also get part2_sud)."""
+    flags = []
+    if instrument == "nida_qs":
+        # 4-item NIDA Quick Screen: q1 alcohol (heavy-use days), q2 tobacco,
+        # q3 prescription drugs for non-medical reasons, q4 illegal drugs.
+        if _num(answers.get("q1")) > 0:
+            flags.append("alcohol_use")
+        if _num(answers.get("q2")) > 0:
+            flags.append("tobacco_use")
+        if _num(answers.get("q3")) > 0 or _num(answers.get("q4")) > 0:
+            flags.append("drug_use")
+    elif instrument == "audit" and score is not None:
+        if score >= 8:
+            flags.append("audit_positive")
+        if score >= 20:
+            flags.append("possible_dependence")
+    elif instrument == "dast10" and score is not None:
+        if score >= 3:
+            flags.append("dast_positive")
+        if score >= 9:
+            flags.append("dast_severe")
+    elif instrument == "sows" and score is not None and score >= 21:
+        flags.append("severe_withdrawal")
+    elif instrument == "craving" and score is not None and score >= 20:
+        flags.append("high_craving")
+    elif instrument == "bam" and _num(answers.get("q8")) >= 3:
+        flags.append("high_craving")  # BAM item 8: bothered by cravings/urges 3-4
+    return flags
+
+
+def next_instrument(instrument: str, answers: dict, score: Optional[int]) -> Optional[str]:
+    """Adaptive administration order (single-submit path; the batch flow's path is
+    driven client-side by the same rules). Uses only the current submission, so the
+    craving/monitoring branch keys off this instrument's own gate."""
+    if instrument in ("c_ssrs", "phq9", "gad7"):
+        return CORE_SEQUENCE[CORE_SEQUENCE.index(instrument) + 1]
+    if instrument == "nida_qs":
+        # Alcohol takes precedence for the single-submit chain; the client's
+        # computeAdaptivePath handles the case where both alcohol and drugs fire.
+        if _num(answers.get("q1")) > 0:
+            return "audit"
+        if _num(answers.get("q3")) > 0 or _num(answers.get("q4")) > 0:
+            return "dast10"
+        return None
+    if instrument == "audit":
+        return "craving" if (score or 0) >= 8 else None
+    if instrument == "dast10":
+        return "sows" if (score or 0) >= 3 else None
+    if instrument == "sows":
+        return "craving"
+    if instrument == "craving":
+        return "bam"
+    if instrument == "bam":
+        return "socrates8"
+    return None
+
+
+# Subscale item maps (canonical instrument item numbers → response keys q<N>).
+# BAM omits item 7 (unscored 7A–7G elaboration); item 17 is standalone, not in a subscale.
+BAM_SUBSCALES = {
+    "use": [4, 5, 6],
+    "risk": [1, 2, 3, 8, 11, 15],
+    "protective": [9, 10, 12, 13, 14, 16],
+}
+SOCRATES_SUBSCALES = {
+    "recognition": [1, 3, 7, 10, 12, 15, 17],
+    "ambivalence": [2, 6, 11, 16],
+    "taking_steps": [4, 5, 8, 9, 13, 14, 18, 19],
+}
+
+
+def compute_subscores(instrument: str, answers: dict) -> Optional[dict]:
+    """Deterministic subscale sums for the subscale instruments (BAM, SOCRATES).
+    Computed server-side because indexed multi-item arithmetic is exactly where an LLM
+    slips — the agent is told to persist these verbatim, not to recompute them."""
+    m = (BAM_SUBSCALES if instrument == "bam"
+         else SOCRATES_SUBSCALES if instrument == "socrates8" else None)
+    if not m:
+        return None
+    return {name: int(sum(_num(answers.get(f"q{i}")) for i in items))
+            for name, items in m.items()}
 
 
 def _run_one(patient: Optional[str], instrument: str, answers: dict,
@@ -49,8 +165,8 @@ def _run_one(patient: Optional[str], instrument: str, answers: dict,
     table = get_table_client()
 
     numeric = [v for v in answers.values() if isinstance(v, (int, float))]
-    score = int(sum(numeric)) if instrument in ("phq9", "gad7") else None
-    item9 = float(answers.get("q9", 0) or 0) > 0
+    score = int(sum(numeric)) if instrument in SUM_SCORED else None
+    item9 = instrument == "phq9" and float(answers.get("q9", 0) or 0) > 0
     cssrs_positive = instrument == "c_ssrs" and any(
         str(v).lower() == "yes" for v in answers.values())
     flags = []
@@ -58,6 +174,13 @@ def _run_one(patient: Optional[str], instrument: str, answers: dict,
         flags.append("item9_positive")
     if cssrs_positive:
         flags.append("cssrs_positive")
+    flags += _sud_flags(instrument, answers, score)
+    if instrument in SUD_INSTRUMENTS:
+        flags.append("part2_sud")  # 42 CFR Part 2 — SUD screening data
+
+    # Subscale instruments (BAM, SOCRATES) are scored deterministically here — the agent
+    # persists these numbers verbatim rather than doing the item arithmetic itself.
+    subscores = compute_subscores(instrument, answers)
 
     fields = {
         "u_instrument": instrument,
@@ -67,6 +190,7 @@ def _run_one(patient: Optional[str], instrument: str, answers: dict,
         "u_session_id": session_id or "",
         "u_raw_score": "" if score is None else str(score),
         "u_flags": ", ".join(flags),
+        "u_subscores": json.dumps(subscores) if subscores else "",
     }
     if patient:
         fields["u_patient"] = patient
@@ -74,11 +198,19 @@ def _run_one(patient: Optional[str], instrument: str, answers: dict,
     sys_id = rec["sys_id"]
 
     answer_lines = "\n".join(f"  {k}: {v}" for k, v in answers.items())
+    subscore_line = ""
+    if subscores:
+        subscore_line = (
+            f"\n\nPrecomputed subscores (AUTHORITATIVE — the server already computed these "
+            f"and saved them; pass this exact JSON to the write tool's `subscores` input and "
+            f"cite these numbers in your rationale; do NOT recompute the subscales yourself):\n"
+            f"{json.dumps(subscores)}"
+        )
     msg = (
         f"Score this behavioral-health screening and write the draft result back for "
         f"clinician confirmation.\n\nscreening_sys_id: {sys_id}\nInstrument: {instrument}\n"
-        f"Responses:\n{answer_lines}\n\nUsing the instrument scoring rules, return a risk band "
-        f"(low/moderate/high), a confidence (0-100), and a rationale citing the specific "
+        f"Responses:\n{answer_lines}{subscore_line}\n\nUsing the instrument scoring rules, return a "
+        f"risk band (low/moderate/high), a confidence (0-100), and a rationale citing the specific "
         f"responses. Then use the write tool with the screening_sys_id above, and run the "
         f"clinician confirmation subflow. Do not finalize."
     )
@@ -89,7 +221,8 @@ def _run_one(patient: Optional[str], instrument: str, answers: dict,
         raise HTTPException(status_code=502, detail="Risk agent unavailable") from exc
 
     scored = table.get(TABLE, sys_id)
-    risk_band = scored.get("u_risk_band") or ("high" if (item9 or cssrs_positive) else "moderate")
+    fallback_high = item9 or cssrs_positive or "severe_withdrawal" in flags or "dast_severe" in flags
+    risk_band = scored.get("u_risk_band") or ("high" if fallback_high else "moderate")
     try:
         confidence = int(scored.get("u_confidence") or 0)
     except (TypeError, ValueError):
@@ -106,7 +239,7 @@ def _run_one(patient: Optional[str], instrument: str, answers: dict,
         "rationale": scored.get("u_rationale") or "",
         "flags": flags,
         "escalate": risk_band == "high",
-        "nextInstrument": NEXT_INSTRUMENT.get(instrument),
+        "nextInstrument": next_instrument(instrument, answers, score),
     }
 
 

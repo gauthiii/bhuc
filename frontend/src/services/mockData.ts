@@ -94,7 +94,7 @@ export const mock = {
   async submitConsent(c: ConsentRecord) { await wait(); return { recorded: true, consentId: 'BHUC_CONSENT_00' + (Math.floor(1 + Math.random() * 8)) } },
 
   // ---- Screening ----
-  getInstrumentQuestions(instrument: Instrument): ScreeningQuestion[] {
+  getInstrumentQuestions(instrument: Instrument, variant?: 'alcohol' | 'drug'): ScreeningQuestion[] {
     const scale = [
       { value: 0, label: 'Not at all' }, { value: 1, label: 'Several days' },
       { value: 2, label: 'More than half the days' }, { value: 3, label: 'Nearly every day' },
@@ -104,6 +104,38 @@ export const mock = {
     }
     if (instrument === 'gad7') {
       return Array.from({ length: 7 }, (_, i) => ({ id: `q${i + 1}`, text: GAD7[i], options: scale }))
+    }
+    if (instrument === 'nida_qs') return NIDA_QS
+    if (instrument === 'audit') return AUDIT
+    if (instrument === 'dast10') {
+      // DAST-10: score = count of "yes" answers, except item 3 which is reverse-scored —
+      // the option values already carry the scored points, so a plain sum is the total.
+      return DAST10.map((text, i) => ({
+        id: `q${i + 1}`, text,
+        options: i === 2
+          ? [{ value: 1, label: 'No' }, { value: 0, label: 'Yes' }]
+          : [{ value: 0, label: 'No' }, { value: 1, label: 'Yes' }],
+      }))
+    }
+    if (instrument === 'craving') return CRAVING
+    if (instrument === 'sows') {
+      const sowsScale = [
+        { value: 0, label: 'Not at all' }, { value: 1, label: 'A little' },
+        { value: 2, label: 'Moderately' }, { value: 3, label: 'Quite a bit' },
+        { value: 4, label: 'Extremely' },
+      ]
+      return SOWS.map((text, i) => ({ id: `q${i + 1}`, text, options: sowsScale }))
+    }
+    if (instrument === 'bam') return BAM
+    if (instrument === 'socrates8') {
+      // SOCRATES v8, 19 items (CASAA, public domain): 8A alcohol wording / 8D drug wording.
+      const items = variant === 'drug' ? SOCRATES_8D : SOCRATES_8A
+      const likert = [
+        { value: 1, label: 'NO! Strongly disagree' }, { value: 2, label: 'No, disagree' },
+        { value: 3, label: '? Undecided or unsure' }, { value: 4, label: 'Yes, agree' },
+        { value: 5, label: 'YES! Strongly agree' },
+      ]
+      return items.map((text, i) => ({ id: `q${i + 1}`, text, options: likert }))
     }
     // C-SSRS (yes/no)
     const yn = [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }]
@@ -431,3 +463,168 @@ const CSSRS = [
   'Have you started to work out the details of how to kill yourself? Do you intend to carry out this plan?',
   'Have you done anything, started to do anything, or prepared to do anything to end your life?',
 ]
+
+// ---- SUD battery (all instruments below are real, public-domain screens) ----
+
+// NIDA Quick Screen V1.0 — "In the past year, how often have you used the following?"
+const NIDA_FREQ = [
+  { value: 0, label: 'Never' }, { value: 1, label: 'Once or twice' },
+  { value: 2, label: 'Monthly' }, { value: 3, label: 'Weekly' },
+  { value: 4, label: 'Daily or almost daily' },
+]
+const NIDA_QS: ScreeningQuestion[] = [
+  { id: 'q1', text: 'Alcohol — for men, 5 or more drinks a day; for women, 4 or more drinks a day', options: NIDA_FREQ },
+  { id: 'q2', text: 'Tobacco products', options: NIDA_FREQ },
+  { id: 'q3', text: 'Prescription drugs for non-medical reasons', options: NIDA_FREQ },
+  { id: 'q4', text: 'Illegal drugs', options: NIDA_FREQ },
+]
+
+// AUDIT (WHO Alcohol Use Disorders Identification Test) — 10 items, total 0–40.
+const AUDIT_FREQ = [
+  { value: 0, label: 'Never' }, { value: 1, label: 'Monthly or less' },
+  { value: 2, label: '2–4 times a month' }, { value: 3, label: '2–3 times a week' },
+  { value: 4, label: '4 or more times a week' },
+]
+const AUDIT_QTY = [
+  { value: 0, label: '1 or 2' }, { value: 1, label: '3 or 4' }, { value: 2, label: '5 or 6' },
+  { value: 3, label: '7, 8, or 9' }, { value: 4, label: '10 or more' },
+]
+const AUDIT_HOWOFTEN = [
+  { value: 0, label: 'Never' }, { value: 1, label: 'Less than monthly' },
+  { value: 2, label: 'Monthly' }, { value: 3, label: 'Weekly' },
+  { value: 4, label: 'Daily or almost daily' },
+]
+const AUDIT_YESNO = [
+  { value: 0, label: 'No' }, { value: 2, label: 'Yes, but not in the last year' },
+  { value: 4, label: 'Yes, during the last year' },
+]
+const AUDIT: ScreeningQuestion[] = [
+  { id: 'q1', text: 'How often do you have a drink containing alcohol?', options: AUDIT_FREQ },
+  { id: 'q2', text: 'How many drinks containing alcohol do you have on a typical day when you are drinking?', options: AUDIT_QTY },
+  { id: 'q3', text: 'How often do you have six or more drinks on one occasion?', options: AUDIT_HOWOFTEN },
+  { id: 'q4', text: 'How often during the last year have you found that you were not able to stop drinking once you had started?', options: AUDIT_HOWOFTEN },
+  { id: 'q5', text: 'How often during the last year have you failed to do what was normally expected of you because of drinking?', options: AUDIT_HOWOFTEN },
+  { id: 'q6', text: 'How often during the last year have you needed a first drink in the morning to get yourself going after a heavy drinking session?', options: AUDIT_HOWOFTEN },
+  { id: 'q7', text: 'How often during the last year have you had a feeling of guilt or remorse after drinking?', options: AUDIT_HOWOFTEN },
+  { id: 'q8', text: 'How often during the last year have you been unable to remember what happened the night before because of your drinking?', options: AUDIT_HOWOFTEN },
+  { id: 'q9', text: 'Have you or someone else been injured because of your drinking?', options: AUDIT_YESNO },
+  { id: 'q10', text: 'Has a relative, friend, doctor, or other health worker been concerned about your drinking or suggested you cut down?', options: AUDIT_YESNO },
+]
+
+// DAST-10 (Drug Abuse Screening Test) — past 12 months, "drug use" excludes alcohol.
+// Yes = 1 except item 3, which is reverse-scored (Yes = 0). Total 0–10.
+const DAST10 = [
+  'Have you used drugs other than those required for medical reasons?',
+  'Do you abuse more than one drug at a time?',
+  'Are you always able to stop using drugs when you want to?',
+  'Have you had "blackouts" or "flashbacks" as a result of drug use?',
+  'Do you ever feel bad or guilty about your drug use?',
+  'Does your spouse (or parents) ever complain about your involvement with drugs?',
+  'Have you neglected your family because of your use of drugs?',
+  'Have you engaged in illegal activities in order to obtain drugs?',
+  'Have you ever experienced withdrawal symptoms (felt sick) when you stopped taking drugs?',
+  'Have you had medical problems as a result of your drug use (e.g., memory loss, hepatitis, convulsions, bleeding)?',
+]
+
+// BAM — Brief Addiction Monitor (VA/Penn, Cacciola et al. 2013), 17 items, past 30 days.
+// Subscales (scored server-side / by Agent 2): Use = q4,q5,q6; Risk = q1,q2,q3,q8,q11,q15;
+// Protective = q9,q10,q12,q13,q14,q16. Item 17 is standalone (reverse-scored). Mixed anchors.
+const BAM_HEALTH = [
+  { value: 0, label: 'Excellent' }, { value: 1, label: 'Very good' }, { value: 2, label: 'Good' },
+  { value: 3, label: 'Fair' }, { value: 4, label: 'Poor' },
+]
+const BAM_DAYS = [
+  { value: 0, label: '0 days' }, { value: 1, label: '1–3 days' }, { value: 2, label: '4–8 days' },
+  { value: 3, label: '9–15 days' }, { value: 4, label: '16–30 days' },
+]
+const BAM_INTENSITY = [
+  { value: 0, label: 'Not at all' }, { value: 1, label: 'Slightly' }, { value: 2, label: 'Moderately' },
+  { value: 3, label: 'Considerably' }, { value: 4, label: 'Extremely' },
+]
+const BAM_YESNO = [{ value: 0, label: 'No' }, { value: 4, label: 'Yes' }]
+const BAM_PROGRESS = [
+  { value: 4, label: 'Not at all' }, { value: 3, label: 'Slightly' }, { value: 2, label: 'Moderately' },
+  { value: 1, label: 'Considerably' }, { value: 0, label: 'Extremely' },
+]
+const BAM: ScreeningQuestion[] = [
+  { id: 'q1', text: 'In the past 30 days, would you say your physical health has been?', options: BAM_HEALTH },
+  { id: 'q2', text: 'In the past 30 days, how many nights did you have trouble falling asleep or staying asleep?', options: BAM_DAYS },
+  { id: 'q3', text: 'In the past 30 days, how many days have you felt depressed, anxious, angry, or very upset throughout most of the day?', options: BAM_DAYS },
+  { id: 'q4', text: 'In the past 30 days, how many days did you drink ANY alcohol?', options: BAM_DAYS },
+  { id: 'q5', text: 'In the past 30 days, how many days did you have at least 5 drinks (if you are a man) or at least 4 drinks (if you are a woman)?', options: BAM_DAYS },
+  { id: 'q6', text: 'In the past 30 days, how many days did you use any illegal/street drugs or abuse any prescription medications?', options: BAM_DAYS },
+  // (canonical item 7 = 7A–7G drug-type elaboration; unscored, not administered here)
+  { id: 'q8', text: 'In the past 30 days, how much were you bothered by cravings or urges to drink alcohol or use drugs?', options: BAM_INTENSITY },
+  { id: 'q9', text: 'How confident are you in your ability to be completely abstinent (clean) from alcohol and drugs in the next 30 days?', options: BAM_INTENSITY },
+  { id: 'q10', text: 'In the past 30 days, how many days did you attend self-help meetings like AA or NA to support your recovery?', options: BAM_DAYS },
+  { id: 'q11', text: 'In the past 30 days, how many days were you in any situations or with any people that might put you at an increased risk for using alcohol or drugs (risky people, places, or things)?', options: BAM_DAYS },
+  { id: 'q12', text: 'Does your religion or spirituality help support your recovery?', options: BAM_INTENSITY },
+  { id: 'q13', text: 'In the past 30 days, how many days did you spend much of the time at work, school, or doing volunteer work?', options: BAM_DAYS },
+  { id: 'q14', text: 'Do you have enough income (from legal sources) to pay for necessities such as housing, transportation, food, and clothing for yourself and your dependents?', options: BAM_YESNO },
+  { id: 'q15', text: 'In the past 30 days, how much have you been bothered by arguments or problems getting along with any family members or friends?', options: BAM_INTENSITY },
+  { id: 'q16', text: 'In the past 30 days, how many days were you in contact or spent time with any family members or friends who are supportive of your recovery?', options: BAM_DAYS },
+  { id: 'q17', text: 'How satisfied are you with your progress toward achieving your recovery goals?', options: BAM_PROGRESS },
+]
+
+// SOWS — Subjective Opiate Withdrawal Scale (Handelsman et al. 1987), 16 items, total 0–64.
+// Public domain / freely available (NCETA/Flinders). Bands: 1–10 mild, 11–20 moderate, 21+ severe.
+const SOWS = [
+  'I feel anxious',
+  'I feel like yawning',
+  'I am perspiring',
+  'My eyes are teary',
+  'My nose is running',
+  'I have goosebumps',
+  'I am shaking',
+  'I have hot flushes',
+  'I have cold flushes',
+  'My bones and muscles ache',
+  'I feel restless',
+  'I feel nauseous',
+  'I feel like vomiting',
+  'My muscles twitch',
+  'I have cramps in my stomach',
+  'I feel like using now',
+]
+
+// Craving & Triggers — CUSTOM BHUC clinic module (not a validated/copyrighted instrument).
+// Captures craving intensity, triggers (before use), control, and after-use feelings.
+// 7 items × 0–4 = total 0–28; operational bands only (low <10, moderate 10–19, high ≥20).
+const CRAVING_FREQ = [
+  { value: 0, label: 'Never' }, { value: 1, label: 'Rarely' }, { value: 2, label: 'Sometimes' },
+  { value: 3, label: 'Often' }, { value: 4, label: 'Nearly all the time' },
+]
+const CRAVING_INTENSITY = [
+  { value: 0, label: 'None' }, { value: 1, label: 'Mild' }, { value: 2, label: 'Moderate' },
+  { value: 3, label: 'Strong' }, { value: 4, label: 'Overwhelming' },
+]
+const CRAVING_RESIST = [
+  { value: 0, label: 'Not at all difficult' }, { value: 1, label: 'Slightly difficult' },
+  { value: 2, label: 'Moderately difficult' }, { value: 3, label: 'Very difficult' },
+  { value: 4, label: 'Impossible to resist' },
+]
+const CRAVING_AGREE = [
+  { value: 0, label: 'Not at all' }, { value: 1, label: 'A little' }, { value: 2, label: 'Somewhat' },
+  { value: 3, label: 'Quite a bit' }, { value: 4, label: 'Very much' },
+]
+const CRAVING: ScreeningQuestion[] = [
+  { id: 'q1', text: 'In the past week, how often did you think about drinking or using?', options: CRAVING_FREQ },
+  { id: 'q2', text: 'At its strongest this past week, how intense was your urge or craving to use?', options: CRAVING_INTENSITY },
+  { id: 'q3', text: 'If drugs or alcohol had been available, how difficult would it have been to resist using?', options: CRAVING_RESIST },
+  { id: 'q4', text: 'How often were you around people, places, or things that set off an urge to use?', options: CRAVING_FREQ },
+  { id: 'q5', text: 'How much are your urges set off by difficult feelings such as stress, sadness, anger, or loneliness?', options: CRAVING_AGREE },
+  { id: 'q6', text: 'How much are your urges set off by social or celebratory situations, or being around others who are using?', options: CRAVING_AGREE },
+  { id: 'q7', text: 'After using, how often do you feel regret, guilt, or feel worse than before?', options: CRAVING_FREQ },
+]
+
+// SOCRATES v8 (Miller & Tonigan), 19 items, PUBLIC DOMAIN. 8A = alcohol, 8D = drug wording.
+// 5-point Likert 1–5 (NO! Strongly disagree → YES! Strongly agree), applied by getInstrumentQuestions.
+// Subscales (scored by Agent 2): Recognition = items 1,3,7,10,12,15,17; Ambivalence = 2,6,11,16;
+// Taking Steps = 4,5,8,9,13,14,18,19. Ranges: Re 7–35, Am 4–20, Ts 8–40.
+//
+// TODO(content-filter): the 19 verbatim item strings could not be written here because the
+// SOCRATES self-report statements trip the output content filter. Fill each '***' with the
+// verbatim item from the CASAA public-domain form (see knowledge/ mirror + spec doc
+// knowledge/SOCRATES_ITEMS_TODO.md). Order matters — index 0 = item 1 … index 18 = item 19.
+const SOCRATES_8A = Array(19).fill('***')  // alcohol wording — REPLACE each with verbatim item
+const SOCRATES_8D = Array(19).fill('***')  // drug wording — REPLACE each with verbatim item

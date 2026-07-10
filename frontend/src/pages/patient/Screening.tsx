@@ -3,17 +3,12 @@ import { Link } from 'react-router-dom'
 import { CheckCircle2, Clock, Loader2, UserRoundCheck } from 'lucide-react'
 import { api } from '../../services/api'
 import type { Instrument, ScreeningQuestion, MeResponse, ScreeningStatusItem, BatchScreeningResult } from '../../lib/types'
+import { INSTRUMENT_NAMES, computeAdaptivePath, socratesVariant, type AllAnswers } from '../../lib/screeningFlow'
 import { usePatientAuth } from '../../contexts/AuthContext'
 import { PatientShell } from '../../components/portals'
 import { CrisisDialog } from '../../components/CrisisDialog'
 import { AgentRunProgress } from '../../components/AgentRunProgress'
 import { Panel, Button, RadioGroup, StatusBadge, Spinner } from '../../components/ui'
-
-const INSTRUMENTS: { key: Instrument; name: string }[] = [
-  { key: 'c_ssrs', name: 'C-SSRS' },
-  { key: 'phq9', name: 'PHQ-9' },
-  { key: 'gad7', name: 'GAD-7' },
-]
 
 type Phase = 'checking' | 'blocked' | 'intro' | 'stepping' | 'running'
 type AnswerMap = Record<string, number | string>
@@ -27,16 +22,25 @@ export function PatientScreening() {
   const [phase, setPhase] = useState<Phase>('checking')
   const [me, setMe] = useState<MeResponse | null>(null)
   const [stepIdx, setStepIdx] = useState(0)
-  const [answers, setAnswers] = useState<Record<Instrument, AnswerMap>>({ c_ssrs: {}, phq9: {}, gad7: {} })
+  const [answers, setAnswers] = useState<AllAnswers>({})
+  const [completed, setCompleted] = useState<Instrument[]>([])
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [runComplete, setRunComplete] = useState(false)
   const [runError, setRunError] = useState(false)
   const [crisis, setCrisis] = useState(false)
   const [status, setStatus] = useState<ScreeningStatusItem[]>([])
 
-  const current = INSTRUMENTS[stepIdx]
+  // The administration path grows as gating answers arrive (SBIRT branching). Because
+  // computeAdaptivePath always returns the core spine first and appends conditionals in a
+  // fixed order, the prefix up to the current step stays stable as the tail extends.
+  const path = useMemo(() => computeAdaptivePath(answers, completed), [answers, completed])
+  const current = path[stepIdx]
+  const variant = current === 'socrates8' ? socratesVariant(answers) : undefined
   const questions: ScreeningQuestion[] = useMemo(
-    () => api.getInstrumentQuestions(current.key), [current.key])
+    () => (current ? api.getInstrumentQuestions(current, variant) : []),
+    [current, variant])
+
+  const answersFor = (ins: Instrument): AnswerMap => answers[ins] ?? {}
 
   // --- gate: must be authenticated + registered before the agents can run ---
   useEffect(() => {
@@ -53,18 +57,25 @@ export function PatientScreening() {
   useEffect(() => { if (me?.registered) loadStatus() }, [me])
 
   function next() {
+    if (!current) return
+    const cur = answersFor(current)
     const missing: Record<string, boolean> = {}
-    questions.forEach((q) => { if (answers[current.key][q.id] === undefined) missing[q.id] = true })
+    questions.forEach((q) => { if (cur[q.id] === undefined) missing[q.id] = true })
     if (Object.keys(missing).length) { setErrors(missing); return }
     setErrors({})
-    if (stepIdx < INSTRUMENTS.length - 1) setStepIdx((i) => i + 1)
-    else runAll()
+
+    // Mark this instrument done, then recompute the path with its answers folded in.
+    const nextCompleted = completed.includes(current) ? completed : [...completed, current]
+    setCompleted(nextCompleted)
+    const nextPath = computeAdaptivePath(answers, nextCompleted)
+    if (stepIdx < nextPath.length - 1) setStepIdx((i) => i + 1)
+    else runAll(nextCompleted)
   }
 
-  async function runAll() {
+  async function runAll(administered: Instrument[]) {
     setPhase('running'); setRunComplete(false); setRunError(false)
     const patientId = me?.profile?.patientId ?? ''
-    const payload = INSTRUMENTS.map((ins) => ({ instrument: ins.key, answers: answers[ins.key] }))
+    const payload = administered.map((ins) => ({ instrument: ins, answers: answersFor(ins) }))
     try {
       const res: BatchScreeningResult = await api.submitScreeningBatch(patientId, payload)
       setRunComplete(true)
@@ -75,12 +86,14 @@ export function PatientScreening() {
     }
   }
 
-  const answeredCount = questions.filter((q) => answers[current.key][q.id] !== undefined).length
+  const curAnswers = current ? answersFor(current) : {}
+  const answeredCount = questions.filter((q) => curAnswers[q.id] !== undefined).length
+  const total = path.length
 
   return (
     <PatientShell
       title="Intake screening"
-      intro="Three short questionnaires help your care team understand how you've been feeling. Answer all three — nothing is scored until you finish and submit them together."
+      intro="A short set of questionnaires helps your care team understand how you've been feeling. Some follow-up questions only appear based on your earlier answers. Nothing is scored until you finish and submit them together."
     >
       <div className="mx-auto max-w-2xl space-y-5">
         {phase === 'checking' && <Spinner label="Loading your screening…" />}
@@ -100,9 +113,10 @@ export function PatientScreening() {
         {phase === 'intro' && (
           <Panel title="Before we begin">
             <p className="text-sm text-slate-600">
-              You'll answer three brief questionnaires — <strong>C-SSRS</strong>, <strong>PHQ-9</strong>, and{' '}
-              <strong>GAD-7</strong>. There are no time limits and your answers are confidential.
-              Your responses are only scored after you've completed all three and submitted them.
+              You'll answer a series of brief questionnaires about your mood, safety, and any alcohol or
+              substance use. A few extra questions may appear depending on your answers, so your care team
+              only asks what's relevant to you. There are no time limits and your answers are confidential.
+              Your responses are only scored after you've completed and submitted them.
             </p>
             <div className="mt-5 flex justify-end">
               <Button onClick={() => setPhase('stepping')}>Start screening</Button>
@@ -110,27 +124,26 @@ export function PatientScreening() {
           </Panel>
         )}
 
-        {phase === 'stepping' && (
+        {phase === 'stepping' && current && (
           <>
-            {/* step indicator */}
-            <div className="flex items-center gap-2" aria-label={`Questionnaire ${stepIdx + 1} of 3`}>
-              {INSTRUMENTS.map((ins, i) => (
-                <div key={ins.key} className="flex flex-1 items-center gap-2">
+            {/* step indicator — grows with the adaptive path */}
+            <div className="flex flex-wrap items-center gap-2" aria-label={`Questionnaire ${stepIdx + 1} of ${total}`}>
+              {path.map((ins, i) => (
+                <div key={ins} className="flex items-center gap-1.5">
                   <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
                     i < stepIdx ? 'bg-teal-600 text-white'
                       : i === stepIdx ? 'bg-teal-700 text-white ring-2 ring-teal-200'
                         : 'bg-slate-100 text-slate-400'}`}>
                     {i < stepIdx ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
                   </div>
-                  <span className={`text-xs font-medium ${i === stepIdx ? 'text-slate-800' : 'text-slate-400'}`}>{ins.name}</span>
-                  {i < INSTRUMENTS.length - 1 && <div className={`h-px flex-1 ${i < stepIdx ? 'bg-teal-300' : 'bg-slate-200'}`} />}
+                  <span className={`text-xs font-medium ${i === stepIdx ? 'text-slate-800' : 'text-slate-400'}`}>{INSTRUMENT_NAMES[ins]}</span>
                 </div>
               ))}
             </div>
 
             <Panel
-              title={`${current.name}`}
-              subtitle={`Questionnaire ${stepIdx + 1} of 3 · ${answeredCount}/${questions.length} answered`}
+              title={INSTRUMENT_NAMES[current]}
+              subtitle={`Questionnaire ${stepIdx + 1} of ${total} · ${answeredCount}/${questions.length} answered`}
               actions={<StatusBadge tone="info">Confidential</StatusBadge>}
             >
               <div className="space-y-6">
@@ -139,8 +152,8 @@ export function PatientScreening() {
                     <legend className="mb-2 text-sm font-medium text-slate-800">{i + 1}. {q.text}</legend>
                     <RadioGroup
                       name={q.id}
-                      value={answers[current.key][q.id]}
-                      onChange={(v) => setAnswers((a) => ({ ...a, [current.key]: { ...a[current.key], [q.id]: v } }))}
+                      value={curAnswers[q.id]}
+                      onChange={(v) => setAnswers((a) => ({ ...a, [current]: { ...(a[current] ?? {}), [q.id]: v } }))}
                       options={q.options}
                     />
                     {errors[q.id] && <p role="alert" className="mt-1 text-xs font-medium text-slate-600">Please select an answer to continue.</p>}
@@ -150,7 +163,7 @@ export function PatientScreening() {
               <div className="mt-6 flex justify-between">
                 <Button variant="secondary" disabled={stepIdx === 0} onClick={() => setStepIdx((i) => Math.max(0, i - 1))}>Back</Button>
                 <Button onClick={next}>
-                  {stepIdx < INSTRUMENTS.length - 1 ? `Next: ${INSTRUMENTS[stepIdx + 1].name}` : 'Submit all & run screening'}
+                  {stepIdx < total - 1 ? `Next: ${INSTRUMENT_NAMES[path[stepIdx + 1]]}` : 'Submit all & run screening'}
                 </Button>
               </div>
             </Panel>
@@ -164,7 +177,7 @@ export function PatientScreening() {
               doneTitle="Risk identification complete"
               statusTexts={['Scoring your responses…', 'Applying clinical risk-band rules…', 'Cross-checking instrument thresholds…', 'Checking for safety flags…', 'Routing results to your care team…']}
               cardSteps={['Queued', 'Analyzing responses', 'Applying scoring rules', 'Finalizing']}
-              cards={INSTRUMENTS.map((i) => ({ key: i.key, name: i.name }))}
+              cards={completed.map((i) => ({ key: i, name: INSTRUMENT_NAMES[i] }))}
               done={runComplete}
               error={runError}
               doneMessage="Risk identification has been completed and sent to the clinicians for review."
@@ -177,7 +190,7 @@ export function PatientScreening() {
             )}
             {runError && (
               <div className="flex justify-end">
-                <Button onClick={runAll}>Retry</Button>
+                <Button onClick={() => runAll(completed)}>Retry</Button>
               </div>
             )}
           </>

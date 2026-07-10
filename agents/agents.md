@@ -37,14 +37,15 @@ on **2026-07-08**.
 ## Agent 2 — BHUC Risk Identification Agent
 - **sys_id:** `ac2e79a73b7d0f1076f13b64c3e45af3` · **internal name:** `global.global.BHUC Risk Identification Agent`
 - **Tools (3):** AIA RAG Retriever (search) · Write risk score (script) · BHUC Risk Confirmation Latest (subflow)
-- **Description:** You score behavioral-health screening instruments (C-SSRS, PHQ-9, GAD-7) into a risk band (Low, Moderate, High) with a confidence value and a short rationale that lists the specific responses that drove the score. You never make a final clinical determination — every score is a draft that a licensed triage clinician must confirm, adjust, or reject. You never output patient identifiers in free text.
-- **Role:** Real-time triage risk-scoring decision support. Produces a risk band + confidence + rationale for clinician confirmation. Runs as the invoking clinician's identity.
+- **Description:** You score behavioral-health screening instruments into a risk band (Low, Moderate, High) with a confidence value and a short rationale that lists the specific responses that drove the score. You handle the mental-health spine (C-SSRS, PHQ-9, GAD-7) and the substance-use battery (NIDA Quick Screen, AUDIT, DAST-10, the Craving & Triggers module, SOWS, BAM, SOCRATES), scoring exactly one instrument per request. For summed instruments you compute the total and map it to the published band; for subscale instruments (BAM, SOCRATES) you compute each subscale and never invent a single total. You retrieve the matching scoring rules from the Screening Scoring Rules KB and score only from those rules, never from memory. Substance-use instruments are 42 CFR Part 2 (SUD) data; you keep patient identifiers out of the free-text rationale. You never make a final clinical determination — every score is a draft that a licensed triage clinician must confirm, adjust, or reject.
+- **Role:** Real-time triage risk-scoring decision support across the mental-health and substance-use screening battery. Produces a risk band + confidence + rationale (plus subscale detail for BAM/SOCRATES) for clinician confirmation. Runs as the invoking clinician's identity. SUD screening rows are 42 CFR Part 2 data.
 - **Instructions:**
   1. Look up the screening record on BHUC Screening (`u_bhuc_screening`) via its `u_patient` reference and read `u_instrument` and `u_responses` (raw JSON answers).
-  2. Use Search Retrieval to load the scoring rules matching `u_instrument`'s value (`c_ssrs`, `phq9`, or `gad7`).
-  3. Compute the risk band, confidence, and a rationale citing the driving responses.
-  4. Write `u_risk_band`, `u_confidence`, `u_rationale` back to the record, and set `u_scored_by_agent = true`.
+  2. Use Search Retrieval to load the scoring rules for **that instrument** (`c_ssrs`, `phq9`, `gad7`, `nida_qs`, `audit`, `dast10`, `craving`, `sows`, `bam`, `socrates8`) — query with the instrument name — plus the "BHUC risk banding and escalation rules" article for band translation.
+  3. Compute the result per the retrieved rules: sum + severity band for summed instruments; per-subscale scores (no single total) for BAM/SOCRATES; substances-positive + indicated follow-ups for the `nida_qs` router. Apply escalation (C-SSRS 4/5 or PHQ-9 item 9 → High/crisis; SOWS ≥21 → note urgent medical review; DAST-10 ≥9 → High).
+  4. Write `u_risk_band`, `u_confidence`, `u_rationale` back to the record (subscale breakdown rides in the rationale), and set `u_scored_by_agent = true`.
   5. Invoke the clinician-confirmation flow, which awaits `u_clinician_action` (Confirm/Adjust/Reject) — do not set `u_state` to confirmed until the clinician acts.
+- **SUD-battery change spec:** see [`agent2_sud_update.md`](agent2_sud_update.md) for the full role/description/instruction/tool diff and smoke tests.
 
 ## Agent 3 — BHUC Clinical Documentation Agent
 - **sys_id:** `59243d673bf5cb105551369693e45aed` · **internal name:** `global.global.BHUC Clinical Documentation Agent`
@@ -115,13 +116,13 @@ on **2026-07-08**.
 
 ## Agent 2 — Tool 1: AIA RAG Retriever (Search Retrieval)
 - **Type:** rag · **sys_id:** `8021ddea2b0d52101d72fb466e91bfd1`
-- **What it does:** Loads the validated scoring rules for the instrument being scored (C-SSRS / PHQ-9 / GAD-7 bands, cutoffs, escalation logic) so the score is grounded in the rulebook, not the model's memory.
-- **Search options:** `search_type=hybrid` · `search_profile=bhuc_screening_search` (BHUC Screening Scoring Rules) · `sources=[kb_knowledge]` · `search_results_limit=10` · `document_match_threshold=0.3` · `semantic_index_names=[body, title]` · `chunking_mode=SMALL_TO_BIG` · `chunk_size=750`
+- **What it does:** Loads the validated scoring rules for the instrument being scored (C-SSRS / PHQ-9 / GAD-7 plus the SUD battery — NIDA Quick Screen, AUDIT, DAST-10, Craving & Triggers, SOWS, BAM, SOCRATES — bands, cutoffs, subscale mappings, escalation logic) so the score is grounded in the rulebook, not the model's memory.
+- **Search options:** `search_type=hybrid` · `search_profile=bhuc_screening_search` (BHUC Screening Scoring Rules) · `sources=[kb_knowledge]` · `search_results_limit=15` *(raised from 10 — KB grew 5→12 articles)* · `document_match_threshold=0.3` · `semantic_index_names=[body, title]` · `chunking_mode=SMALL_TO_BIG` · `chunk_size=750`
 
 ## Agent 2 — Tool 2: Write risk score
 - **Type:** script · **sys_id:** `5349b2a33b3d4f1076f13b64c3e45a1a`
 - **Inputs:** `risk_band`, `confidence`, `rationale`, `screening_sys_id`
-- **What it does:** Writes the computed score back onto the screening record (`u_bhuc_screening`): `u_risk_band`, `u_confidence`, `u_rationale`, sets `u_scored_by_agent=true` and `u_state=scored`. Uses `GlideRecord` (not Secure) for now — swap to `GlideRecordSecure` once SN-4 ACLs land.
+- **What it does:** Writes the computed score back onto the screening record (`u_bhuc_screening`): `u_risk_band`, `u_confidence`, `u_rationale`, sets `u_scored_by_agent=true` and `u_state=scored`. **Now uses `GlideRecordSecure`** (verified live 2026-07-09) — ACL-gated under `svc-bhuc-risk-ai`. **SUD-battery update (2026-07-09):** added a 5th input `subscores` and the line `if (inputs.subscores) { gr.u_subscores = inputs.subscores; }` — the agent persists BAM/SOCRATES per-subscale JSON into the new `u_bhuc_screening.u_subscores` field. Those subscales are computed **server-side** (`risk.py compute_subscores`, written at record creation and passed to the agent as an authoritative block) so the agent never does the item arithmetic itself. See `agent2_sud_update.md` §4.
 - **Script:**
 ```javascript
 (function(inputs) {
@@ -402,6 +403,7 @@ or a raw A2A `message/send`. Reference records on this instance: patient **BHUC_
 - `Score this C-SSRS and give the risk band, confidence, and rationale (do not write to any record): item1 wish to be dead = yes; item2 active thoughts = yes; item3 methods = yes; item4 intent = yes; item5 plan = no; behavior = no.` → expect **High**.
 - `Score this PHQ-9 and give the risk band and rationale (do not write to any record): q1=3, q2=3, q3=2, q4=2, q5=1, q6=2, q7=1, q8=1, q9=2.`
 - *Real flow:* have the agent look up a `u_bhuc_screening` record by patient and write the band back (the app triggers this on screening submit).
+- **SUD battery** (AUDIT/DAST-10/SOWS/BAM/SOCRATES/NIDA/Craving): see the six no-write smoke tests in [`agent2_sud_update.md`](agent2_sud_update.md) §5.
 
 ## Agent 3 — Clinical Documentation
 - `Draft a clinical note (do not write to any record) for this encounter and tag unverified lines: Follow-up, 30F, depressed mood ~3 weeks, poor sleep, passive suicidal ideation without plan, on sertraline 50 mg. Include Chief Complaint, HPI, MSE, Assessment, Plan, and suggest ICD-10/CPT codes.`

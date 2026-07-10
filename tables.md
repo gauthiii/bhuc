@@ -60,13 +60,13 @@
 
 ## Table 2 — `u_bhuc_screening` (Intake Screening & Instrument Scores)
 
-**Label:** BHUC Screening · **Number prefix:** `BHUC_SCREENING_` → `BHUC_SCREENING_001` · **Purpose:** one row per submitted instrument (C-SSRS/PHQ-9/GAD-7); the Risk Identification Agent scores it (draft) and a clinician confirms (§4.4 Agent 2, §3.2 P4, §3.3 C4). Backs the `/intake/screening` + `/risk/confirm` endpoints.
+**Label:** BHUC Screening · **Number prefix:** `BHUC_SCREENING_` → `BHUC_SCREENING_001` · **Purpose:** one row per submitted instrument; the Risk Identification Agent scores it (draft) and a clinician confirms (§4.4 Agent 2, §3.2 P4, §3.3 C4). Backs the `/intake/screening` + `/risk/confirm` endpoints. **Instruments (2026-07-09):** mental-health spine (C-SSRS, PHQ-9, GAD-7) + SUD battery (NIDA Quick Screen, AUDIT, DAST-10, Craving & Triggers, SOWS, BAM, SOCRATES). SUD rows carry the `part2_sud` flag (42 CFR Part 2).
 
 | # | Field (column) | Label | Type | Len | Mand. | Default | Choices / Reference | Sens. |
 |---|---|---|---|---|---|---|---|---|
 | 1 | `u_number` | Number | string | 40 | Y | auto | prefix `BHUC_SCREENING_` | — |
 | 2 | `u_patient` | Patient | reference | — | Y | — | → `u_bhuc_patient` | PII |
-| 3 | `u_instrument` | Instrument | choice | 20 | Y | — | c_ssrs, phq9, gad7 | — |
+| 3 | `u_instrument` | Instrument | choice | 20 | Y | — | c_ssrs, phq9, gad7, nida_qs, audit, dast10, craving, sows, bam, socrates8 | — |
 | 4 | `u_session_id` | Session ID | string | 64 | N | — | client correlation id | — |
 | 5 | `u_responses` | Raw responses (JSON) | string | 4000 | N | — | structured answers | Part2 |
 | 6 | `u_state` | State | choice | 20 | Y | draft | draft, submitted, scored, confirmed | — |
@@ -75,7 +75,7 @@
 | 9 | `u_risk_band` | Risk band (agent) | choice | 20 | N | — | low, moderate, high | — |
 | 10 | `u_confidence` | Confidence | integer | — | N | — | 0–100 | — |
 | 11 | `u_rationale` | Agent rationale | string | 4000 | N | — | grounded rationale | Part2 |
-| 12 | `u_flags` | Flags | string | 1000 | N | — | e.g. item9_positive, cssrs_positive | — |
+| 12 | `u_flags` | Flags | string | 1000 | N | — | e.g. item9_positive, cssrs_positive, part2_sud, audit_positive, dast_positive, dast_severe, severe_withdrawal, high_craving | — |
 | 13 | `u_escalate` | Escalate | boolean | — | N | false | — | — |
 | 14 | `u_agent_execution_id` | A2A execution id | string | 64 | N | — | links A2A request_id | — |
 | 15 | `u_scored_by_agent` | Scored by agent | boolean | — | N | false | — | — |
@@ -84,6 +84,9 @@
 | 18 | `u_clinician_rationale` | Clinician rationale | string | 1000 | N | — | — | — |
 | 19 | `u_contains_part2` | Contains Part 2 data | boolean | — | N | false | set by Consent agent | Part2 |
 | 20 | `u_completed_at` | Completed at | glide_date_time | — | N | — | — | — |
+| 21 | `u_subscores` | Subscores | string | 1000 | N | — | JSON per-subscale scores for BAM/SOCRATES (computed server-side; empty for single-band instruments) | Part2 |
+
+> **Added 2026-07-09 (`u_subscores`):** BAM and SOCRATES have no single total — only subscales (BAM: use/risk/protective; SOCRATES: recognition/ambivalence/taking_steps). `risk.py compute_subscores` calculates them deterministically at record creation and passes them to Agent 2 as an authoritative block; the agent persists them verbatim via the Write-risk-score tool's `subscores` input (never recomputes). Field sys_id `4a6e36603b8a4f5076f13b64c3e45a84`.
 
 ## Table 3 — `u_bhuc_consent` (Consent Records)
 
@@ -366,7 +369,7 @@ sys_user (clinician) referenced by screening/appointment/message/care_plan/prior
 | Table | Business fields (excl. sys_*) | PII fields | Part2 fields |
 |---|---|---|---|
 | `u_bhuc_patient` | 30 | 11 | 1 |
-| `u_bhuc_screening` | 20 | 1 (ref) | 3 |
+| `u_bhuc_screening` | 21 | 1 (ref) | 3 |
 | `u_bhuc_consent` | 14 | 3 | 2 |
 | `u_bhuc_appointment` | 18 | 1 (ref) | 0 |
 | `u_bhuc_message` | 14 | 2 | 1 |

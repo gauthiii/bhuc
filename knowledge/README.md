@@ -13,7 +13,7 @@ AI Search source + profile steps below are **UI-only** (REST is business-rule-bl
 | KB (title) | Agent | `kb_knowledge_base` sys_id | Articles | Mirror file |
 | --- | --- | --- | --- | --- |
 | BHUC Facility Information | 1 (Front-Door) | `11c6b5a73bf90f1076f13b64c3e45a0b` | 11 (Published) | `bhuc-facility-information.md` |
-| BHUC Screening Scoring Rules | 2 (Risk ID) | `532b483f3b71cf1076f13b64c3e45a68` | 5 (Published) | `bhuc-screening-scoring-rules.md` |
+| BHUC Screening Scoring Rules | 2 (Risk ID) | `532b483f3b71cf1076f13b64c3e45a68` | 12 (5 Published + 7 Draft) | `bhuc-screening-scoring-rules.md` |
 | BHUC Clinical Coding and Documentation | 3 (Clinical Doc) | `103b883f3b71cf1076f13b64c3e45afa` | 5 (Published) | `bhuc-clinical-coding-and-documentation.md` |
 | BHUC Payer Policy Library | 5 (Prior-Auth) | `c93bc83f3b71cf1076f13b64c3e45af7` | 6 (Published) | `bhuc-payer-policy-library.md` |
 | BHUC Clinician Directory | 6 (Scheduling) | `c23b8c3f3b71cf1076f13b64c3e45adb` | 6 (Published) | `bhuc-clinician-directory.md` |
@@ -55,6 +55,15 @@ open the list link, select all articles, and click **Publish** (instant, no appr
 Confirm `workflow_state = published`.
 
 - Screening: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=532b483f3b71cf1076f13b64c3e45a68`
+
+> **SUD battery update (2026-07-09).** Added the substance-use screening battery to the Screening
+> KB via REST (`scratchpad/push_kb.py`, re-runnable from the mirror). **2 existing articles PATCHed
+> in place (stayed Published):** KB0010015 (risk banding — now folds in AUDIT/DAST-10/SOWS/craving
+> acuity) and KB0010016 (administration order — now the full SBIRT adaptive order). **7 new articles
+> created as Draft — publish these in the UI:** KB0010039 NIDA Quick Screen · KB0010040 AUDIT ·
+> KB0010041 DAST-10 · KB0010042 Craving & Triggers (custom) · KB0010043 SOWS · KB0010044 BAM ·
+> KB0010045 SOCRATES. The AI Search source + profile (`bhuc_screening_search`) already cover the KB,
+> so no source/profile change is needed — published articles appear in retrieval within minutes.
 - Clinical Coding: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=103b883f3b71cf1076f13b64c3e45afa`
 - Payer Policy: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=c93bc83f3b71cf1076f13b64c3e45af7`
 - Clinician Directory: `kb_knowledge_list.do?sysparm_query=kb_knowledge_base=c23b8c3f3b71cf1076f13b64c3e45adb`
