@@ -67,6 +67,13 @@
 | 1 | `u_number` | Number | string | 40 | Y | auto | prefix `BHUC_SCREENING_` | — |
 | 2 | `u_patient` | Patient | reference | — | Y | — | → `u_bhuc_patient` | PII |
 | 3 | `u_instrument` | Instrument | choice | 20 | Y | — | c_ssrs, phq9, gad7, nida_qs, audit, dast10, craving, sows, bam, socrates8 | — |
+
+<!-- u_instrument is a RESTRICTED choice field: ServiceNow blanks any value not in sys_choice on write.
+     All 10 choices are provisioned (sys_choice, name=u_bhuc_screening element=u_instrument, en):
+     c_ssrs(0) phq9(1) gad7(2) nida_qs(3) audit(4) dast10(5) craving(6) sows(7) bam(8) socrates8(9).
+     The 7 SUD choices were added 2026-07-10 — before that, new-instrument rows stored an empty
+     u_instrument. Any rebuild/clone must recreate these choices or the SUD battery won't persist. -->
+
 | 4 | `u_session_id` | Session ID | string | 64 | N | — | client correlation id | — |
 | 5 | `u_responses` | Raw responses (JSON) | string | 4000 | N | — | structured answers | Part2 |
 | 6 | `u_state` | State | choice | 20 | Y | draft | draft, submitted, scored, confirmed | — |
