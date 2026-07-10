@@ -622,9 +622,45 @@ const CRAVING: ScreeningQuestion[] = [
 // Subscales (scored by Agent 2): Recognition = items 1,3,7,10,12,15,17; Ambivalence = 2,6,11,16;
 // Taking Steps = 4,5,8,9,13,14,18,19. Ranges: Re 7–35, Am 4–20, Ts 8–40.
 //
-// TODO(content-filter): the 19 verbatim item strings could not be written here because the
-// SOCRATES self-report statements trip the output content filter. Fill each '***' with the
-// verbatim item from the CASAA public-domain form (see knowledge/ mirror + spec doc
-// knowledge/SOCRATES_ITEMS_TODO.md). Order matters — index 0 = item 1 … index 18 = item 19.
-const SOCRATES_8A = Array(19).fill('***')  // alcohol wording — REPLACE each with verbatim item
-const SOCRATES_8D = Array(19).fill('***')  // drug wording — REPLACE each with verbatim item
+const SOCRATES_8A = [
+  'I really want to make changes in my drinking.',
+  'Sometimes I wonder if I am an alcoholic.',
+  'If I don\'t change my drinking soon, my problems are going to get worse.',
+  'I have already started making some changes in my drinking.',
+  'I was drinking too much at one time, but I\'ve managed to change my drinking.',
+  'Sometimes I wonder if my drinking is hurting other people.',
+  'I am a problem drinker.',
+  'I\'m not just thinking about changing my drinking, I\'m already doing something about it.',
+  'I have already changed my drinking, and I am looking for ways to keep from slipping back to my old pattern.',
+  'I have serious problems with drinking.',
+  'Sometimes I wonder if I am in control of my drinking.',
+  'My drinking is causing a lot of harm.',
+  'I am actively doing things now to cut down or stop drinking.',
+  'I want help to keep from going back to the drinking problems that I had before.',
+  'I know that I have a drinking problem.',
+  'There are times when I wonder if I drink too much.',
+  'I am an alcoholic.',
+  'I am working hard to change my drinking.',
+  'I have made some changes in my drinking, and I want some help to keep from going back to the way I used to drink.',
+]
+const SOCRATES_8D = [
+  'I really want to make changes in my use of drugs.',
+  'Sometimes I wonder if I am an addict.',
+  'If I don\'t change my drug use soon, my problems are going to get worse.',
+  'I have already started making some changes in my use of drugs.',
+  'I was using drugs too much at one time, but I\'ve managed to change that.',
+  'Sometimes I wonder if my drug use is hurting other people.',
+  'I have a drug problem.',
+  'I\'m not just thinking about changing my drug use, I\'m already doing something about it.',
+  'I have already changed my drug use, and I am looking for ways to keep from slipping back to my old pattern.',
+  'I have serious problems with drugs.',
+  'Sometimes I wonder if I am in control of my drug use.',
+  'My drug use is causing a lot of harm.',
+  'I am actively doing things now to cut down or stop my use of drugs.',
+  'I want help to keep from going back to the drug problems that I had before.',
+  'I know that I have a drug problem.',
+  'There are times when I wonder if I use drugs too much.',
+  'I am a drug addict.',
+  'I am working hard to change my drug use.',
+  'I have made some changes in my drug use, and I want some help to keep from going back to the way I used before.',
+]
