@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, PenLine, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
@@ -7,9 +7,65 @@ import { Panel, StatusBadge, Spinner, ErrorState, Button, Textarea, EmptyState }
 import { AgentRunProgress } from '../../components/AgentRunProgress'
 import { useClinicianAuth } from '../../contexts/AuthContext'
 import { api } from '../../services/api'
-import type { DocumentationDraft, Part2CheckResult } from '../../lib/types'
+import { FACILITY } from '../../lib/facility'
+import type { DocumentationDraft, Part2CheckResult, PatientChart } from '../../lib/types'
 
 type Phase = 'loading' | 'drafting' | 'ready' | 'empty' | 'error'
+
+// --- Parse the agent's section-tagged lines into a document layout. Each line keeps its
+// identity (id/verified) so per-line verify is unchanged; we only derive a section + a
+// prefix-stripped display value so the note reads like a clinical paper. ---
+type DocLine = DocumentationDraft['lines'][number]
+type Field = { line: DocLine; prefix: string; display: string }
+type DocSection = { key: string; label: string; items: Field[] }
+
+const SECTIONS: { key: string; label: string; match: RegExp }[] = [
+  { key: 'cc', label: 'Chief Complaint', match: /^(chief complaint|cc)\b/i },
+  { key: 'hpi', label: 'History of Present Illness', match: /^(hpi|history of present illness)\b/i },
+  { key: 'screening', label: 'Screening Results', match: /^(screening results?|screening)\b/i },
+  { key: 'mse', label: 'Mental Status Exam', match: /^(mse|mental status( exam)?)\b/i },
+  { key: 'assessment', label: 'Assessment', match: /^(assessment( ?\/ ?diagnosis)?|diagnosis|impression)\b/i },
+  { key: 'plan', label: 'Plan', match: /^(plan)\b/i },
+]
+
+function detectSection(text: string): { key: string; label: string; prefix: string; display: string } | null {
+  const t = text.replace(/^\s+/, '')
+  for (const s of SECTIONS) {
+    if (s.match.test(t)) {
+      const colon = t.indexOf(':')
+      if (colon !== -1) return { key: s.key, label: s.label, prefix: t.slice(0, colon + 1), display: t.slice(colon + 1).trim() }
+      return { key: s.key, label: s.label, prefix: '', display: t }
+    }
+  }
+  return null
+}
+
+// A static key/value line in the document header (not editable — not agent-generated).
+function DocField({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="text-slate-700">{value && value !== '—' ? value : <span className="text-slate-400">—</span>}</dd>
+    </div>
+  )
+}
+
+function groupSections(lines: DocLine[]): DocSection[] {
+  const groups: DocSection[] = []
+  let cur = 'cc'
+  for (const line of lines) {
+    const d = detectSection(line.text)
+    const key = d ? d.key : cur
+    const label = d ? d.label : (SECTIONS.find((s) => s.key === key)?.label ?? 'Note')
+    cur = key
+    if (!groups.length || groups[groups.length - 1].key !== key) groups.push({ key, label, items: [] })
+    const prefix = d ? d.prefix : ''
+    const display = d ? d.display : line.text
+    if (d && display.trim() === '') continue        // bare "HPI:" header → heading only, no field
+    groups[groups.length - 1].items.push({ line, prefix, display })
+  }
+  return groups
+}
 
 // C5 — Ambient Documentation. ?new=1 drafts a fresh note (Agent 3, animated);
 // ?note=<id> views a specific note; default views the patient's latest note.
@@ -29,6 +85,7 @@ export function ClinicianDocumentation() {
   const [signing, setSigning] = useState(false)
   const [signed, setSigned] = useState(false)
   const [part2Check, setPart2Check] = useState<'running' | Part2CheckResult | null>(null)
+  const [chart, setChart] = useState<PatientChart | null>(null)
 
   function apply(d: DocumentationDraft | null) {
     if (!d) { setPhase('empty'); return }
@@ -56,7 +113,17 @@ export function ClinicianDocumentation() {
     return () => { alive = false }
   }, [id, wantNew, noteParam, screeningParam, user?.username])
 
+  // Patient demographics for the document header (name/MRN/DOB/insurance/phone).
+  useEffect(() => {
+    let alive = true
+    if (!id) return
+    api.getChart(id, false, user?.username).then((c) => { if (alive) setChart(c) }).catch(() => {})
+    return () => { alive = false }
+  }, [id, user?.username])
+
   const unverifiedCount = lines.filter((l) => !l.verified).length
+  const sections = useMemo(() => groupSections(lines), [lines])
+  const acceptedCodes = codes.filter((c) => c.accepted)
   const canSign = unverifiedCount === 0 && attested && !signing && !signed
   const reasons: string[] = []
   if (unverifiedCount > 0) reasons.push(`${unverifiedCount} unverified line${unverifiedCount > 1 ? 's' : ''} remain — verify each before signing.`)
@@ -142,36 +209,105 @@ export function ClinicianDocumentation() {
               The BHUC Clinical Documentation Agent drafts this note but never signs it — a human clinician must. Draft note; not part of the record until signed.
             </HumanInLoopNote>
 
-            <Panel
-              title={`Session note — ${data.patientName}`}
-              subtitle={data.screeningId ? `${data.id} · from ${data.screeningId}` : data.id}
-              actions={signed
-                ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Signed &amp; verified</StatusBadge>
-                : (
-                  <div className="flex items-center gap-2">
-                    {unverifiedCount > 0 && (
-                      <Button variant="secondary" className="px-3 py-1 text-xs" onClick={verifyAll}>
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Verify all
-                      </Button>
-                    )}
-                    <StatusBadge tone="warning">Draft</StatusBadge>
-                  </div>
-                )}
-            >
-              <ul className="grid gap-3">
-                {lines.map((l) => (
-                  <li key={l.id} className={`rounded-lg border p-3 ${l.verified ? 'border-slate-100' : 'border-amber-200 bg-amber-50'}`}>
-                    <div className="mb-2 flex items-center justify-between">
-                      {l.verified
-                        ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Verified</StatusBadge>
-                        : <StatusBadge tone="warning" icon={<AlertTriangle className="h-3.5 w-3.5" />}>Unverified</StatusBadge>}
-                      {!l.verified && !signed && <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => verify(l.id)}>Mark verified</Button>}
+            {/* Clinical-document "paper": static scaffold (letterhead + demographics + section
+                headings), agent-generated text as editable per-line fields with verify. */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-2.5">
+                <span className="text-xs font-medium text-slate-500">
+                  {data.screeningId ? `${data.id} · from ${data.screeningId}` : data.id}
+                </span>
+                {signed
+                  ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Signed &amp; verified</StatusBadge>
+                  : (
+                    <div className="flex items-center gap-2">
+                      {unverifiedCount > 0 && (
+                        <Button variant="secondary" className="px-3 py-1 text-xs" onClick={verifyAll}>
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Verify all
+                        </Button>
+                      )}
+                      <StatusBadge tone="warning">Draft</StatusBadge>
                     </div>
-                    <Textarea rows={2} value={l.text} disabled={signed} onChange={(e) => editLine(l.id, e.target.value)} />
-                  </li>
+                  )}
+              </div>
+
+              <div className="px-6 py-7 sm:px-10">
+                {/* Letterhead */}
+                <div className="border-b border-slate-200 pb-4 text-center">
+                  <div className="font-display text-lg font-bold text-slate-800">{FACILITY.name}</div>
+                  <div className="mt-0.5 text-xs text-slate-500">{FACILITY.address} · {FACILITY.phone}</div>
+                  <div className="mt-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">Clinical Encounter Note</div>
+                </div>
+
+                {/* Demographics + encounter */}
+                <dl className="grid grid-cols-1 gap-x-10 gap-y-1.5 border-b border-slate-200 py-4 text-sm sm:grid-cols-2">
+                  <DocField label="Patient" value={chart?.name.value ?? data.patientName} />
+                  <DocField label="Encounter date" value={new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} />
+                  <DocField label="MRN" value={chart?.number} />
+                  <DocField label="Provider" value={user?.username ?? 'Attending clinician'} />
+                  <DocField label="Date of birth" value={chart?.dateOfBirth.value} />
+                  <DocField label="Encounter type" value="Behavioral Health Urgent Care" />
+                  {chart?.demographics
+                    ?.filter((d) => !/42 CFR|SUD/i.test(d.label))   // header is demographics only — not the Part 2 field
+                    .map((d) => (
+                      <DocField key={d.label} label={d.label} value={d.value.masked ? null : d.value.value} />
+                    ))}
+                </dl>
+
+                {/* Sections — agent text as editable fields under document headings */}
+                {sections.map((section, si) => (
+                  <section key={`${section.key}-${si}`} className="mt-6">
+                    <h3 className="mb-2.5 border-b border-slate-200 pb-1 font-display text-sm font-bold uppercase tracking-wide text-slate-700">{section.label}</h3>
+                    <div className="grid gap-2">
+                      {section.items.map(({ line, prefix, display }) => {
+                        const rows = Math.min(6, Math.max(1, Math.ceil((display.length || 1) / 72)))
+                        return (
+                          <div key={line.id} className={`rounded-md border px-3 py-2 ${line.verified ? 'border-slate-200 bg-white' : 'border-amber-200 bg-amber-50/60'}`}>
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              {line.verified
+                                ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3 w-3" />}>Verified</StatusBadge>
+                                : <StatusBadge tone="warning" icon={<AlertTriangle className="h-3 w-3" />}>Unverified</StatusBadge>}
+                              {!line.verified && !signed && <Button variant="secondary" className="px-2.5 py-0.5 text-xs" onClick={() => verify(line.id)}>Mark verified</Button>}
+                            </div>
+                            <Textarea
+                              rows={rows}
+                              value={display}
+                              disabled={signed}
+                              onChange={(e) => editLine(line.id, prefix ? `${prefix} ${e.target.value}` : e.target.value)}
+                            />
+                          </div>
+                        )
+                      })}
+                      {/* Accepted codes flow into the Assessment section, live. */}
+                      {section.key === 'assessment' && acceptedCodes.length > 0 && (
+                        <div className="mt-1 rounded-md border border-teal-200 bg-teal-50/60 px-3 py-2">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-teal-800">Coded diagnoses &amp; services</div>
+                          <ul className="mt-1 grid gap-0.5 text-sm text-slate-700">
+                            {acceptedCodes.map((c) => (
+                              <li key={c.code}><span className="font-semibold">{c.code}</span> <span className="text-xs text-slate-400">{c.type}</span> — {c.description}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </section>
                 ))}
-              </ul>
-            </Panel>
+
+                {/* If the agent produced no Assessment section but codes were accepted, show them. */}
+                {acceptedCodes.length > 0 && !sections.some((s) => s.key === 'assessment') && (
+                  <section className="mt-6">
+                    <h3 className="mb-2.5 border-b border-slate-200 pb-1 font-display text-sm font-bold uppercase tracking-wide text-slate-700">Assessment</h3>
+                    <div className="rounded-md border border-teal-200 bg-teal-50/60 px-3 py-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-teal-800">Coded diagnoses &amp; services</div>
+                      <ul className="mt-1 grid gap-0.5 text-sm text-slate-700">
+                        {acceptedCodes.map((c) => (
+                          <li key={c.code}><span className="font-semibold">{c.code}</span> <span className="text-xs text-slate-400">{c.type}</span> — {c.description}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </section>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-4">
