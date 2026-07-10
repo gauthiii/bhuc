@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, PenLine, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Eye, EyeOff, PenLine, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, StatusBadge, Spinner, ErrorState, Button, Textarea, EmptyState } from '../../components/ui'
@@ -86,6 +86,7 @@ export function ClinicianDocumentation() {
   const [signed, setSigned] = useState(false)
   const [part2Check, setPart2Check] = useState<'running' | Part2CheckResult | null>(null)
   const [chart, setChart] = useState<PatientChart | null>(null)
+  const [preview, setPreview] = useState(false)   // eye toggle → clean read-only PDF view
 
   function apply(d: DocumentationDraft | null) {
     if (!d) { setPhase('empty'); return }
@@ -216,18 +217,26 @@ export function ClinicianDocumentation() {
                 <span className="text-xs font-medium text-slate-500">
                   {data.screeningId ? `${data.id} · from ${data.screeningId}` : data.id}
                 </span>
-                {signed
-                  ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Signed &amp; verified</StatusBadge>
-                  : (
-                    <div className="flex items-center gap-2">
-                      {unverifiedCount > 0 && (
-                        <Button variant="secondary" className="px-3 py-1 text-xs" onClick={verifyAll}>
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Verify all
-                        </Button>
-                      )}
-                      <StatusBadge tone="warning">Draft</StatusBadge>
-                    </div>
+                <div className="flex items-center gap-2">
+                  {!preview && !signed && unverifiedCount > 0 && (
+                    <Button variant="secondary" className="px-3 py-1 text-xs" onClick={verifyAll}>
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Verify all
+                    </Button>
                   )}
+                  {signed
+                    ? <StatusBadge tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Signed &amp; verified</StatusBadge>
+                    : <StatusBadge tone="warning">Draft</StatusBadge>}
+                  <button
+                    type="button"
+                    onClick={() => setPreview((p) => !p)}
+                    aria-pressed={preview}
+                    aria-label={preview ? 'Exit document preview' : 'Preview document'}
+                    title={preview ? 'Exit preview' : 'Preview document'}
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-md border transition ${preview ? 'border-teal-300 bg-teal-50 text-teal-700' : 'border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                  >
+                    {preview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="px-6 py-7 sm:px-10">
@@ -259,6 +268,15 @@ export function ClinicianDocumentation() {
                     <h3 className="mb-2.5 border-b border-slate-200 pb-1 font-display text-sm font-bold uppercase tracking-wide text-slate-700">{section.label}</h3>
                     <div className="grid gap-2">
                       {section.items.map(({ line, prefix, display }) => {
+                        // Preview (eye-on): plain document text, no field container / badges.
+                        if (preview) {
+                          const isBullet = /^\s*-\s+/.test(display)
+                          return (
+                            <p key={line.id} className={`text-sm leading-relaxed text-slate-800 ${isBullet ? 'pl-4' : ''}`}>
+                              {isBullet ? `• ${display.replace(/^\s*-\s*/, '')}` : display}
+                            </p>
+                          )
+                        }
                         const rows = Math.min(6, Math.max(1, Math.ceil((display.length || 1) / 72)))
                         return (
                           <div key={line.id} className={`rounded-md border px-3 py-2 ${line.verified ? 'border-slate-200 bg-white' : 'border-amber-200 bg-amber-50/60'}`}>
