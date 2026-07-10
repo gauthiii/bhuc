@@ -122,6 +122,11 @@ _ETHN_LABEL = {"hispanic_or_latino": "Hispanic or Latino",
                "prefer_not_to_say": "Prefer not to say", "": "Unknown"}
 _GENDER_LABEL = {"female": "Female", "male": "Male", "nonbinary": "Non-binary",
                  "other": "Other", "prefer_not_to_say": "Prefer not to say", "": "Unknown"}
+_RACE_LABEL = {"white": "White", "black_or_african_american": "Black or African American",
+               "asian": "Asian", "american_indian_or_alaska_native": "American Indian or Alaska Native",
+               "native_hawaiian_or_pacific_islander": "Native Hawaiian or Pacific Islander",
+               "two_or_more": "Two or more races", "other": "Other race",
+               "prefer_not_to_say": "Prefer not to say", "": "Unknown"}
 
 
 def _wait_days(scheduled: str, requested: str) -> float:
@@ -156,14 +161,15 @@ def _dimension(rows: list, keyfn, labelfn) -> tuple:
 @router.get("/fairness")
 def scheduling_fairness() -> dict:
     """Distribution of confirmed/completed appointments + wait-time parity by
-    age band, gender, and ethnicity."""
+    age band, gender, race, and ethnicity."""
     table = get_table_client()
     # Only complete rows: a scheduled outcome with a preserved request time AND a patient with
     # demographics on file. Incomplete rows are data-quality gaps, not bias — excluding them keeps
     # the parity metric honest (no phantom "Unknown" group).
     rows = table.list(
         APPT, ("u_statusINconfirmed,completed^u_requested_startISNOTEMPTY"
-               "^u_patient.u_genderISNOTEMPTY^u_patient.u_ethnicityISNOTEMPTY"),
+               "^u_patient.u_genderISNOTEMPTY^u_patient.u_ethnicityISNOTEMPTY"
+               "^u_patient.u_raceISNOTEMPTY"),
         fields=("u_start,u_requested_start,u_patient.u_gender,u_patient.u_race,"
                 "u_patient.u_ethnicity,u_patient.u_date_of_birth"), limit=500)
     data = []
@@ -172,17 +178,20 @@ def scheduling_fairness() -> dict:
         data.append({
             "_wait": _wait_days(r.get("u_start"), r.get("u_requested_start")),
             "gender": r.get("u_patient.u_gender") or "",
+            "race": r.get("u_patient.u_race") or "",
             "ethnicity": r.get("u_patient.u_ethnicity") or "",
             "ageBand": _age_band(dob),
         })
     by_gender, r_g = _dimension(data, lambda r: r["gender"], lambda g: _GENDER_LABEL.get(g, g or "Unknown"))
+    by_race, r_r = _dimension(data, lambda r: r["race"], lambda g: _RACE_LABEL.get(g, g or "Unknown"))
     by_ethnicity, r_e = _dimension(data, lambda r: r["ethnicity"], lambda g: _ETHN_LABEL.get(g, g or "Unknown"))
     by_age, r_a = _dimension(data, lambda r: r["ageBand"], lambda g: g)
-    overall = round((r_g + r_e + r_a) / 3) if data else 100
+    overall = round((r_g + r_r + r_e + r_a) / 4) if data else 100
     return {
         "total": len(data),
         "byGender": by_gender,
+        "byRace": by_race,
         "byEthnicity": by_ethnicity,
         "byAge": by_age,
-        "fairnessRate": {"gender": r_g, "ethnicity": r_e, "age": r_a, "overall": overall},
+        "fairnessRate": {"gender": r_g, "race": r_r, "ethnicity": r_e, "age": r_a, "overall": overall},
     }

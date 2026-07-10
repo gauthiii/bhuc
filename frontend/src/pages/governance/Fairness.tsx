@@ -50,7 +50,7 @@ export function GovernanceFairness() {
   return (
     <GovernanceShell
       title="Scheduling Fairness"
-      intro="Distribution of scheduled appointments and wait-time parity across age, gender, and ethnicity. The Scheduling Agent excludes these protected attributes from its decisions — this page verifies the outcomes stay equitable."
+      intro="Distribution of scheduled appointments and wait-time parity across age, gender, race, and ethnicity. The Scheduling Agent excludes these protected attributes from its decisions — this page verifies the outcomes stay equitable."
       actions={
         <a href="https://ven04690.service-now.com/now/ai-control-tower" target="_blank" rel="noreferrer"
            className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:underline">
@@ -68,7 +68,7 @@ export function GovernanceFairness() {
             <div className="flex flex-wrap items-center gap-5">
               <div className={`font-display text-5xl font-bold ${rateText(data.fairnessRate.overall)}`}>{data.fairnessRate.overall}%</div>
               <div className="max-w-xl text-sm text-slate-600">
-                <p>Wait-time parity across age, gender, and ethnicity over <span className="font-semibold text-slate-800">{data.total}</span> confirmed/completed appointments.</p>
+                <p>Wait-time parity across age, gender, race, and ethnicity over <span className="font-semibold text-slate-800">{data.total}</span> confirmed/completed appointments.</p>
                 <p className="mt-1 text-slate-500">100% means every group waits equally from requested time to scheduled slot. A drop flags a group being pushed further out — a scheduling-bias signal to investigate.</p>
               </div>
             </div>
@@ -77,8 +77,9 @@ export function GovernanceFairness() {
             </div>
           </Panel>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-2">
             <Dimension title="By gender" groups={data.byGender} rate={data.fairnessRate.gender} />
+            <Dimension title="By race" groups={data.byRace} rate={data.fairnessRate.race} />
             <Dimension title="By ethnicity" groups={data.byEthnicity} rate={data.fairnessRate.ethnicity} />
             <Dimension title="By age band" groups={data.byAge} rate={data.fairnessRate.age} />
           </div>

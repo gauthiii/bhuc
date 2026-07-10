@@ -419,9 +419,10 @@ export const mock = {
     return {
       total: 24,
       byGender: [ { group: 'Female', count: 11, avgWaitDays: 1.6 }, { group: 'Male', count: 10, avgWaitDays: 1.8 }, { group: 'Non-binary', count: 3, avgWaitDays: 1.7 } ],
+      byRace: [ { group: 'White', count: 9, avgWaitDays: 1.7 }, { group: 'Black or African American', count: 6, avgWaitDays: 1.8 }, { group: 'Asian', count: 5, avgWaitDays: 1.6 }, { group: 'Two or more races', count: 4, avgWaitDays: 1.7 } ],
       byEthnicity: [ { group: 'Hispanic or Latino', count: 6, avgWaitDays: 1.7 }, { group: 'Not Hispanic or Latino', count: 18, avgWaitDays: 1.7 } ],
       byAge: [ { group: '18-29', count: 7, avgWaitDays: 1.7 }, { group: '30-44', count: 10, avgWaitDays: 1.6 }, { group: '45-59', count: 5, avgWaitDays: 1.9 }, { group: '60+', count: 2, avgWaitDays: 1.8 } ],
-      fairnessRate: { gender: 89, ethnicity: 100, age: 84, overall: 91 },
+      fairnessRate: { gender: 89, race: 94, ethnicity: 100, age: 84, overall: 92 },
     }
   },
   async getDisposition(id: string): Promise<DispositionCase> {

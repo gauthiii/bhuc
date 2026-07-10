@@ -279,8 +279,8 @@ export interface ClinicianCalendar { pendingCount: number; appointments: Calenda
 export interface FairnessGroup { group: string; count: number; avgWaitDays: number }
 export interface FairnessMetrics {
   total: number
-  byGender: FairnessGroup[]; byEthnicity: FairnessGroup[]; byAge: FairnessGroup[]
-  fairnessRate: { gender: number; ethnicity: number; age: number; overall: number }
+  byGender: FairnessGroup[]; byRace: FairnessGroup[]; byEthnicity: FairnessGroup[]; byAge: FairnessGroup[]
+  fairnessRate: { gender: number; race: number; ethnicity: number; age: number; overall: number }
 }
 
 export interface SchedulingRecommendation {
