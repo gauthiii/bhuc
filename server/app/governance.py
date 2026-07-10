@@ -12,6 +12,7 @@ import logging
 
 from fastapi import APIRouter
 
+from . import prompt_injection as pi
 from .servicenow import get_table_client
 
 logger = logging.getLogger("bhuc.governance")
@@ -195,3 +196,13 @@ def scheduling_fairness() -> dict:
         "byAge": by_age,
         "fairnessRate": {"gender": r_g, "race": r_r, "ethnicity": r_e, "age": r_a, "overall": overall},
     }
+
+
+# ---- Prompt-injection defense monitoring (Agent 1 / Front-Door) ----------------------
+# App-side view of the deterministic output filter in prompt_injection.py: how many replies
+# were blocked, by category, plus suspicious-input attempts and recent samples. Counters are
+# in-process (reset on restart); native detection lives on the AICT Security & privacy tab.
+
+@router.get("/prompt-injection")
+def prompt_injection_summary() -> dict:
+    return pi.summary()

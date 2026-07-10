@@ -25,6 +25,7 @@ import { ClinicianCalendarPage } from './pages/clinician/Calendar'
 import { GovernanceSignIn } from './pages/governance/SignIn'
 import { GovernanceAgentsInventory } from './pages/governance/AgentsInventory'
 import { GovernanceOutputIntegrity } from './pages/governance/OutputIntegrity'
+import { GovernancePromptInjection } from './pages/governance/PromptInjection'
 import { GovernanceFairness } from './pages/governance/Fairness'
 
 function PatientGuard({ children }: { children: ReactNode }) {
@@ -73,6 +74,7 @@ export default function App() {
       <Route path="/governance" element={<Navigate to="/governance/agents" replace />} />
       <Route path="/governance/agents" element={<GovernanceGuard><GovernanceAgentsInventory /></GovernanceGuard>} />
       <Route path="/governance/output-integrity" element={<GovernanceGuard><GovernanceOutputIntegrity /></GovernanceGuard>} />
+      <Route path="/governance/prompt-injection" element={<GovernanceGuard><GovernancePromptInjection /></GovernanceGuard>} />
       <Route path="/governance/fairness" element={<GovernanceGuard><GovernanceFairness /></GovernanceGuard>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

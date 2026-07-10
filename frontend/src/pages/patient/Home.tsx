@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { Send, CalendarDays, HeartPulse, MessageCircle, ClipboardList } from 'lucide-react'
+import { Send, CalendarDays, HeartPulse, MessageCircle, ClipboardList, ShieldAlert } from 'lucide-react'
 import { api } from '../../services/api'
 import { usePatientAuth } from '../../contexts/AuthContext'
 import type { ChatReply, ChatTurn, DashboardSummary, ScreeningStatusItem } from '../../lib/types'
@@ -9,6 +9,50 @@ import { PatientShell } from '../../components/portals'
 import { CrisisDialog } from '../../components/CrisisDialog'
 import { Panel, Button, StatusBadge, Spinner, ErrorState, Textarea, EmptyState } from '../../components/ui'
 import { formatDateTime } from '../../lib/format'
+import { screenInput, CATEGORY_LABEL, BLOCKLIST_COUNT, type InjectionCategory } from '../../lib/promptInjectionPolicy'
+
+type BlockedInfo = { input: string; category: InjectionCategory; matched: string }
+
+// Content-filtering policy modal — shown when a submitted message matches the Front-Door
+// input policy (300+ prompt-injection samples + heuristics). The message is never sent.
+function ContentFilterModal({ info, onClose }: { info: BlockedInfo; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="cf-title" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start gap-3 border-b border-slate-100 p-5">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-100 text-rose-600">
+            <ShieldAlert className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 id="cf-title" className="text-lg font-semibold text-slate-800">Blocked by content filtering policy</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              This message was blocked before reaching the assistant. The front door only handles
+              routine facility questions.
+            </p>
+          </div>
+        </div>
+        <div className="space-y-3 p-5">
+          {/* Policy category + matched policy phrase — kept for later, hidden for now.
+          <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Policy category</span>
+            <div className="mt-0.5 font-medium text-slate-700">{CATEGORY_LABEL[info.category]}</div>
+          </div>
+          <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Matched policy phrase</span>
+            <div className="mt-0.5"><code className="rounded bg-rose-50 px-1 text-xs text-rose-700">{info.matched}</code></div>
+          </div>
+          */}
+          <p className="text-xs text-slate-400">
+            If you need help, ask about hours, location, insurance, or how to register — or call 988 in a crisis.
+          </p>
+        </div>
+        <div className="flex justify-end border-t border-slate-100 p-4">
+          <Button onClick={onClose}>OK</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const QUICK_REPLIES = ['Book a visit', 'I need to talk', 'Check coverage']
 
@@ -56,6 +100,7 @@ export function PatientHome() {
   const [screening, setScreening] = useState<ScreeningStatusItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [blocked, setBlocked] = useState<BlockedInfo | null>(null)
   const logRef = useRef<HTMLDivElement>(null)
 
   const loadDash = () => {
@@ -75,12 +120,27 @@ export function PatientHome() {
   async function send(text: string) {
     const trimmed = text.trim()
     if (!trimmed || sending) return
+    // INPUT content-filtering policy (Front-Door only): block prompt-injection attempts
+    // before they reach the agent, and show the policy modal. The message is not sent.
+    const screen = screenInput(trimmed)
+    if (screen.blocked) {
+      // Realistic beat: show the message + a brief processing pause (~1.5s), then the policy
+      // modal — so it reads like the request was evaluated rather than blocked instantly.
+      setDraft('')
+      setTurns((t) => [...t, { id: 'u-' + Date.now(), role: 'user', text: trimmed }])
+      setSending(true)
+      window.setTimeout(() => {
+        setSending(false)
+        setBlocked({ input: trimmed, category: screen.category!, matched: screen.matched! })
+      }, 1500)
+      return
+    }
     setDraft('')
     setTurns((t) => [...t, { id: 'u-' + Date.now(), role: 'user', text: trimmed }])
     setSending(true)
     try {
       const reply: ChatReply = await api.frontDoorChat(trimmed)
-      setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text: reply.reply }])
+      setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text: reply.reply, filtered: reply.filtered }])
       if (reply.crisis) setCrisis(true)
     } catch {
       setTurns((t) => [...t, { id: 'e-' + Date.now(), role: 'agent', text: 'Sorry, that didn’t send. Please try again.' }])
@@ -99,6 +159,11 @@ export function PatientHome() {
                 <div key={t.id} className={`msg-enter ${t.role === 'user' ? 'flex justify-end' : 'flex justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${t.role === 'user' ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-800'}`}>
                     <MessageBody role={t.role} text={t.text} />
+                    {t.filtered && (
+                      <div className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                        <ShieldAlert className="h-3 w-3 text-amber-500" /> Filtered for safety
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -186,6 +251,7 @@ export function PatientHome() {
       </div>
 
       <CrisisDialog open={crisis} onClose={() => setCrisis(false)} onConnect={() => setCrisis(false)} />
+      {blocked && <ContentFilterModal info={blocked} onClose={() => setBlocked(null)} />}
     </PatientShell>
   )
 }

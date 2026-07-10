@@ -64,12 +64,17 @@ export interface ChatReply {
   riskLevel: 'none' | 'elevated' | 'crisis'
   crisis: boolean
   suggestedActions?: { type: string; label: string }[]
+  // Prompt-injection output filter (Agent 1): true when the reply was blocked + replaced
+  // with a safe refusal; injectionCategory names which control fired.
+  filtered?: boolean
+  injectionCategory?: string
 }
 
 export interface ChatTurn {
   id: string
   role: 'user' | 'agent'
   text: string
+  filtered?: boolean
 }
 
 // ---- Consent ----
@@ -201,6 +206,15 @@ export interface OutputIntegritySummary {
     label: string; total: number; withUnverified: number; unverifiedRatePct: number
     avgUnverifiedLines: number; signed: number; unsigned: number
   }
+}
+
+// Prompt-injection defense monitoring (Agent 1 / Front-Door output filter).
+export interface PromptInjectionSummary {
+  total: number
+  inputAttempts: number
+  byCategory: { category: string; label: string; count: number }[]
+  recent: { category: string; label: string; matched: string; input: string; at: string }[]
+  guardrailsActive: boolean
 }
 
 export interface NotesSummary {

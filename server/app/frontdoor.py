@@ -16,6 +16,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from . import prompt_injection as pi
 from .config import get_settings
 from .servicenow import A2AError, get_a2a_client
 
@@ -40,12 +41,23 @@ class ChatReply(BaseModel):
     contextId: Optional[str] = None
     taskId: Optional[str] = None
     state: Optional[str] = None
+    # Prompt-injection output filter: true when the agent reply was blocked + replaced
+    # with a safe refusal; injectionCategory names which control fired.
+    filtered: bool = False
+    injectionCategory: str = "none"
 
 
 @router.post("/chat", response_model=ChatReply)
 def frontdoor_chat(req: ChatRequest) -> ChatReply:
     settings = get_settings()
     client = get_a2a_client()
+
+    # Detective: count suspicious INPUTs for the governance metric. This does NOT gate the
+    # request — enforcement is output-side (below), so a benign message phrased oddly is
+    # never blocked and a clever injection is still caught by the output filter.
+    if pi.scan_input(req.text).get("suspicious"):
+        pi.record_input_attempt()
+
     try:
         out = client.execute_agent(
             settings.snow_agent_frontdoor,
@@ -63,5 +75,21 @@ def frontdoor_chat(req: ChatRequest) -> ChatReply:
             "I'm sorry, I couldn't process that just now. If this is an emergency, "
             "call or text 988 for the Suicide & Crisis Lifeline."
         )
+
+    # ENFORCE — deterministic prompt-injection output filter. If the agent's reply shows a
+    # sign an injection succeeded (leaked prompt/tools, clinical advice, jailbreak
+    # compliance, exfiltration/unsafe markup), block it and return a safe refusal. The 988
+    # crisis path skips the content-scope checks (see prompt_injection.scan_output).
+    out["filtered"] = False
+    out["injectionCategory"] = "none"
+    verdict = pi.scan_output(out.get("reply") or "", crisis=bool(out.get("crisis")))
+    if verdict["flagged"]:
+        pi.record_block(verdict["category"], verdict["matched"], req.text)
+        logger.warning("Front-Door output filtered: category=%s matched=%r",
+                       verdict["category"], verdict["matched"])
+        out["reply"] = verdict["safe_reply"]
+        out["filtered"] = True
+        out["injectionCategory"] = verdict["category"]
+
     out["riskLevel"] = "crisis" if out.get("crisis") else "none"
     return ChatReply(**out)

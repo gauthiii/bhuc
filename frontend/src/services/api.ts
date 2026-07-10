@@ -66,6 +66,7 @@ const live = {
   draftNewNote: (patientId: string, screening?: string) => j(`/note/new/${patientId}${screening ? `?screening=${encodeURIComponent(screening)}` : ''}`, { method: 'POST', body: '{}' }),
   signNote: (id: string, unverifiedLines?: string[], noteText?: string) => j('/note/sign', { method: 'POST', body: JSON.stringify({ id, unverifiedLines, noteText }) }),
   getOutputIntegrity: () => j('/governance/output-integrity'),
+  getPromptInjection: () => j('/governance/prompt-injection'),
   checkHallucination: (agentKey: string, output: string) => j('/hallucination/check', { method: 'POST', body: JSON.stringify({ agentKey, output }) }),
   getPriorAuth: (patientId: string, clinicianEmail?: string) =>
     j(`/priorauth?patient=${patientId}${clinicianEmail ? `&clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
@@ -111,6 +112,7 @@ const liveAgent2and3 = {
   draftNewNote: live.draftNewNote,
   signNote: live.signNote,
   getOutputIntegrity: live.getOutputIntegrity,
+  getPromptInjection: live.getPromptInjection,
   checkHallucination: live.checkHallucination,
   getMe: live.getMe,
   registerPatient: live.registerPatient,
