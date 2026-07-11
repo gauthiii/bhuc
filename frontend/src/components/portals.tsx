@@ -8,7 +8,7 @@ import { usePatientAuth, useClinicianAuth, useGovernanceAuth } from '../contexts
 const SNOW_INSTANCE = 'https://ven04690.service-now.com'
 const GOVERNANCE_NAV: NavItem[] = [
   { to: '/governance/agents', label: 'Agents Inventory', icon: <Bot className="h-4 w-4" /> },
-  { to: '/governance/ai-assets', label: 'AI Asset Management', icon: <Boxes className="h-4 w-4" /> },
+  { to: '/governance/ai-assets', label: 'Governance', icon: <Boxes className="h-4 w-4" /> },
   { to: '/governance/output-integrity', label: 'Output Integrity', icon: <ShieldCheck className="h-4 w-4" /> },
   { to: '/governance/prompt-injection', label: 'Prompt Injection', icon: <ShieldAlert className="h-4 w-4" /> },
   { to: '/governance/fairness', label: 'Scheduling Fairness', icon: <CalendarClock className="h-4 w-4" /> },

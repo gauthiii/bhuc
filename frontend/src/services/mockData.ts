@@ -423,7 +423,7 @@ export const mock = {
     const managed = id === 'mock-risk' || id === 'mock-doc'
     return {
       asset: { name: 'BHUC Front Door Security Agent', type: 'Agentic AI', builtBy: 'gautham.vijayaraj@accelare.com', lifecycle: managed ? 'Assess' : 'New', managed, riskScore: managed ? 'Medium' : 'To be determined' },
-      airc: managed ? { number: 'AIS0001112', riskClassification: 'Medium', inherentRating: 'Medium (Score: 6.4)', residualRating: '—', controlEffectiveness: '—', state: 'Build', owner: 'Tanush Kuppusami', description: 'Behavioral-health risk identification agent.' } : null,
+      airc: managed ? { number: 'AIS0001112', riskClassification: 'Medium', inherentRating: 'Medium (Score: 6.4)', residualRating: 'Medium (Score: 4.2)', controlEffectiveness: 'Needs improvement (Score: 4.5)', state: 'Build', owner: 'Tanush Kuppusami', description: 'Behavioral-health risk identification agent.' } : null,
       assessments: managed ? [{ number: 'AIA0001092', type: 'AI impact assessment', state: 'Closed complete', assignedTo: 'Gautham Vijayara', openedBy: 'Gautham Vijayara' }] : [],
       risks: managed ? [
         { name: 'PHI Re-identification Risk', description: '[CAA-DEMO] De-identified datasets can be re-identified through linkage attacks.', state: 'Draft', owner: 'Tanush Kuppusami', inherent: '—', residual: '—' },

@@ -18,6 +18,35 @@ function riskTone(risk: string): Tone {
   return r.includes('high') ? 'danger' : r.includes('medium') ? 'warning' : r.includes('low') ? 'success' : 'neutral'
 }
 
+// Residual rating + control effectiveness are derived (illustrative) from the inherent score
+// on a 0–10 scale: controls mitigate ~half of the inherent risk they address.
+function inherentScore(rating: string): number {
+  const m = (rating || '').match(/Score:\s*([\d.]+)/i) || (rating || '').match(/([\d.]+)/)
+  const n = m ? parseFloat(m[1]) : NaN
+  return Number.isNaN(n) ? 0 : n
+}
+function riskBand(s: number): string {
+  if (s <= 0) return '—'
+  const band = s >= 7 ? 'High' : s >= 4 ? 'Medium' : 'Low'
+  return `${band} (Score: ${s.toFixed(1)})`
+}
+function controlBand(s: number): string {
+  if (s <= 0) return '—'
+  const band = s >= 7 ? 'Effective' : s >= 4 ? 'Needs improvement' : 'Ineffective'
+  return `${band} (Score: ${s.toFixed(1)})`
+}
+function deriveFromInherent(inherentRating: string): { residual: string; control: string } {
+  const s = inherentScore(inherentRating)
+  if (s <= 0) return { residual: '—', control: '—' }
+  const ce = Math.round(s * 0.7 * 10) / 10               // control effectiveness score (0–10)
+  const res = Math.max(0, Math.round((s - ce * 0.5) * 10) / 10)  // residual after controls (0–10)
+  return { residual: riskBand(res), control: controlBand(ce) }
+}
+// Use the real value if present; otherwise show the derived (illustrative) one.
+function orDerived(real: string, derived: string): string {
+  return real && real !== '—' ? real : derived
+}
+
 function Field({ label, value, tone }: { label: string; value: string; tone?: Tone }) {
   return (
     <div className="rounded-lg border border-slate-100 p-3">
@@ -126,14 +155,24 @@ export function GovernanceAIAssetDetail() {
             subtitle="Risk ratings, assessments, approvals, and attached risks & controls — live from AICT/AIRC">
             {data.airc ? (
               <>
-                <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  <Field label="Governance record" value={data.airc.number} />
-                  <Field label="Risk classification" value={data.airc.riskClassification} tone={riskTone(data.airc.riskClassification)} />
-                  <Field label="Inherent rating" value={data.airc.inherentRating} />
-                  <Field label="Residual rating" value={data.airc.residualRating} />
-                  <Field label="Control effectiveness" value={data.airc.controlEffectiveness} />
-                  <Field label="State / Owner" value={`${data.airc.state} · ${data.airc.owner}`} />
-                </div>
+                {(() => {
+                  const d = deriveFromInherent(data.airc.inherentRating)
+                  const residual = orDerived(data.airc.residualRating, d.residual)
+                  const control = orDerived(data.airc.controlEffectiveness, d.control)
+                  return (
+                    <>
+                      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                        <Field label="Governance record" value={data.airc.number} />
+                        <Field label="Risk classification" value={data.airc.riskClassification} tone={riskTone(data.airc.riskClassification)} />
+                        <Field label="Inherent rating" value={data.airc.inherentRating} tone={riskTone(data.airc.inherentRating)} />
+                        <Field label="Residual rating" value={residual} tone={riskTone(residual)} />
+                        <Field label="Control effectiveness" value={control} />
+                        <Field label="State / Owner" value={`${data.airc.state} · ${data.airc.owner}`} />
+                      </div>
+                      <p className="mt-2 text-xs text-slate-400">Residual rating and control effectiveness are derived from the inherent score (illustrative — controls mitigate ~half the inherent risk).</p>
+                    </>
+                  )
+                })()}
               </>
             ) : (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
