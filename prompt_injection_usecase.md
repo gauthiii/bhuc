@@ -1,6 +1,6 @@
 # Prompt-Injection Defense — Front-Door Security Agent (Agent 1) — Output-Filter Plan
 
-> **Status: BUILT (2026-07-10).** The app-side layers are implemented + verified — the deterministic **output filter** (backend, §5–6) and the **input content-filtering policy** (Front-Door chat, §11). The only remaining work is ServiceNow UI-only (§10 handoff). Test prompts are in **§12**.
+> **Status: BUILT (2026-07-10).** The **input content-filtering policy** (Front-Door chat, §11) is the **active** layer. The deterministic **output filter** (backend, §5–6) was built but is **currently DISABLED** — it over-blocked legitimate facility answers (e.g. a "services we offer" reply mentioning MAT / buprenorphine / opioid tripped the clinical-advice rule and got replaced with the safe refusal). The `prompt_injection.py` module, governance endpoint, and Governance page remain in place (dormant) for easy re-enable. Test prompts are in **§12**.
 >
 > Strengthens **Use Case 1 (Front-Door Security)**. Related: [output_integrity.md](output_integrity.md) (the deterministic app-side control precedent), [fairness_usecase.md](fairness_usecase.md), [sud_usecase.md](sud_usecase.md).
 
@@ -136,6 +136,8 @@ Mirror the **Output Integrity** page exactly (FE-9e): a new `/governance/prompt-
 ---
 
 ## 6. Part B status — as-built (2026-07-10) ✅
+
+> **UPDATE 2026-07-10 — the OUTPUT filter is DISABLED.** In `frontdoor.py` the `pi.scan_input()`/`pi.scan_output()` calls were removed because the deterministic output filter over-blocked normal facility answers (the clinical-advice drug list — buprenorphine/methadone/opioid/MAT — legitimately appears in the agent's "services we offer" answers, so those replies were replaced with the safe refusal). Agent replies now pass through unchanged. The **client-side INPUT policy (§11) is the sole active filter.** The module, `GET /governance/prompt-injection`, and the Governance page stay in place (dormant, showing zeros in live) so the output filter can be re-enabled — restore the two `pi.*` calls in `frontdoor.py` (see git history).
 
 Everything doable from the app side is **built + verified**:
 

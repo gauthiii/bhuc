@@ -12,7 +12,7 @@ AI Search source + profile steps below are **UI-only** (REST is business-rule-bl
 
 | KB (title) | Agent | `kb_knowledge_base` sys_id | Articles | Mirror file |
 | --- | --- | --- | --- | --- |
-| BHUC Facility Information | 1 (Front-Door) | `11c6b5a73bf90f1076f13b64c3e45a0b` | 11 (Published) | `bhuc-facility-information.md` |
+| BHUC Facility Information | 1 (Front-Door) | `11c6b5a73bf90f1076f13b64c3e45a0b` | 17 (11 Published + **6 Draft**) | `bhuc-facility-information.md` |
 | BHUC Screening Scoring Rules | 2 (Risk ID) | `532b483f3b71cf1076f13b64c3e45a68` | 12 (5 Published + 7 Draft) | `bhuc-screening-scoring-rules.md` |
 | BHUC Clinical Coding and Documentation | 3 (Clinical Doc) | `103b883f3b71cf1076f13b64c3e45afa` | 8 (5 Published + 3 Draft) | `bhuc-clinical-coding-and-documentation.md` |
 | BHUC Payer Policy Library | 5 (Prior-Auth) | `c93bc83f3b71cf1076f13b64c3e45af7` | 6 (Published) | `bhuc-payer-policy-library.md` |
@@ -37,6 +37,7 @@ Each profile maps to exactly its own KB-filtered source (`ais_search_source`) �
 - ✅ **Step C — Search profiles built & Published** (one per KB, one source each).
 - ⏳ **Step D — wire each agent's Search Retrieval tool** — pending, done per-agent during the AG-2/3/5/6 builds (settings table below).
 - 🧹 **Cleanup** — retire stray `KB0010011` placeholder from the Facility KB (see bottom).
+- 📝 **PENDING PUBLISH (2026-07-10)** — 6 new how-to drafts added to the Facility KB (mirrored in `bhuc-facility-information.md`): **KB0010049** How to book an appointment · **KB0010050** How to take your screening · **KB0010051** How to register step by step · **KB0010052** Using the BHUC patient portal · **KB0010053** Your consent and privacy (HIPAA & 42 CFR Part 2) · **KB0010054** What happens after your screening. Publish them in the UI, then re-index the `bhuc_facility_search` source so Agent 1 can cite them.
 
 Content policy: **real standards** for PHQ-9/GAD-7/C-SSRS scoring, ICD-10-CM F-codes, CPT
 psych codes, and 42 CFR Part 2; **demo-but-consistent** (labelled "sample") for the payer

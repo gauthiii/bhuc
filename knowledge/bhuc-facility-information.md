@@ -74,3 +74,33 @@
 ## Accessibility and language services
 
 <p>BHUC&#39;s facility is wheelchair accessible. We offer <strong>interpreter services</strong> in many languages and <strong>ASL</strong> on request at no cost. Let the front desk or your care team know your needs when you register.</p>
+
+
+## How to book an appointment
+
+<p>You can request a behavioral-health visit in a few steps:</p><ol><li>Sign in to the BHUC patient portal (register first if you are new).</li><li>Open <strong>Appointments</strong> and choose <strong>Book a visit</strong>.</li><li>Pick a date and time that works for you, choose <strong>telehealth</strong> or <strong>in person</strong>, and add a brief reason for the visit.</li><li>Submit your request. Our scheduling team reviews it and either confirms it or proposes the closest available time.</li><li>Track the status (requested, proposed, or confirmed) in Appointments, and accept a proposed time if one is offered.</li></ol><p>For urgent needs you can also walk in during urgent-care hours. In a crisis, call or text <strong>988</strong>.</p>
+
+
+## How to take your screening
+
+<p>After you register, we ask you to complete a short, confidential screening so our clinicians understand how you are doing.</p><ul><li>Open <strong>Screening</strong> in the patient portal and answer the guided questions — it takes just a few minutes.</li><li>It may include validated tools such as the <strong>C-SSRS</strong> (safety), <strong>PHQ-9</strong> (depression), <strong>GAD-7</strong> (anxiety), and, when relevant, substance-use questions (protected under 42 CFR Part 2).</li><li>A licensed clinician reviews your answers — the screening itself is not a diagnosis.</li><li>You can see your screening status (submitted, under review, reviewed) on your Home screen.</li></ul><p>If any answer suggests you may be in danger, we connect you to crisis support (<strong>988</strong>) right away.</p>
+
+
+## How to register step by step
+
+<p>Registering for BHUC takes just a few minutes:</p><ol><li>Create your account in the BHUC patient portal with your email.</li><li>Complete your profile — name, date of birth, contact details, and insurance if you have it.</li><li>Review and choose your consents (each is independent and optional): <strong>HIPAA</strong> authorization, <strong>42 CFR Part 2</strong> consent for substance-use records, and optional <strong>text/SMS</strong> reminders.</li><li>Submit to finish registration.</li><li>Complete your intake screening so a clinician can review your needs.</li></ol><p>Prefer in person? Walk in during urgent-care hours and register at the front desk. You control each consent and can decline any of them.</p>
+
+
+## Using the BHUC patient portal
+
+<p>Once you register, the patient portal is your home for care:</p><ul><li><strong>Home</strong> — chat with us, see your next appointment, and track your screening status.</li><li><strong>Screening</strong> — complete or review your confidential screening.</li><li><strong>Coverage</strong> — check your insurance eligibility and get a cost estimate.</li><li><strong>Appointments</strong> — book a visit and see confirmed times.</li><li><strong>Care plan</strong> — view your safety plan, medications, and next steps.</li><li><strong>Messages</strong> — message your care team securely.</li><li><strong>Check-in</strong> — complete a quick wellbeing check-in between visits.</li></ul><p>In a crisis, call or text <strong>988</strong> anytime.</p>
+
+
+## Your consent and privacy (HIPAA and 42 CFR Part 2)
+
+<p>Your privacy is protected by law, and you are in control:</p><ul><li><strong>HIPAA authorization</strong> covers how we use and share your general health information.</li><li><strong>42 CFR Part 2</strong> gives extra protection to substance-use disorder (SUD) records — they are not shared without your specific consent.</li><li><strong>Text/SMS reminders</strong> are optional.</li></ul><p>Each consent is separate and optional — you can grant or decline any of them and update them later in the portal. Substance-use information stays protected unless you choose to share it.</p>
+
+
+## What happens after your screening
+
+<p>After you complete your screening:</p><ol><li>A licensed clinician reviews your results — AI helps prepare them, but a human confirms every result.</li><li>If needed, we reach out to schedule a visit or connect you with the right level of care.</li><li>You may receive a care plan with a safety plan, medications, and next steps.</li><li>You can message your care team and complete check-ins between visits.</li></ol><p>If your screening suggests immediate risk, we connect you to crisis support (<strong>988</strong>) right away.</p>
