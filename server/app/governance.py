@@ -206,3 +206,81 @@ def scheduling_fairness() -> dict:
 @router.get("/prompt-injection")
 def prompt_injection_summary() -> dict:
     return pi.summary()
+
+
+# ---- AI Asset Management (mirrors AI Control Tower Managed / Unmanaged assets) ---------
+# Live view of the AICT AI Asset Inventory for the BHUC agents, plus instance-wide totals.
+# Data model (AICT docs, Zurich): each AI system/agent is a row in
+# ``alm_ai_system_digital_asset``; its governance state (Managed/Unmanaged + lifecycle +
+# risk classification) is in ``sn_ai_governance_asset_governance_details`` joined on the
+# asset sys_id. Reference fields come back as {value, display_value} on this instance, so we
+# read display values for labels and the raw value for join keys.
+
+AI_SYSTEM = "alm_ai_system_digital_asset"
+AI_GOV = "sn_ai_governance_asset_governance_details"
+
+
+def _val(v):
+    return v.get("value") if isinstance(v, dict) else v
+
+
+def _disp(v):
+    return v.get("display_value") if isinstance(v, dict) else v
+
+
+def _managed(v) -> bool:
+    return str(_val(v)).lower() in ("true", "1")
+
+
+@router.get("/ai-assets")
+def ai_assets() -> dict:
+    """BHUC agents from the AI Asset Inventory, split Managed/Unmanaged with lifecycle +
+    risk classification, plus instance-wide system totals — mirrors the AI Control Tower."""
+    table = get_table_client()
+
+    # BHUC AI systems (the 6 agents)
+    systems = table.list(
+        AI_SYSTEM, "display_nameLIKEBHUC^ORDERBYdisplay_name",
+        fields="sys_id,display_name,model_category,sys_created_by,life_cycle_stage",
+        display_value="all", limit=50)
+    ids = [_val(s.get("sys_id")) for s in systems]
+
+    # Governance record per BHUC system (joined on asset = system sys_id)
+    gov_by_asset: dict = {}
+    if ids:
+        gov = table.list(
+            AI_GOV, "assetIN" + ",".join(ids),
+            fields="asset,governed,lifecycle_phase,risk_score",
+            display_value="all", limit=200)
+        for g in gov:
+            gov_by_asset[_val(g.get("asset"))] = g
+
+    managed, unmanaged = [], []
+    for s in systems:
+        g = gov_by_asset.get(_val(s.get("sys_id")))
+        is_managed = _managed(g.get("governed")) if g else False
+        lifecycle = (_disp(g.get("lifecycle_phase")) if g else "") or _disp(s.get("life_cycle_stage")) or "—"
+        risk = (_disp(g.get("risk_score")) if g else "") or "—"
+        row = {
+            "name": _disp(s.get("display_name")) or "—",
+            "builtBy": _disp(s.get("sys_created_by")) or "—",
+            "type": _disp(s.get("model_category")) or "AI system",
+            "lifecycle": lifecycle,
+            "risk": risk,
+            "managed": is_managed,
+        }
+        (managed if is_managed else unmanaged).append(row)
+
+    # Instance-wide totals: count managed SYSTEMS (governance rows with governed=true whose
+    # asset is an AI system), not sub-assets.
+    all_ids = {_val(r.get("sys_id")) for r in
+               table.list(AI_SYSTEM, "", fields="sys_id", display_value="all", limit=2000)}
+    total = len(all_ids)
+    managed_gov = table.list(AI_GOV, "governed=true", fields="asset", display_value="all", limit=2000)
+    managed_instance = len({_val(g.get("asset")) for g in managed_gov} & all_ids)
+
+    return {
+        "bhuc": {"managed": managed, "unmanaged": unmanaged},
+        "instance": {"totalSystems": total, "managed": managed_instance,
+                     "unmanaged": max(0, total - managed_instance)},
+    }

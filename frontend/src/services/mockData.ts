@@ -6,7 +6,7 @@ import type {
   PatientProfile, PriorAuthPacket, RiskDetail, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
   MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary, OutputIntegritySummary,
-  HallucinationCheck, PromptInjectionSummary,
+  HallucinationCheck, PromptInjectionSummary, AIAssetSummary,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -399,6 +399,24 @@ export const mock = {
     await wait()
     // Return a copy so the page reflects live mock ticks from frontDoorChat.
     return { ...MOCK_INJECTION, byCategory: MOCK_INJECTION.byCategory.map((c) => ({ ...c })), recent: [...MOCK_INJECTION.recent] }
+  },
+  async getAIAssets(): Promise<AIAssetSummary> {
+    await wait()
+    return {
+      instance: { totalSystems: 339, managed: 35, unmanaged: 304 },
+      bhuc: {
+        managed: [
+          { name: 'BHUC Risk Identification Agent', builtBy: 'tanush.kuppusami@accelare.com', type: 'Agentic AI', lifecycle: 'Build and test', risk: 'Medium', managed: true },
+          { name: 'BHUC Clinical Documentation Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'Assess', risk: 'To be determined', managed: true },
+        ],
+        unmanaged: [
+          { name: 'BHUC Front Door Security Agent', builtBy: 'gautham.vijayaraj@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+          { name: 'BHUC PriorAuth Compliance Agent', builtBy: 'sanjana.kuppusami@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+          { name: 'BHUC Consent and Data Protection Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+          { name: 'BHUC Scheduling Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+        ],
+      },
+    }
   },
   async getPriorAuth(_patientId: string, _clinicianEmail?: string): Promise<PriorAuthPacket | null> {
     await wait()
