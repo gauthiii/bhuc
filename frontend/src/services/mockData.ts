@@ -6,7 +6,7 @@ import type {
   PatientProfile, PriorAuthPacket, RiskDetail, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
   MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary, OutputIntegritySummary,
-  HallucinationCheck, PromptInjectionSummary, AIAssetSummary,
+  HallucinationCheck, PromptInjectionSummary, AIAssetSummary, AIAssetDetail,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -406,16 +406,45 @@ export const mock = {
       instance: { totalSystems: 339, managed: 35, unmanaged: 304 },
       bhuc: {
         managed: [
-          { name: 'BHUC Risk Identification Agent', builtBy: 'tanush.kuppusami@accelare.com', type: 'Agentic AI', lifecycle: 'Build and test', risk: 'Medium', managed: true },
-          { name: 'BHUC Clinical Documentation Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'Assess', risk: 'To be determined', managed: true },
+          { id: 'mock-risk', name: 'BHUC Risk Identification Agent', builtBy: 'tanush.kuppusami@accelare.com', type: 'Agentic AI', lifecycle: 'Build and test', risk: 'Medium', managed: true },
+          { id: 'mock-doc', name: 'BHUC Clinical Documentation Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'Assess', risk: 'To be determined', managed: true },
         ],
         unmanaged: [
-          { name: 'BHUC Front Door Security Agent', builtBy: 'gautham.vijayaraj@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
-          { name: 'BHUC PriorAuth Compliance Agent', builtBy: 'sanjana.kuppusami@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
-          { name: 'BHUC Consent and Data Protection Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
-          { name: 'BHUC Scheduling Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+          { id: 'mock-frontdoor', name: 'BHUC Front Door Security Agent', builtBy: 'gautham.vijayaraj@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+          { id: 'mock-priorauth', name: 'BHUC PriorAuth Compliance Agent', builtBy: 'sanjana.kuppusami@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+          { id: 'mock-consent', name: 'BHUC Consent and Data Protection Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
+          { id: 'mock-scheduling', name: 'BHUC Scheduling Agent', builtBy: 'sivashankar.balamurali@accelare.com', type: 'Agentic AI', lifecycle: 'New', risk: 'To be determined', managed: false },
         ],
       },
+    }
+  },
+  async getAIAssetDetail(id: string): Promise<AIAssetDetail> {
+    await wait()
+    const managed = id === 'mock-risk' || id === 'mock-doc'
+    return {
+      asset: { name: 'BHUC Front Door Security Agent', type: 'Agentic AI', builtBy: 'gautham.vijayaraj@accelare.com', lifecycle: managed ? 'Assess' : 'New', managed, riskScore: managed ? 'Medium' : 'To be determined' },
+      airc: managed ? { number: 'AIS0001112', riskClassification: 'Medium', inherentRating: 'Medium (Score: 6.4)', residualRating: '—', controlEffectiveness: '—', state: 'Build', owner: 'Tanush Kuppusami', description: 'Behavioral-health risk identification agent.' } : null,
+      assessments: managed ? [{ number: 'AIA0001092', type: 'AI impact assessment', state: 'Closed complete', assignedTo: 'Gautham Vijayara', openedBy: 'Gautham Vijayara' }] : [],
+      risks: managed ? [
+        { name: 'PHI Re-identification Risk', description: '[CAA-DEMO] De-identified datasets can be re-identified through linkage attacks.', state: 'Draft', owner: 'Tanush Kuppusami', inherent: '—', residual: '—' },
+        { name: 'UC2 Output Integrity / Hallucination', description: 'Ungrounded LLM generation by the BHUC Risk & Documentation agents.', state: 'Monitor', owner: 'Tanush Kuppusami', inherent: 'Medium (Score: 5.5)', residual: '—' },
+      ] : [],
+      controls: managed ? [
+        { name: 'Output Integrity Controls — Guardrails + HITL (UC2)', description: 'AICT guardrails + app grounding + HITL gates.', state: 'Draft', owner: 'Tanush Kuppusami', classification: '—' },
+        { name: 'Encrypt Data at Rest and in Transit', description: 'Apply strong encryption to all sensitive data.', state: 'Draft', owner: 'Tanush Kuppusami', classification: '—' },
+      ] : [],
+      agent: {
+        name: 'BHUC Front Door Security Agent',
+        description: 'You are the front door for a Behavioral Health Urgent Care facility, talking to visitors who are not logged in.',
+        role: 'Navigation and information assistant for unauthenticated visitors. Scope is strictly informational and escalation-only.',
+        instructions: '1. Run the crisis-classifier Script tool first.\n2. If crisis, call the 988 Escalation flow.\n3. Otherwise use Search Retrieval and cite facility info.',
+        strategy: 'ReAct',
+      },
+      tools: [
+        { name: 'BHUC Crisis Classifier', executionMode: 'Autonomous', type: 'Script', description: 'Deterministic keyword crisis classifier.', script: '(function(inputs){ /* keyword match */ })(inputs);', subflow: '', retrieval: {} },
+        { name: 'BHUC Facility Information Search Retrieval', executionMode: 'Autonomous', type: 'Search Retriever', description: 'Retrieve facility info from the KB.', script: '', subflow: '', retrieval: { search_type: 'hybrid', search_profile: 'bhuc_facility_search', search_results_limit: '5', document_match_threshold: '0.4' } },
+        { name: '988 Escalation Tool', executionMode: 'Autonomous', type: 'Subflow', description: 'BHUC 988 Escalation', script: '', subflow: 'Flow: BHUC 988 Escalation', retrieval: {} },
+      ],
     }
   },
   async getPriorAuth(_patientId: string, _clinicianEmail?: string): Promise<PriorAuthPacket | null> {

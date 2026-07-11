@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ExternalLink, Boxes, ShieldCheck, CircleDot } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ExternalLink, ShieldCheck, CircleDot, ChevronRight } from 'lucide-react'
 import { GovernanceShell } from '../../components/portals'
 import { Panel, StatusBadge, Spinner, ErrorState, EmptyState, type Tone } from '../../components/ui'
 import { api } from '../../services/api'
@@ -27,6 +28,7 @@ function RiskBadge({ risk }: { risk: string }) {
 }
 
 function AssetTable({ rows }: { rows: AIAssetRow[] }) {
+  const navigate = useNavigate()
   if (rows.length === 0) return <EmptyState title="No assets in this state." />
   return (
     <div className="overflow-x-auto">
@@ -37,17 +39,22 @@ function AssetTable({ rows }: { rows: AIAssetRow[] }) {
             <th className="py-2 pr-3 font-medium">Type</th>
             <th className="py-2 pr-3 font-medium">Built by</th>
             <th className="py-2 pr-3 font-medium">Lifecycle state</th>
-            <th className="py-2 font-medium">Risk classification</th>
+            <th className="py-2 pr-3 font-medium">Risk classification</th>
+            <th className="py-2 font-medium sr-only">Open</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.name} className="border-b border-slate-50 align-middle">
-              <td className="py-2.5 pr-3 font-medium text-slate-800">{r.name}</td>
+            <tr key={r.id} onClick={() => navigate(`/governance/ai-assets/${r.id}`)}
+              className="group cursor-pointer border-b border-slate-50 align-middle transition hover:bg-slate-50"
+              role="button" tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/governance/ai-assets/${r.id}`) }}>
+              <td className="py-2.5 pr-3 font-medium text-teal-700 group-hover:underline">{r.name}</td>
               <td className="py-2.5 pr-3"><StatusBadge tone="neutral">{r.type}</StatusBadge></td>
               <td className="py-2.5 pr-3 text-slate-600">{r.builtBy}</td>
               <td className="py-2.5 pr-3 text-slate-700">{r.lifecycle}</td>
-              <td className="py-2.5"><RiskBadge risk={r.risk} /></td>
+              <td className="py-2.5 pr-3"><RiskBadge risk={r.risk} /></td>
+              <td className="py-2.5 text-right"><ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-500" /></td>
             </tr>
           ))}
         </tbody>

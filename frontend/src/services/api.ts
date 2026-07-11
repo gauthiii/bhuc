@@ -68,6 +68,7 @@ const live = {
   getOutputIntegrity: () => j('/governance/output-integrity'),
   getPromptInjection: () => j('/governance/prompt-injection'),
   getAIAssets: () => j('/governance/ai-assets'),
+  getAIAssetDetail: (id: string) => j(`/governance/ai-assets/${id}`),
   checkHallucination: (agentKey: string, output: string) => j('/hallucination/check', { method: 'POST', body: JSON.stringify({ agentKey, output }) }),
   getPriorAuth: (patientId: string, clinicianEmail?: string) =>
     j(`/priorauth?patient=${patientId}${clinicianEmail ? `&clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
@@ -115,6 +116,7 @@ const liveAgent2and3 = {
   getOutputIntegrity: live.getOutputIntegrity,
   getPromptInjection: live.getPromptInjection,
   getAIAssets: live.getAIAssets,
+  getAIAssetDetail: live.getAIAssetDetail,
   checkHallucination: live.checkHallucination,
   getMe: live.getMe,
   registerPatient: live.registerPatient,

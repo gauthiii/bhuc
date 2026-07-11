@@ -210,6 +210,7 @@ export interface OutputIntegritySummary {
 
 // AI Asset Management — mirrors the AI Control Tower Managed / Unmanaged asset inventory.
 export interface AIAssetRow {
+  id: string
   name: string
   builtBy: string
   type: string
@@ -220,6 +221,29 @@ export interface AIAssetRow {
 export interface AIAssetSummary {
   bhuc: { managed: AIAssetRow[]; unmanaged: AIAssetRow[] }
   instance: { totalSystems: number; managed: number; unmanaged: number }
+}
+
+// AI asset detail — governance (risk/assessments/approvals/controls) + agent config + tools.
+export interface AIToolDetail {
+  name: string
+  executionMode: string
+  type: string
+  description: string
+  script: string
+  subflow: string
+  retrieval: Record<string, string>
+}
+export interface AIAssetDetail {
+  asset: { name: string; type: string; builtBy: string; lifecycle: string; managed: boolean; riskScore: string }
+  airc: {
+    number: string; riskClassification: string; inherentRating: string; residualRating: string
+    controlEffectiveness: string; state: string; owner: string; description: string
+  } | null
+  assessments: { number: string; type: string; state: string; assignedTo: string; openedBy: string }[]
+  risks: { name: string; description: string; state: string; owner: string; inherent: string; residual: string }[]
+  controls: { name: string; description: string; state: string; owner: string; classification: string }[]
+  agent: { name: string; description: string; role: string; instructions: string; strategy: string } | null
+  tools: AIToolDetail[]
 }
 
 // Prompt-injection defense monitoring (Agent 1 / Front-Door output filter).

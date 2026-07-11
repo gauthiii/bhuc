@@ -10,7 +10,7 @@ the frontend deep-links to those.
 import json
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from . import prompt_injection as pi
 from .servicenow import get_table_client
@@ -262,6 +262,7 @@ def ai_assets() -> dict:
         lifecycle = (_disp(g.get("lifecycle_phase")) if g else "") or _disp(s.get("life_cycle_stage")) or "—"
         risk = (_disp(g.get("risk_score")) if g else "") or "—"
         row = {
+            "id": _val(s.get("sys_id")),          # digital-asset sys_id → detail route key
             "name": _disp(s.get("display_name")) or "—",
             "builtBy": _disp(s.get("sys_created_by")) or "—",
             "type": _disp(s.get("model_category")) or "AI system",
@@ -283,4 +284,145 @@ def ai_assets() -> dict:
         "bhuc": {"managed": managed, "unmanaged": unmanaged},
         "instance": {"totalSystems": total, "managed": managed_instance,
                      "unmanaged": max(0, total - managed_instance)},
+    }
+
+
+AGENT = "sn_aia_agent"
+AGENT_TOOL_M2M = "sn_aia_agent_tool_m2m"
+AGENT_TOOL = "sn_aia_tool"
+AIRC_SYSTEM = "sn_grc_ai_gov_ai_system"          # AIRC AI-system record (risk ratings)
+AIRC_TASK = "sn_grc_ai_gov_ai_system_task"       # AI assessments (impact/risk) on that record
+RISK = "sn_risk_risk"                            # risks attached via the agent's GRC profile
+CONTROL = "sn_compliance_control"                # controls attached via the agent's GRC profile
+
+
+def _tool_retrieval(m2m_inputs: str) -> dict:
+    """Pull the RAG/search config out of a Search Retriever tool's m2m inputs JSON."""
+    try:
+        items = json.loads(m2m_inputs or "[]")
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    by = {i.get("name"): i.get("value") for i in items if isinstance(i, dict)}
+    keys = ("search_type", "search_profile", "sources", "search_results_limit",
+            "document_match_threshold", "semantic_index_names", "chunking_mode",
+            "chunk_size", "expanded_snippet_size")
+    out = {k: by[k] for k in keys if by.get(k) not in (None, "")}
+    return out
+
+
+@router.get("/ai-assets/{asset_id}")
+def ai_asset_detail(asset_id: str) -> dict:
+    """Full detail for one BHUC agent: AICT governance (risk, assessments, approvals,
+    attached risks/controls — live, empty where none exist) + the agent's config
+    (description/role/instructions) and every tool with its full definition."""
+    table = get_table_client()
+
+    try:
+        asset = table.get(AI_SYSTEM, asset_id, display_value="all")
+    except Exception:  # ServiceNow 404 on an unknown sys_id raises via raise_for_status
+        asset = None
+    if not asset:
+        raise HTTPException(status_code=404, detail="AI asset not found")
+    name = _disp(asset.get("display_name")) or ""
+
+    # governance details (managed / lifecycle / risk)
+    gd = table.list(AI_GOV, f"asset={asset_id}", display_value="all", limit=1)
+    gd = gd[0] if gd else None
+    managed = _managed(gd.get("governed")) if gd else False
+
+    # AIRC governance record (risk ratings) — present only for governed/managed agents
+    airc = table.list(AIRC_SYSTEM, f"ai_system_digital_asset={asset_id}", display_value="all", limit=1)
+    airc = airc[0] if airc else None
+    airc_out = None
+    airc_id = None
+    if airc:
+        airc_id = _val(airc.get("sys_id"))
+        airc_out = {
+            "number": _disp(airc.get("number")),
+            "riskClassification": _disp(airc.get("risk_classification")) or "—",
+            "inherentRating": _disp(airc.get("inherent_rating")) or "—",
+            "residualRating": _disp(airc.get("residual_rating")) or "—",
+            "controlEffectiveness": _disp(airc.get("control_effectiveness_rating")) or "—",
+            "state": _disp(airc.get("state")) or "—",
+            "owner": _disp(airc.get("business_owner")) or "—",
+            "description": _disp(airc.get("description")) or "",
+        }
+
+    # Assessments (impact & risk) — AICT task records on the AIRC system, with status +
+    # who it is assigned to / approved by.
+    assessments = []
+    if airc_id:
+        atasks = table.list(AIRC_TASK, f"ai_system={airc_id}^ORDERBYnumber", display_value="all", limit=50)
+        assessments = [{
+            "number": _disp(a.get("number")),
+            "type": _disp(a.get("assessment_template")) or "Assessment",
+            "state": _disp(a.get("state")) or "—",
+            "assignedTo": _disp(a.get("assigned_to")) or "—",
+            "openedBy": _disp(a.get("opened_by")) or "—",
+        } for a in atasks]
+
+    # Risks & controls — attached via the agent's GRC profile (matched by name).
+    risks, controls = [], []
+    if name:
+        for r in table.list(RISK, f"profile.name={name}", display_value="all", limit=50):
+            risks.append({
+                "name": _disp(r.get("statement")) or _disp(r.get("content")) or "—",
+                "description": _disp(r.get("description")) or "",
+                "state": _disp(r.get("state")) or "—",
+                "owner": _disp(r.get("owner")) or "—",
+                "inherent": _disp(r.get("inherent_score")) or _disp(r.get("inherent_risk")) or "—",
+                "residual": _disp(r.get("residual_score")) or _disp(r.get("residual_risk")) or "—",
+            })
+        for c in table.list(CONTROL, f"profile.name={name}", display_value="all", limit=50):
+            controls.append({
+                "name": _disp(c.get("content")) or _disp(c.get("reference")) or "—",
+                "description": _disp(c.get("description")) or "",
+                "state": _disp(c.get("state")) or "—",
+                "owner": _disp(c.get("owner")) or "—",
+                "classification": _disp(c.get("classification")) or "—",
+            })
+
+    # agent config (sn_aia_agent) — match by name
+    ag = table.list(AGENT, f"name={name}", display_value="all", limit=1) \
+        or table.list(AGENT, f"nameLIKE{name}", display_value="all", limit=1)
+    agent_out, tools_out = None, []
+    if ag:
+        a = ag[0]
+        agent_id = _val(a.get("sys_id"))
+        agent_out = {
+            "name": _disp(a.get("name")), "description": _disp(a.get("description")) or "",
+            "role": _disp(a.get("role")) or "", "instructions": _disp(a.get("instructions")) or "",
+            "strategy": _disp(a.get("strategy")) or "—",
+        }
+        # tools + full definitions
+        m2m = table.list(AGENT_TOOL_M2M, f"agent={agent_id}", display_value="all", limit=50)
+        for m in m2m:
+            tool_ref = _val(m.get("tool"))
+            trec = table.get(AGENT_TOOL, tool_ref, display_value="all") if tool_ref else None
+            ttype = _disp(trec.get("type")) if trec else ""
+            tool = {
+                "name": _disp(m.get("name")) or (_disp(trec.get("name")) if trec else "—"),
+                "executionMode": _disp(m.get("execution_mode")) or "—",
+                "type": ttype or "—",
+                "description": (_disp(trec.get("description")) if trec else "") or "",
+                "script": (_disp(trec.get("script")) if trec and ttype == "Script" else "") or "",
+                "subflow": (_disp(trec.get("target_document")) if trec and ttype == "Subflow" else "") or "",
+                "retrieval": _tool_retrieval(_disp(m.get("inputs"))) if ttype == "Search Retriever" else {},
+            }
+            tools_out.append(tool)
+
+    return {
+        "asset": {
+            "name": name, "type": _disp(asset.get("model_category")) or "AI system",
+            "builtBy": _disp(asset.get("sys_created_by")) or "—",
+            "lifecycle": (_disp(gd.get("lifecycle_phase")) if gd else "") or _disp(asset.get("life_cycle_stage")) or "—",
+            "managed": managed,
+            "riskScore": (_disp(gd.get("risk_score")) if gd else "") or "—",
+        },
+        "airc": airc_out,
+        "assessments": assessments,
+        "risks": risks,
+        "controls": controls,
+        "agent": agent_out,
+        "tools": tools_out,
     }
