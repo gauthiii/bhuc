@@ -208,6 +208,35 @@ export interface OutputIntegritySummary {
   }
 }
 
+// Crisis escalations (u_bhuc_escalation) — patientName null ⇒ anonymous / unregistered.
+export interface Escalation {
+  id: string
+  source: string
+  channel: string
+  message: string
+  detectedBy: string
+  status: 'open' | 'acknowledged' | 'resolved'
+  onCallNotified: boolean
+  acknowledgedBy: string
+  acknowledgedAt: string
+  notes: string
+  patientName: string | null
+  patientNumber: string
+  registered: boolean
+  createdAt: string
+}
+
+// Clinician notification feed (bell).
+export interface NotificationItem {
+  id: string
+  type: 'registration' | 'screening' | 'appointment' | 'escalation'
+  title: string
+  detail: string
+  at: string
+  link?: string
+  urgent?: boolean
+}
+
 // AI Asset Management — mirrors the AI Control Tower Managed / Unmanaged asset inventory.
 export interface AIAssetRow {
   id: string

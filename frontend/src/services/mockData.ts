@@ -6,7 +6,7 @@ import type {
   PatientProfile, PriorAuthPacket, RiskDetail, ScreeningQuestion,
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
   MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary, OutputIntegritySummary,
-  HallucinationCheck, PromptInjectionSummary, AIAssetSummary, AIAssetDetail,
+  HallucinationCheck, PromptInjectionSummary, AIAssetSummary, AIAssetDetail, Escalation, NotificationItem,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -417,6 +417,25 @@ export const mock = {
         ],
       },
     }
+  },
+  async getEscalations(): Promise<Escalation[]> {
+    await wait()
+    return [
+      { id: 'BHUC_ESCALATION_006', source: 'Check-in', channel: '988', message: 'Check-in flagged active self-harm thoughts.', detectedBy: 'crisis_classifier', status: 'open', onCallNotified: true, acknowledgedBy: '', acknowledgedAt: '', notes: '', patientName: 'Maya Alvarez', patientNumber: 'BHUC_PATIENT_002', registered: true, createdAt: '2026-07-12 07:20:25' },
+      { id: 'BHUC_ESCALATION_005', source: 'Front door', channel: '988', message: 'I want to end my life', detectedBy: 'crisis_classifier', status: 'open', onCallNotified: true, acknowledgedBy: '', acknowledgedAt: '', notes: '', patientName: null, patientNumber: '', registered: false, createdAt: '2026-07-12 06:20:11' },
+      { id: 'BHUC_ESCALATION_003', source: 'Front door', channel: '988', message: 'I want to hurt myself', detectedBy: 'crisis_classifier', status: 'resolved', onCallNotified: true, acknowledgedBy: '', acknowledgedAt: '', notes: 'Resolved by clinician.', patientName: null, patientNumber: '', registered: false, createdAt: '2026-07-11 00:26:08' },
+    ]
+  },
+  async acknowledgeEscalation(_id: string, _email?: string) { await wait(); return { ok: true, status: 'acknowledged' } },
+  async resolveEscalation(_id: string, _email?: string) { await wait(); return { ok: true, status: 'resolved' } },
+  async getNotifications(): Promise<NotificationItem[]> {
+    await wait()
+    return [
+      { id: 'esc:1', type: 'escalation', title: 'Crisis escalation', detail: 'Unregistered patient · front door', at: '2026-07-12 06:20:11', link: '/clinician/escalations', urgent: true },
+      { id: 'scr:1', type: 'screening', title: 'New screening · C-SSRS', detail: 'Daniel Rivera · High', at: '2026-07-10 07:50:47', link: '/clinician/worklist' },
+      { id: 'appt:1', type: 'appointment', title: 'Appointment proposed', detail: 'Maya Alvarez', at: '2026-07-09 05:00:00', link: '/clinician/calendar' },
+      { id: 'reg:1', type: 'registration', title: 'New patient registered', detail: 'Daniel Rivera', at: '2026-07-08 12:00:00', link: '/clinician/worklist' },
+    ]
   },
   async getAIAssetDetail(id: string): Promise<AIAssetDetail> {
     await wait()

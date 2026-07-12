@@ -28,6 +28,7 @@ from .careplan import router as careplan_router
 from .messages import router as messages_router
 from .checkin import router as checkin_router
 from .disposition import router as disposition_router
+from .escalations import router as escalations_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -69,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(messages_router)
     app.include_router(checkin_router)
     app.include_router(disposition_router)
+    app.include_router(escalations_router)
     return app
 
 

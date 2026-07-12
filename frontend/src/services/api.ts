@@ -90,6 +90,10 @@ const live = {
   rejectAppointment: (id: string) => j('/scheduling/reject', { method: 'POST', body: JSON.stringify({ id }) }),
   getFairness: () => j('/governance/fairness'),
   getDisposition: (id: string) => j(`/disposition/${id}`),
+  getEscalations: () => j('/escalations'),
+  acknowledgeEscalation: (id: string, clinicianEmail?: string) => j('/escalations/acknowledge', { method: 'POST', body: JSON.stringify({ id, clinicianEmail }) }),
+  resolveEscalation: (id: string, clinicianEmail?: string) => j('/escalations/resolve', { method: 'POST', body: JSON.stringify({ id, clinicianEmail }) }),
+  getNotifications: () => j('/notifications'),
 }
 
 // Per-endpoint live overrides. The rest of the app stays on mock (its CRUD routes
@@ -154,6 +158,10 @@ const liveAgent2and3 = {
   rejectAppointment: live.rejectAppointment,
   getFairness: live.getFairness,
   getDisposition: live.getDisposition,
+  getEscalations: live.getEscalations,
+  acknowledgeEscalation: live.acknowledgeEscalation,
+  resolveEscalation: live.resolveEscalation,
+  getNotifications: live.getNotifications,
 }
 
 const overrides = USE_MOCK

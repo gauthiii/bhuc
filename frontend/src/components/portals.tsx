@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CalendarDays, ClipboardList, FileText, HeartPulse, Home, ListChecks, MessageCircle, ShieldQuestion, Stethoscope, UserRound, CalendarClock, Bot, Database, ExternalLink, ShieldCheck, ShieldAlert, Boxes, Workflow } from 'lucide-react'
 import { PortalShell, PageHeader, type NavItem } from './Shell'
 import { usePatientAuth, useClinicianAuth, useGovernanceAuth } from '../contexts/AuthContext'
+import { NotificationBell } from './NotificationBell'
 
 // ServiceNow instance — the Governance "Tables" links open each table's list view here.
 const SNOW_INSTANCE = 'https://ven04690.service-now.com'
@@ -61,6 +62,7 @@ const CLINICIAN_NAV: NavItem[] = [
   { to: '/clinician/worklist', label: 'Worklist', icon: <ListChecks className="h-4 w-4" /> },
   { to: '/clinician/scheduling', label: 'Scheduling', icon: <CalendarClock className="h-4 w-4" /> },
   { to: '/clinician/calendar', label: 'Calendar', icon: <CalendarDays className="h-4 w-4" /> },
+  { to: '/clinician/escalations', label: 'Escalations', icon: <ShieldAlert className="h-4 w-4" /> },
 ]
 
 export function PatientShell({ title, intro, actions, children }: { title: string; intro?: string; actions?: ReactNode; children: ReactNode }) {
@@ -78,7 +80,7 @@ export function ClinicianShell({ title, intro, actions, children }: { title: str
   const { user, logout } = useClinicianAuth()
   const navigate = useNavigate()
   return (
-    <PortalShell portal="Clinician" user={user?.displayName} nav={CLINICIAN_NAV} onSignOut={() => { logout(); navigate('/clinician/sign-in') }}>
+    <PortalShell portal="Clinician" user={user?.displayName} nav={CLINICIAN_NAV} headerExtra={<NotificationBell />} onSignOut={() => { logout(); navigate('/clinician/sign-in') }}>
       <PageHeader title={title} intro={intro} actions={actions} />
       {children}
     </PortalShell>

@@ -8,11 +8,12 @@ export interface NavItem { to: string; label: string; icon?: ReactNode }
 
 // Portal shell: sticky top bar + persistent 988 banner + optional side nav.
 // Used by both the patient and clinician portals (careatlas PatientShell pattern).
-export function PortalShell({ portal, user, nav, sidebarExtra, onSignOut, children }: {
+export function PortalShell({ portal, user, nav, sidebarExtra, headerExtra, onSignOut, children }: {
   portal: 'Patient' | 'Clinician' | 'Governance'
   user?: string
   nav?: NavItem[]
   sidebarExtra?: ReactNode
+  headerExtra?: ReactNode
   onSignOut?: () => void
   children: ReactNode
 }) {
@@ -39,6 +40,7 @@ export function PortalShell({ portal, user, nav, sidebarExtra, onSignOut, childr
             <span className={`hidden rounded-full px-2 py-0.5 text-xs sm:inline ${low ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}`} title="Session timeout">
               {mm}:{ss}
             </span>
+            {headerExtra}
             {user && <span className="hidden text-slate-600 sm:inline">{user}</span>}
             {onSignOut && (
               <button onClick={onSignOut} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">
