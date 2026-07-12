@@ -10,6 +10,8 @@
 **Version:** 3.0 — Six-agent architecture + iframe/A2A integration (careatlas-modeled). Supersedes v2.0.
 **Status:** Draft for Technical Review
 
+> **As-built additions (2026-07-10→12), tracked in `action.md` (FE-9m…FE-9q) + dedicated docs:** (1) **Prior-auth 12-field gap closed** — `priorauth.py _build_document` seeds all clinician-blank packet fields from existing data (see memory `bhuc-priorauth-fields`). (2) **UC1 prompt-injection defense** — a client-side **input** content-filtering policy (300 prompts) blocks injections on the front-door chat; the deterministic **output** filter was built but is disabled (over-blocked facility answers). Full plan in **`prompt_injection_usecase.md`**. (3) **Governance portal expansion** — an **AI Asset Management** page + per-**agent detail** page (AICT/AIRC risks, controls, assessments, config, tools), sidebar renamed **"Governance"**, and an animated end-to-end **Workflow** page (`/governance/workflow`, PNG export). Full monitoring reference in **`governance_usecase.md`**. (4) **Clinician Escalations** screen (`/clinician/escalations`, with "unregistered patient" handling + acknowledge/resolve) and a header **notification bell** (registrations/screenings/appointments/escalations). (5) **Facility KB** got 6 new how-to draft articles (KB0010049–54) — **pending publish + reindex**.
+
 ---
 
 ## A Note on Sourcing and Verification

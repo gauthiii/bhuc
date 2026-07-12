@@ -28,11 +28,11 @@
 | 2 | Agents (AG) | 13 | 11 | 1 | ~14.75 | ~0.75 |
 | 3 | Governance config (GOV) | 10 | 3 | 0 | ~4.75 | ~3.75 |
 | 4 | Backend / FastAPI (BE) | 11 | 4 | 2 | ~10.75 | ~3.75 |
-| 5 | Frontend / React (FE) | 27 | 25 | 0 | ~30 | ~2 |
+| 5 | Frontend / React (FE) | 29 | 27 | 0 | ~32 | ~2 |
 | 6 | iframe portal wiring (PORT) | 3 | 1 | 0 | ~2 | ~1.5 |
 | 7 | Demo (DEMO) | 5 | 0 | 0 | ~2.5 | ~2.5 |
 | — | Doc cleanup (DOC) | 6 | 0 | 0 | ~1.8 | ~1.8 |
-| | **Total** | **95** | **60** | **5** | **~84 person-days** | **~19 person-days** |
+| | **Total** | **97** | **62** | **5** | **~86 person-days** | **~19 person-days** |
 
 > Estimates are single-threaded; with an SN admin + backend dev + frontend dev working in parallel, calendar time compresses substantially (see "Suggested critical path" at the end).
 > **Est. person-days left** counts every not-done (☐) item at full effort and each partially-complete (◐) item at half its estimate (est − done − ½·partial), summed from the per-item estimates in the phase tables below.
