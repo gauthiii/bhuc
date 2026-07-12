@@ -103,3 +103,8 @@ button { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---- Workflow modal: animated dashed edge ---- */
+@keyframes bhucdash {
+  to { stroke-dashoffset: -12; }
+}

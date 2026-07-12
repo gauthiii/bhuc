@@ -27,6 +27,7 @@ import { GovernanceAgentsInventory } from './pages/governance/AgentsInventory'
 import { GovernanceOutputIntegrity } from './pages/governance/OutputIntegrity'
 import { GovernanceAIAssets } from './pages/governance/AIAssetManagement'
 import { GovernanceAIAssetDetail } from './pages/governance/AIAssetDetail'
+import { GovernanceWorkflow } from './pages/governance/Workflow'
 import { GovernancePromptInjection } from './pages/governance/PromptInjection'
 import { GovernanceFairness } from './pages/governance/Fairness'
 
@@ -80,6 +81,7 @@ export default function App() {
       <Route path="/governance/output-integrity" element={<GovernanceGuard><GovernanceOutputIntegrity /></GovernanceGuard>} />
       <Route path="/governance/prompt-injection" element={<GovernanceGuard><GovernancePromptInjection /></GovernanceGuard>} />
       <Route path="/governance/fairness" element={<GovernanceGuard><GovernanceFairness /></GovernanceGuard>} />
+      <Route path="/governance/workflow" element={<GovernanceGuard><GovernanceWorkflow /></GovernanceGuard>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

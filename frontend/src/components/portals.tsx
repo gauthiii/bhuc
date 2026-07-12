@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarDays, ClipboardList, FileText, HeartPulse, Home, ListChecks, MessageCircle, ShieldQuestion, Stethoscope, UserRound, CalendarClock, Bot, Database, ExternalLink, ShieldCheck, ShieldAlert, Boxes } from 'lucide-react'
+import { CalendarDays, ClipboardList, FileText, HeartPulse, Home, ListChecks, MessageCircle, ShieldQuestion, Stethoscope, UserRound, CalendarClock, Bot, Database, ExternalLink, ShieldCheck, ShieldAlert, Boxes, Workflow } from 'lucide-react'
 import { PortalShell, PageHeader, type NavItem } from './Shell'
 import { usePatientAuth, useClinicianAuth, useGovernanceAuth } from '../contexts/AuthContext'
 
@@ -85,11 +85,33 @@ export function ClinicianShell({ title, intro, actions, children }: { title: str
   )
 }
 
+// Sidebar extra for the Governance portal: an end-to-end workflow launcher (navigates to
+// the full-page patient+clinician+AI journey) plus the Tables quick-links.
+function GovernanceSidebarExtra() {
+  const navigate = useNavigate()
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="mb-1 flex items-center gap-1.5 px-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <Workflow className="h-3.5 w-3.5" /> Workflow
+        </p>
+        <button
+          onClick={() => navigate('/governance/workflow')}
+          className="group flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100">
+          Patient &amp; Clinician Journey
+          <ExternalLink className="ml-auto h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500" />
+        </button>
+      </div>
+      <GovernanceTables />
+    </div>
+  )
+}
+
 export function GovernanceShell({ title, intro, actions, children }: { title: string; intro?: string; actions?: ReactNode; children: ReactNode }) {
   const { user, logout } = useGovernanceAuth()
   const navigate = useNavigate()
   return (
-    <PortalShell portal="Governance" user={user?.displayName} nav={GOVERNANCE_NAV} sidebarExtra={<GovernanceTables />}
+    <PortalShell portal="Governance" user={user?.displayName} nav={GOVERNANCE_NAV} sidebarExtra={<GovernanceSidebarExtra />}
       onSignOut={() => { logout(); navigate('/governance/sign-in') }}>
       <PageHeader title={title} intro={intro} actions={actions} />
       {children}
