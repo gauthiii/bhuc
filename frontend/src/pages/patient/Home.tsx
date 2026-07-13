@@ -140,7 +140,19 @@ export function PatientHome() {
     setSending(true)
     try {
       const reply: ChatReply = await api.frontDoorChat(trimmed)
-      setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text: reply.reply, filtered: reply.filtered }])
+      // Escalation signal (Agent 1 / Front-Door). The crisis classifier substring-matches the
+      // message ("kill myself", "suicide", "self harm", "overdose", "want to die", …); on a hit
+      // it fires the 988 Escalation subflow, which logs to u_bhuc_escalation and returns NO user
+      // text — so the agent emits an empty JSON object, usually markdown-fenced (```json\n{}\n```).
+      // Treat crisis=true / riskLevel=crisis, or any empty-object reply, as an escalation and
+      // surface a human-readable notice instead of the raw "{}".
+      const stripped = (reply.reply ?? '').replace(/```[a-z]*/gi, '').replace(/```/g, '').trim()
+      const emptyObj = stripped === '' || /^\{\s*\}$/.test(stripped)
+      const escalated = reply.crisis === true || reply.riskLevel === 'crisis' || emptyObj
+      const text = escalated
+        ? 'An escalation has been triggered — you should be expecting a call from our crisis team.'
+        : reply.reply
+      setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text, filtered: reply.filtered }])
       if (reply.crisis) setCrisis(true)
     } catch {
       setTurns((t) => [...t, { id: 'e-' + Date.now(), role: 'agent', text: 'Sorry, that didn’t send. Please try again.' }])
