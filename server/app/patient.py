@@ -177,7 +177,11 @@ def patient_chart(patient_id: str, reveal: int = Query(0),
         raise HTTPException(status_code=404, detail="Patient not found")
     part2_consent = _b(rec.get("u_part2_consent"))
     part2_role = has_part2_access(clinician_email(authorization, clinicianEmail))
-    can_see_part2 = bool(reveal) and part2_consent and part2_role
+    # Role-only gate (product decision 2026-07-12): the manual "reveal" toggle was removed —
+    # a clinician who holds u_bhuc_part2_access simply sees Part 2 content; everyone else gets
+    # the masked/redacted component. Consent is no longer required for *viewing* in-app (the
+    # platform ACLs remain the authoritative gate for direct-SN access). `reveal` is ignored.
+    can_see_part2 = part2_role
 
     name = f"{rec.get('u_first_name', '')} {rec.get('u_last_name', '')}".strip() or "Unknown patient"
     insurance = "Self-pay" if _b(rec.get("u_self_pay")) else (rec.get("u_insurance_provider") or "—")
@@ -253,6 +257,94 @@ def patient_chart(patient_id: str, reveal: int = Query(0),
         "aiSummary": {"text": summary, "citations": citations},
         "history": hist,
         "part2Content": part2_content,
+    }
+
+
+# SUD battery → 42 CFR Part 2. Redacted for clinicians without u_bhuc_part2_access.
+# Core mental-health spine (c_ssrs, phq9, gad7) is visible to any clinician.
+_SUD_INSTRUMENTS = {"nida_qs", "audit", "dast10", "craving", "sows", "bam", "socrates8"}
+_INSTRUMENT_LABEL = {
+    "c_ssrs": "C-SSRS", "phq9": "PHQ-9", "gad7": "GAD-7", "nida_qs": "NIDA Quick Screen",
+    "audit": "AUDIT", "dast10": "DAST-10", "craving": "Craving & Triggers",
+    "sows": "SOWS", "bam": "BAM", "socrates8": "SOCRATES-8",
+}
+# Display order: mental-health spine first, then the SUD battery.
+_INSTRUMENT_ORDER = ["c_ssrs", "phq9", "gad7", "nida_qs", "audit", "dast10",
+                     "craving", "sows", "bam", "socrates8"]
+
+
+@router.get("/patient/{patient_id}/screenings/latest")
+def latest_screenings(patient_id: str, clinicianEmail: str = Query(""),
+                      authorization: Optional[str] = Header(None)) -> dict:
+    """Latest *scored* screening per instrument for one patient, rendered as a set of
+    questionnaire "documents" for the clinician chart's screening-results viewer.
+
+    42 CFR Part 2 gate (role-only, per product decision): a clinician who does NOT hold
+    ``u_bhuc_part2_access`` gets the SUD-battery documents back as ``redacted: true`` with
+    NO responses/score — the protected content never leaves the server. Core mental-health
+    instruments (C-SSRS / PHQ-9 / GAD-7) are always returned in full."""
+    table = get_table_client()
+    rec = table.get(PATIENT, patient_id)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    has_access = has_part2_access(clinician_email(authorization, clinicianEmail))
+
+    # All scored screenings, newest first; keep only the latest per instrument.
+    rows = table.list(
+        SCREENING, f"u_patient={patient_id}^u_state=scored^ORDERBYDESCsys_updated_on",
+        fields="u_number,u_instrument,u_responses,u_risk_band,u_raw_score,u_subscores,"
+               "u_rationale,sys_created_on,sys_updated_on", limit=200)
+    latest: dict = {}
+    for r in rows:
+        inst = (r.get("u_instrument") or "").lower()
+        if inst and inst not in latest:
+            latest[inst] = r
+
+    import json as _json
+    documents = []
+    for inst in _INSTRUMENT_ORDER:
+        r = latest.get(inst)
+        if not r:
+            continue
+        is_part2 = inst in _SUD_INSTRUMENTS
+        redacted = is_part2 and not has_access
+        doc = {
+            "instrument": inst,
+            "instrumentLabel": _INSTRUMENT_LABEL.get(inst, inst.upper()),
+            "screeningId": r.get("u_number") or "",
+            "date": r.get("sys_created_on") or "",
+            "part2": is_part2,
+            "redacted": redacted,
+        }
+        if not redacted:
+            try:
+                responses = _json.loads(r.get("u_responses") or "{}")
+            except (ValueError, TypeError):
+                responses = {}
+            try:
+                subscores = _json.loads(r.get("u_subscores") or "null")
+            except (ValueError, TypeError):
+                subscores = None
+            doc.update({
+                "riskBand": r.get("u_risk_band") or "unknown",
+                "score": r.get("u_raw_score") or "",
+                "subscores": subscores,
+                "rationale": r.get("u_rationale") or "",
+                "responses": responses,
+            })
+        documents.append(doc)
+
+    insurance = "Self-pay" if _b(rec.get("u_self_pay")) else (rec.get("u_insurance_provider") or "—")
+    return {
+        "patient": {
+            "name": f"{rec.get('u_first_name', '')} {rec.get('u_last_name', '')}".strip() or "Unknown patient",
+            "number": rec.get("u_number") or "",
+            "dateOfBirth": rec.get("u_date_of_birth") or "—",
+            "insurance": insurance,
+        },
+        "clinicianHasPart2Access": has_access,
+        "documents": documents,
     }
 
 

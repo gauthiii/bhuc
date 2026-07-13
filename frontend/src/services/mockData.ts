@@ -7,6 +7,7 @@ import type {
   ScreeningResult, SendMessageResult, WorklistItem, Instrument, ConsentRecord, DashboardSummary,
   MeResponse, ScreeningStatusItem, BatchScreeningResult, NotesSummary, OutputIntegritySummary,
   HallucinationCheck, PromptInjectionSummary, AIAssetSummary, AIAssetDetail, Escalation, NotificationItem,
+  LatestScreenings,
 } from '../lib/types'
 import { FACILITY } from '../lib/facility'
 
@@ -345,6 +346,19 @@ export const mock = {
         { label: 'C-SSRS ideation', answer: 'Positive' },
       ],
       status: 'pending',
+    }
+  },
+  async getLatestScreenings(patientId: string, _clinicianEmail?: string): Promise<LatestScreenings> {
+    await wait()
+    return {
+      patient: { name: 'Maya Alvarez', number: patientId || 'BHUC_PATIENT_001', dateOfBirth: '1996-04-12', insurance: 'Blue Shield PPO 500' },
+      clinicianHasPart2Access: true,
+      documents: [
+        { instrument: 'c_ssrs' as const, instrumentLabel: 'C-SSRS', screeningId: 'BHUC_SCREENING_002', date: iso(-2), part2: false, redacted: false, riskBand: 'high' as const, score: '', responses: { q1: 'yes', q2: 'yes', q3: 'no', q4: 'no', q5: 'no', q6: 'no' } },
+        { instrument: 'phq9' as const, instrumentLabel: 'PHQ-9', screeningId: 'BHUC_SCREENING_003', date: iso(-2), part2: false, redacted: false, riskBand: 'high' as const, score: '18', responses: { q1: 3, q2: 3, q3: 2, q4: 2, q5: 1, q6: 2, q7: 1, q8: 2, q9: 2 } },
+        { instrument: 'gad7' as const, instrumentLabel: 'GAD-7', screeningId: 'BHUC_SCREENING_001', date: iso(-2), part2: false, redacted: false, riskBand: 'moderate' as const, score: '12', responses: { q1: 2, q2: 2, q3: 2, q4: 1, q5: 2, q6: 2, q7: 1 } },
+        { instrument: 'audit' as const, instrumentLabel: 'AUDIT', screeningId: 'BHUC_SCREENING_004', date: iso(-2), part2: true, redacted: false, riskBand: 'moderate' as const, score: '14', responses: { q1: 3, q2: 2, q3: 2, q4: 1, q5: 2, q6: 1, q7: 1, q8: 1, q9: 0, q10: 1 } },
+      ],
     }
   },
   async confirmRisk(_id?: string, _action?: string, _rationale?: string, _band?: string) { await wait(); return { ok: true } },

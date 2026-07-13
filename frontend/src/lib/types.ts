@@ -307,6 +307,29 @@ export interface PatientChart {
   part2Content?: Part2Note[]
 }
 
+// ---- Latest screening-results viewer (clinician chart) ----
+// One instrument's latest scored screening, rendered as a questionnaire "document".
+// SUD-battery instruments come back `redacted: true` (no responses/score) for clinicians
+// without u_bhuc_part2_access — the server never sends the protected content.
+export interface ScreeningDoc {
+  instrument: Instrument
+  instrumentLabel: string
+  screeningId: string
+  date: string
+  part2: boolean
+  redacted: boolean
+  riskBand?: RiskBand
+  score?: string
+  subscores?: Record<string, number> | null
+  rationale?: string
+  responses?: Record<string, number | string>
+}
+export interface LatestScreenings {
+  patient: { name: string; number: string; dateOfBirth: string; insurance: string }
+  clinicianHasPart2Access: boolean
+  documents: ScreeningDoc[]
+}
+
 export interface RiskDetail {
   screeningId: string
   patientId?: string

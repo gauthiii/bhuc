@@ -59,6 +59,8 @@ const live = {
   },
   setConsent: (body: unknown) => j('/patient/consent', { method: 'PATCH', body: JSON.stringify(body) }),
   getRiskDetail: (id: string) => j(`/risk/${id}`),
+  getLatestScreenings: (patientId: string, clinicianEmail?: string) =>
+    j(`/patient/${patientId}/screenings/latest${clinicianEmail ? `?clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
   confirmRisk: (id: string, action: string, rationale: string, band?: string) => j('/risk/confirm', { method: 'POST', body: JSON.stringify({ id, action, rationale, band }) }),
   getDocumentation: (id: string, clinicianEmail?: string) => j(`/note/${id}${clinicianEmail ? `?clinicianEmail=${encodeURIComponent(clinicianEmail)}` : ''}`),
   getNotesSummary: (patientId: string) => j(`/notes/summary/${patientId}`),
@@ -111,6 +113,7 @@ const liveAgent2and3 = {
   submitScreeningBatch: live.submitScreeningBatch,
   getWorklist: live.getWorklist,
   getRiskDetail: live.getRiskDetail,
+  getLatestScreenings: live.getLatestScreenings,
   confirmRisk: live.confirmRisk,
   getDocumentation: live.getDocumentation,
   getNotesSummary: live.getNotesSummary,
