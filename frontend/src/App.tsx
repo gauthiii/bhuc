@@ -19,6 +19,7 @@ import { ClinicianChart } from './pages/clinician/Chart'
 import { ClinicianRiskConfirm } from './pages/clinician/RiskConfirm'
 import { ClinicianDocumentation } from './pages/clinician/Documentation'
 import { ClinicianPriorAuth } from './pages/clinician/PriorAuth'
+import { ClinicianPriorAuthDemo } from './pages/clinician/PriorAuthDemo'
 import { ClinicianDisposition } from './pages/clinician/Disposition'
 import { ClinicianScheduling } from './pages/clinician/Scheduling'
 import { ClinicianCalendarPage } from './pages/clinician/Calendar'
@@ -69,6 +70,7 @@ export default function App() {
       <Route path="/clinician/risk/:screeningId" element={<ClinicianGuard><ClinicianRiskConfirm /></ClinicianGuard>} />
       <Route path="/clinician/documentation/:id" element={<ClinicianGuard><ClinicianDocumentation /></ClinicianGuard>} />
       <Route path="/clinician/prior-auth/:patientId" element={<ClinicianGuard><ClinicianPriorAuth /></ClinicianGuard>} />
+      <Route path="/clinician/prior-auth2" element={<ClinicianGuard><ClinicianPriorAuthDemo /></ClinicianGuard>} />
       <Route path="/clinician/disposition/:id" element={<ClinicianGuard><ClinicianDisposition /></ClinicianGuard>} />
       <Route path="/clinician/scheduling" element={<ClinicianGuard><ClinicianScheduling /></ClinicianGuard>} />
       <Route path="/clinician/calendar" element={<ClinicianGuard><ClinicianCalendarPage /></ClinicianGuard>} />
