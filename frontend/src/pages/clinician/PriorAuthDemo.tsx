@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Lock, LockOpen, CheckCircle2, Sparkles, Plus, FileText, Trash2, Eye, EyeOff,
-  Paperclip, PenLine, AlertTriangle, HelpCircle,
+  Paperclip, PenLine, AlertTriangle, Scale,
 } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
 import { Panel, StatusBadge, Button, Input, Textarea, Select } from '../../components/ui'
 import { AgentRunProgress } from '../../components/AgentRunProgress'
+import { HelpTip } from '../../components/HelpTip'
+import { PriorAuthFairnessModal } from '../../components/PriorAuthFairnessModal'
 import {
   buildDemoPacket, REDISCLOSURE_NOTICE,
   DEMO_PRIMARY_DX_OPTIONS, DEMO_SECONDARY_DX_OPTIONS, DEMO_PAYER_OPTIONS,
@@ -24,40 +26,6 @@ const EMPTY_FORM: DemoForm = {
   requestedUnits: '3x/week for 4 weeks',
 }
 
-// Hover/focus help on a field label: what the field is and what belongs in it. Opens on
-// pointer hover, on keyboard focus, and on click (so it works on touch), and closes on Escape.
-function FieldHelp({ label, help }: { label: string; help: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <span
-      className="relative inline-flex"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        aria-label={`What is ${label}?`}
-        aria-expanded={open}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false) }}
-        className="text-slate-300 transition hover:text-teal-600 focus:text-teal-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-200"
-      >
-        <HelpCircle className="h-3.5 w-3.5" />
-      </button>
-      {open && (
-        <span
-          role="tooltip"
-          className="absolute left-0 top-full z-40 mt-1.5 w-72 rounded-lg bg-slate-900 px-3 py-2 text-[11px] font-normal normal-case leading-relaxed tracking-normal text-slate-100 shadow-xl ring-1 ring-black/10"
-        >
-          {help}
-        </span>
-      )}
-    </span>
-  )
-}
-
 // A draft-form control with hover help. Mirrors <Field> from ui.tsx, but wraps in a div
 // instead of a <label> so the help button is not nested inside a label element.
 function FormField({ label, help, children }: { label: string; help: string; children: ReactNode }) {
@@ -65,7 +33,7 @@ function FormField({ label, help, children }: { label: string; help: string; chi
     <div>
       <span className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700">
         {label}
-        <FieldHelp label={label} help={help} />
+        <HelpTip label={label} help={help} />
       </span>
       {children}
     </div>
@@ -97,7 +65,7 @@ function DocFieldRow({ field, value, redacted, editable, onEdit }: {
       <dt className="pt-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
         <span className="inline-flex items-center gap-1.5">
           {field.label}
-          {field.help && <FieldHelp label={field.label} help={field.help} />}
+          {field.help && <HelpTip label={field.label} help={field.help} />}
         </span>
         {field.hint && <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-slate-300">{field.hint}</span>}
       </dt>
@@ -133,6 +101,7 @@ export function ClinicianPriorAuthDemo() {
   const [attested, setAttested] = useState(false)
   const [preview, setPreview] = useState(false)
   const [part2Access, setPart2Access] = useState(true)   // toggle: role + consent granted?
+  const [fairnessOpen, setFairnessOpen] = useState(false)
 
   const selected = packets.find((p) => p.id === selectedId) ?? null
   const openDraft = packets.find((p) => p.status !== 'submitted') ?? null
@@ -224,6 +193,11 @@ export function ClinicianPriorAuthDemo() {
     <ClinicianShell
       title="Prior authorization"
       intro="Draft a payer-ready prior-authorization packet. The Prior-Auth Compliance Agent searches the payer policy library and drafts a cited packet with the medical-necessity narrative, ASAM dimensions and provider identifiers filled in. Review, edit, sign and submit — the agent never submits. SUD fields are redacted under 42 CFR Part 2 without role + consent."
+      actions={
+        <Button variant="secondary" onClick={() => setFairnessOpen(true)}>
+          <Scale className="h-4 w-4" /> Fairness monitoring
+        </Button>
+      }
     >
       <div className="mx-auto grid max-w-4xl gap-4">
         <HumanInLoopNote>
@@ -312,7 +286,7 @@ export function ClinicianPriorAuthDemo() {
               <div className="mt-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
                   Secondary diagnoses (optional)
-                  <FieldHelp label="Secondary diagnoses" help={FORM_HELP.secondaryDx} />
+                  <HelpTip label="Secondary diagnoses" help={FORM_HELP.secondaryDx} />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {DEMO_SECONDARY_DX_OPTIONS.filter((o) => o.code !== form.primaryDx).map((o) => {
@@ -475,6 +449,8 @@ export function ClinicianPriorAuthDemo() {
           </div>
         ) : null}
       </div>
+
+      {fairnessOpen && <PriorAuthFairnessModal onClose={() => setFairnessOpen(false)} />}
 
       {drafting && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-label="Prior-Auth Compliance Agent">
