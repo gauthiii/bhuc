@@ -10,6 +10,7 @@ import { CrisisDialog } from '../../components/CrisisDialog'
 import { Panel, Button, StatusBadge, Spinner, ErrorState, Textarea, EmptyState } from '../../components/ui'
 import { formatDateTime } from '../../lib/format'
 import { screenInput, CATEGORY_LABEL, BLOCKLIST_COUNT, type InjectionCategory } from '../../lib/promptInjectionPolicy'
+import { isCoverageQuestion, coverageAnswer } from '../../lib/coverageAnswer'
 
 type BlockedInfo = { input: string; category: InjectionCategory; matched: string }
 
@@ -138,6 +139,17 @@ export function PatientHome() {
     setDraft('')
     setTurns((t) => [...t, { id: 'u-' + Date.now(), role: 'user', text: trimmed }])
     setSending(true)
+    // "What is my insurance coverage?" is answered from the member's benefits on file rather
+    // than by the Front-Door agent, which only holds facility information. Every other message
+    // falls through to the agent below, unchanged.
+    if (isCoverageQuestion(trimmed)) {
+      const name = user?.displayName?.trim().split(/\s+/)[0] || 'Maya'
+      window.setTimeout(() => {
+        setTurns((t) => [...t, { id: 'a-' + Date.now(), role: 'agent', text: coverageAnswer(name) }])
+        setSending(false)
+      }, 2000 + Math.round(Math.random() * 1000))
+      return
+    }
     try {
       const reply: ChatReply = await api.frontDoorChat(trimmed)
       // Escalation signal (Agent 1 / Front-Door). The crisis classifier substring-matches the
