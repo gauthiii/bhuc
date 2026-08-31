@@ -34,6 +34,7 @@ export interface DemoField {
   multiline?: boolean
   sensitive?: boolean
   hint?: string
+  help?: string          // hover explanation: what the field is + what to enter
 }
 export interface DemoSection { id: string; title: string; fields: DemoField[] }
 export interface DemoPacket {
@@ -57,10 +58,10 @@ export interface DemoForm {
 // ── Fictional identities (format-valid, clearly not real people) ─────────────────────────
 export const DEMO_MEMBER = {
   name: 'Jordan A. Rivera',
-  memberId: 'BS-MOCK-4471928',
+  memberId: 'BSA447192801',
   group: 'GRP-778120',
   dob: '1991-03-14',
-  mrn: 'MRN-DEMO-0042',
+  mrn: 'BHUC_PATIENT_042',
   address: '88 Cypress Lane, Apt 4B, Austin, TX 78745',
   phone: '(512) 555-0142',
   relationship: 'Self (subscriber)',
@@ -74,7 +75,7 @@ export const DEMO_PROVIDER = {
   npi: '1234567893',
   tin: '99-0000123',
   taxonomy: '2084P0800X — Psychiatry & Neurology / Psychiatry',
-  license: 'TX-MD-DEMO-55219',
+  license: 'TX M55219',
   practice: 'Behavioral Health Urgent Care — Outpatient Behavioral Health',
   address: '1420 Riverside Drive, Suite 200, Austin, TX 78704',
   phone: '(512) 555-0100',
@@ -95,7 +96,6 @@ export const DEMO_PAYER = {
   paFax: '(800) 555-0177',
   paPhone: '(800) 555-0166',
   formId: 'BH-PA-2026 · Behavioral Health Prior Authorization Request',
-  portal: 'provider.blueshield-demo.example',
 }
 
 // Primary diagnosis options are SUD codes only: this demo exists to show the 42 CFR Part 2
@@ -139,15 +139,15 @@ const BANDS = {
 }
 
 export const DEMO_ATTACHMENTS = [
-  'AUDIT screening (SCR-DEMO-0104) — 18, moderate',
-  'DAST-10 screening (SCR-DEMO-0105) — 7, substantial',
-  'PHQ-9 screening (SCR-DEMO-0106) — 16, moderately severe',
-  'GAD-7 screening (SCR-DEMO-0107) — 12, moderate',
-  'C-SSRS screening (SCR-DEMO-0108) — low risk',
-  'SOCRATES-8 screening (SCR-DEMO-0109) — high readiness',
-  'Clinical note CN-DEMO-0311 — signed 2026-08-24',
-  'Clinical note CN-DEMO-0298 — signed 2026-08-11',
-  'Eligibility verification ELG-DEMO-0077 — active',
+  'AUDIT screening (BHUC_SCREENING_104) — 18, moderate',
+  'DAST-10 screening (BHUC_SCREENING_105) — 7, substantial',
+  'PHQ-9 screening (BHUC_SCREENING_106) — 16, moderately severe',
+  'GAD-7 screening (BHUC_SCREENING_107) — 12, moderate',
+  'C-SSRS screening (BHUC_SCREENING_108) — low risk',
+  'SOCRATES-8 screening (BHUC_SCREENING_109) — high readiness',
+  'Clinical note BHUC_CARE_PLAN_311 — signed 2026-08-24',
+  'Clinical note BHUC_CARE_PLAN_298 — signed 2026-08-11',
+  'Eligibility verification BHUC_ELIGIBILITY_077 — active',
 ]
 
 // ── Per level-of-care bundle: coding, policy, and the clinical narrative that has to agree
@@ -329,6 +329,159 @@ function asamSummary(b: LocBundle): string {
   ].join('\n')
 }
 
+// ── Hover help: what each field is, and what belongs in it ───────────────────────────────
+// Keyed by field id and attached to every field by the factory below, so the document is
+// self-explanatory to anyone reading it — clinician, reviewer, or auditor.
+const FIELD_HELP: Record<string, string> = {
+  // Request Summary
+  request_type: 'Whether this is a brand-new authorization or a change to one that already exists. Enter "Initial authorization" for a first request, "Concurrent review" to extend an active authorization, or "Retrospective" for services already delivered.',
+  date_of_request: 'The date this packet was drafted. Stamped once and locked, so the submitted record always shows when the request was actually made rather than when it was last opened.',
+  urgency: 'How fast the payer must decide. Standard is the normal turnaround; use Expedited only when the standard timeframe could seriously jeopardise the patient\u2019s life, health, or ability to regain maximum function \u2014 payers audit this.',
+  service: 'The treatment being requested, in plain language. Enter the level-of-care name the payer\u2019s own policy uses, for example "Intensive Outpatient (IOP)".',
+  cpt_hcpcs: 'The procedure code the claim will be billed under. Enter the CPT or HCPCS code with its description. It must match the level of care requested, or the claim can deny even with an approval on file.',
+  revenue_code: 'The four-digit facility revenue code that pairs with the procedure code on an institutional (UB-04) claim. Enter the code and its description, or leave blank for professional-only billing.',
+  primary_dx: 'The condition that is the main reason for this treatment. Enter the ICD-10 code and description, coded to the highest level of specificity the chart supports.',
+  secondary_dx: 'Co-occurring conditions that affect the treatment plan or justify the intensity requested. Enter additional ICD-10 codes separated by semicolons, or leave blank if none apply.',
+  level_of_care: 'The ASAM level being requested. Enter the level number and name exactly as the payer\u2019s medical policy words it \u2014 reviewers match this against their criteria set.',
+  place_of_service: 'The two-digit CMS place-of-service code describing where care is delivered. Enter the code and its description; it must be consistent with the revenue code and the servicing facility.',
+  units: 'How much care is being requested. Enter sessions or days per week and the total duration, for example "3x/week for 4 weeks". This is what the payer authorises and what claims are checked against.',
+  requested_start: 'The first date of service you are asking the payer to cover. Enter a date on or after today \u2014 back-dating turns this into a retrospective review with different rules.',
+  requested_end: 'The last date of service covered by this request. Calculated from the requested start plus the duration in Units; edit it if the plan of care differs.',
+  auth_period: 'The full window the authorisation would span, shown as start to end with the day count. This is the span the payer stamps on the approval.',
+
+  // Member Information
+  member_name: 'The patient\u2019s full legal name exactly as it appears on the insurance card. A mismatch against the payer\u2019s records is the most common cause of an administrative denial.',
+  member_id: 'The subscriber ID printed on the insurance card, including any alpha prefix. Enter it exactly as printed, without spaces or dashes that are not on the card.',
+  member_group: 'The employer or plan group number from the insurance card. It tells the payer which benefit set applies \u2014 the same member ID can carry different behavioural health benefits under different groups.',
+  member_dob: 'The patient\u2019s date of birth as YYYY-MM-DD. Used together with name and member ID to match the member record.',
+  member_mrn: 'Your organisation\u2019s internal medical record number for this patient. The payer does not use it, but it lets both sides trace this request back to the chart.',
+  member_address: 'The patient\u2019s current residential address on file. Payers use it to confirm the plan\u2019s service area and network adequacy.',
+  member_phone: 'A phone number where the patient can be reached about this request, including area code.',
+  member_relationship: 'How the patient relates to the person who holds the policy. Enter "Self" when the patient is the subscriber, otherwise Spouse, Child, or Other.',
+  member_payer: 'The insurance company and the specific plan being billed. Enter the payer name and the product, for example "PPO Behavioral Health" \u2014 behavioural health benefits are often carved out to a separate plan.',
+  eligibility_verified: 'Confirmation that coverage was active when checked, with the date and the verification reference. Always verify before submitting: an authorisation on an inactive policy will not pay.',
+
+  // Requesting / Ordering Provider
+  provider_name: 'The clinician ordering the service and taking clinical responsibility for the request. Enter their full name as it appears on their licence.',
+  provider_credentials: 'The ordering clinician\u2019s degree and any board certification. Payers check that the credential is appropriate to the level of care being requested.',
+  provider_npi: 'The ordering clinician\u2019s ten-digit individual National Provider Identifier. Enter the individual (Type 1) NPI, not the group or facility NPI \u2014 the payer validates it against the NPPES registry.',
+  provider_tin: 'The Tax Identification Number the claim will be billed under, as XX-XXXXXXX. It must match the TIN on the provider\u2019s contract with this payer.',
+  provider_taxonomy: 'The ten-character taxonomy code describing the provider\u2019s specialty. Enter the code and its description; it must match the taxonomy registered to the NPI.',
+  provider_practice: 'The practice or group the ordering clinician bills under. Enter the legal business name as contracted with the payer.',
+  provider_address: 'The service location address for the ordering provider, matching what the payer has on file.',
+  provider_phone: 'A daytime phone number the payer\u2019s reviewer can call about this request.',
+  provider_fax: 'The secure fax number where the payer should send the determination letter. Confirm it is a fax the clinical team actually monitors \u2014 determinations are still commonly faxed.',
+  p2p_contact: 'The person the payer\u2019s medical director should reach for a peer-to-peer clinical discussion if this request heads toward denial. Enter a name and role.',
+  p2p_phone: 'The direct number and hours for that peer-to-peer discussion. Payers allow only a short window to respond before issuing a denial, so give a number that is genuinely answered.',
+
+  // Servicing Facility
+  facility_name: 'The legal name of the facility where the service will actually be delivered, which may differ from the ordering provider\u2019s practice.',
+  facility_npi: 'The facility\u2019s ten-digit organisational (Type 2) NPI. Enter the servicing site\u2019s NPI, not the ordering clinician\u2019s individual NPI.',
+  facility_tin: 'The Tax Identification Number the facility bills under, as XX-XXXXXXX.',
+  facility_address: 'The physical address where the patient will receive the service. Payers check it against the network and against the place-of-service code.',
+  facility_pos: 'The CMS place-of-service code for this site, repeated here so the servicing location and the billed setting are unambiguous.',
+
+  // Clinical Justification
+  presenting_problem: 'The clinical picture in the current episode: what is happening now, how long it has been happening, and how it affects functioning. Write three to six sentences a reviewer who has never seen the chart could follow, and spell out abbreviations.',
+  risk_assessment: 'Current suicide, self-harm, and violence risk, with the instrument, score, and date behind it. State plan, intent, access to means, and history explicitly \u2014 "no SI" on its own is not enough for a reviewer.',
+  why_loc: 'The core medical-necessity argument: why this exact level of care is required now. Tie it to specific ASAM dimensions, screening scores, and documented events rather than general statements of severity.',
+  why_not_lower: 'Why a less intensive setting will not work, with evidence. Name the lower level, give the dates it was tried, and state what happened. An untried lower level is the most common reason a request gets downgraded.',
+  why_not_higher: 'Why a more intensive setting is not needed, which shows the reviewer you considered the whole continuum. Address medical stability, withdrawal risk, safety, and the recovery environment.',
+  asam: 'A dimension-by-dimension summary across all six ASAM dimensions. Give each dimension its own line with the finding and the evidence \u2014 reviewers score criteria dimension by dimension and skip narrative that is not organised this way.',
+
+  // Clinical History
+  current_medications: 'Every medication the patient is currently taking, with dose, route, frequency, start date, and prescriber. Include psychiatric and medication-assisted treatment drugs \u2014 they justify the medication-management component of the request.',
+  allergies: 'Known drug and food allergies with the reaction that occurred, or an explicit statement that there are none. Never leave this blank: a blank field reads to a reviewer as "not assessed".',
+  prior_treatment: 'Every prior behavioural health treatment episode with dates, level of care, attendance or dose, and outcome. This is the evidence behind the why-not-lower argument, so give real dates rather than "has failed outpatient".',
+  psychosocial: 'Housing, employment, transport, caregiving duties, supports, and legal involvement. These drive ASAM Dimension 6 and show whether the patient can realistically attend the level of care requested.',
+
+  // Policy Criteria Referenced
+  pa_required: 'Whether the payer\u2019s own published policy requires authorisation for this service, and under what conditions. State it as the policy states it, including any visit thresholds or notification-only rules.',
+  policy_id: 'The identifier of the specific medical policy you are relying on, with its revision. Cite the version in effect on the requested start date, not the newest one.',
+  policy_section: 'The exact section or paragraph of that policy containing the criteria. Pointing at a section rather than the whole document is what makes a citation checkable.',
+  criteria_summary: 'The payer\u2019s published criteria, quoted or closely paraphrased. Reproduce their wording so the reviewer can match your evidence to their checklist item by item.',
+  criteria_met: 'A point-by-point mapping of each published criterion to where in this packet it is satisfied. This is the section that most often turns a pended request into an approval, so name the sections you are pointing at.',
+
+  // Treatment Plan & Goals
+  goals: 'Specific, measurable, time-bound treatment goals. Each should name a metric, a target, and a deadline \u2014 "reduce PHQ-9 from 16 to 9 or below within 8 weeks" rather than "improve mood".',
+  modalities: 'The specific interventions that will be delivered and at what intensity. Reviewers check that these add up to the hours the requested level of care requires.',
+  frequency: 'How often and for how long the patient will be seen. It must be arithmetically consistent with the Units requested and with the level-of-care definition.',
+  discharge: 'The observable conditions under which the patient will step down or complete treatment. Payers require a defined endpoint; open-ended plans are routinely pended.',
+  coordination: 'How the treating team, prescriber, primary care, and the next level of care stay connected \u2014 including who books the follow-up appointment and when.',
+
+  // SUD Detail (42 CFR Part 2)
+  sud_detail: 'The substance use disorder specifics supporting this request: substances, most recent use dates, and current medication. This is 42 CFR Part 2 protected information and may only be disclosed with a written consent meeting \u00a7 2.31.',
+  sud_history: 'The course of the substance use disorder over time \u2014 onset, progression, routes of use, prior withdrawal or overdose events. Also 42 CFR Part 2 protected.',
+  sud_consent: 'The written consent authorising this specific disclosure, with its identifier, signature date, purpose, and expiry. A general medical release is not sufficient under 42 CFR \u00a7 2.31: without a qualifying consent on file, none of this section may be sent.',
+
+  // Attestation & Signature
+  attest_statement: 'The certification you are signing. Read it before signing \u2014 it asserts that the clinical information is accurate and that the services are medically necessary, and it carries legal consequences if knowingly false.',
+  signer_name: 'The clinician taking responsibility for this request. Must be the treating provider, or someone authorised to sign on the treating provider\u2019s behalf.',
+  signer_credentials: 'The signer\u2019s degree and board certification, shown so the payer can confirm the attestation came from an appropriately qualified clinician.',
+  signer_license: 'The signer\u2019s state professional licence number \u2014 how the payer confirms they are licensed to practise in the state where care is delivered.',
+  signer_npi: 'The signer\u2019s individual NPI, repeated in the signature block so the attestation is tied to a specific registered provider.',
+  signature: 'Type your full legal name to sign. This is your electronic signature and carries the same weight as a handwritten one. Never sign on another clinician\u2019s behalf.',
+  date_signed: 'The date the attestation was signed. Stamped automatically on submission, so it always reflects the real signing date.',
+
+  // Payer Use Only
+  auth_number: 'The authorisation number the payer issues on approval. Leave blank \u2014 the payer completes this section. You will need this number on every claim for the authorised services.',
+  determination: 'The payer\u2019s decision: approved, partially approved, denied, or pended for more information. Completed by the payer.',
+  units_approved: 'How many sessions or days the payer actually authorised, which can be fewer than requested. Completed by the payer \u2014 check it against your request before starting care.',
+  approved_span: 'The date range the payer authorised, which can be narrower than requested. Completed by the payer; services outside this span will not pay.',
+  reviewer: 'The payer\u2019s reviewer or medical director who made the determination. Completed by the payer \u2014 you need this name to request a peer-to-peer discussion or file an appeal.',
+  decision_date: 'The date the payer issued the determination. Completed by the payer; appeal deadlines run from this date.',
+}
+
+// ── Draft-form help ──────────────────────────────────────────────────────────────────────
+// What each level of care actually involves, used to decode the Service currently selected in
+// the draft form.
+export const SERVICE_NOTES: Record<string, string> = {
+  'Intensive Outpatient (IOP)': 'ASAM 2.1 — roughly 9 structured treatment hours a week, with the patient continuing to live at home.',
+  'Partial Hospitalization (PHP)': 'ASAM 2.5 — full-day programming, roughly 30 hours a week, with the patient returning home each evening.',
+  'Clinically Managed Residential': 'ASAM 3.5 — 24-hour treatment in a structured residential setting.',
+  'Medication-Assisted Treatment (MAT)': 'Office-based treatment with buprenorphine/naloxone plus counselling, billed per visit rather than per programme day.',
+  'Standard Outpatient': 'ASAM 1.0 — weekly individual or group therapy, the least intensive level on the continuum.',
+}
+
+const NUMBER_WORD: Record<number, string> = {
+  1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six',
+  7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten', 11: 'eleven', 12: 'twelve',
+}
+const word = (n: number) => NUMBER_WORD[n] ?? String(n)
+
+/** Plain-English decode of a "Requested units" string: what the frequency and duration mean,
+ *  the resulting session count, and the authorisation window the packet derives from it.
+ *  Computed from the same parsing `authWindow` uses, so the explanation can never drift from
+ *  the dates the packet actually produces. */
+export function explainUnits(units: string): string {
+  const text = units.trim()
+  if (!text) {
+    return 'Left blank, the packet falls back to the standard frequency for the level of care selected and to a 90-day authorisation window.'
+  }
+  const freq = /(\d+)\s*x\s*\/?\s*(day|week|month)/i.exec(text)
+  const rest = text.replace(/(\d+)\s*x\s*\/?\s*(day|week|month)/i, ' ')
+  const dur = /(\d+)\s*(day|week|month)/i.exec(rest)
+
+  const durDays = dur
+    ? Number(dur[1]) * (dur[2].toLowerCase() === 'day' ? 1 : dur[2].toLowerCase() === 'week' ? 7 : 30)
+    : 90
+  const art = /^(8|11|18)/.test(String(durDays)) ? 'an' : 'a'
+  const window = dur
+    ? `and it is what sets the authorisation period: the packet derives ${art} ${durDays}-day window from the “${dur[1]} ${dur[2].toLowerCase()}${Number(dur[1]) === 1 ? '' : 's'}” part`
+    : 'and because no duration is stated the packet falls back to a 90-day authorisation window'
+
+  if (freq && dur) {
+    const n = Number(freq[1]), m = Number(dur[1])
+    const per = freq[2].toLowerCase(), span = dur[2].toLowerCase()
+    const total = per === span ? ` — ${word(n * m)} sessions in total —` : ''
+    return `“${text}” means ${word(n)} treatment session${n === 1 ? '' : 's'} each ${per} for ${word(m)} consecutive ${span}${m === 1 ? '' : 's'}${total} ${window}. Change the “${freq[1]}x/${per}” part to change how often the patient is seen, and the “${m} ${span}${m === 1 ? '' : 's'}” part to change how long the authorisation runs.`
+  }
+  if (dur) {
+    return `“${text}” states how long treatment runs but not how often the patient is seen. The packet derives ${art} ${durDays}-day authorisation window from it. Add a frequency such as “3x/week” so the payer can see the intended intensity as well as the span.`
+  }
+  return `“${text}” does not state a duration the packet can read, ${window}. Write it as a frequency followed by a span — for example “3x/week for 4 weeks” — so the authorisation period is derived correctly.`
+}
+
 // ── Packet builder ───────────────────────────────────────────────────────────────────────
 let seq = 47
 
@@ -355,6 +508,7 @@ export function buildDemoPacket(form: DemoForm): DemoPacket {
     multiline: opts.multiline,
     sensitive: opts.sensitive,
     hint: opts.hint,
+    help: FIELD_HELP[id],
   })
 
   const sections: DemoSection[] = [
@@ -388,7 +542,7 @@ export function buildDemoPacket(form: DemoForm): DemoPacket {
       f('member_phone', 'Phone', DEMO_MEMBER.phone, { editable: false }),
       f('member_relationship', 'Relationship to Subscriber', DEMO_MEMBER.relationship, { editable: false }),
       f('member_payer', 'Payer / Plan', `${form.payer} — PPO Behavioral Health`, { editable: false }),
-      f('eligibility_verified', 'Eligibility Verified', `Yes — active as of ${today} (ELG-DEMO-0077)`, { editable: false }),
+      f('eligibility_verified', 'Eligibility Verified', `Yes — active as of ${today} (BHUC_ELIGIBILITY_077)`, { editable: false }),
     ] },
 
     // 3 ── Requesting provider, with the identifiers a payer actually requires — correction #2
@@ -456,7 +610,7 @@ export function buildDemoPacket(form: DemoForm): DemoPacket {
     sections.push({ id: 'sud', title: 'SUD Detail (42 CFR Part 2)', fields: [
       f('sud_detail', 'SUD Detail', `Substance use disorder treatment detail for ${form.service}, primary diagnosis ${primaryDx}. Primary substance: opioids, non-prescribed, most recent use 2026-08-09. Secondary: alcohol, most recent use 2026-08-18. Currently maintained on buprenorphine/naloxone under prescriber oversight since 2026-08-12.`, { multiline: true, sensitive: true }),
       f('sud_history', 'Substance Use History', 'Opioid use beginning approximately 2021 following a post-surgical prescription, transitioning to non-prescribed use by 2023. Alcohol use since adolescence, escalating over the past 18 months. One prior withdrawal-management episode in 2025-11. No injection use reported. No overdose history. No tobacco or stimulant use.', { multiline: true, sensitive: true }),
-      f('sud_consent', 'Part 2 Consent on File', 'Written consent CNS-DEMO-0219, signed 2026-08-24, authorizing disclosure to the named payer for payment purposes; expires 2027-08-24 or upon written revocation.', { editable: false }),
+      f('sud_consent', 'Part 2 Consent on File', 'Written consent BHUC_CONSENT_219, signed 2026-08-24, authorizing disclosure to the named payer for payment purposes; expires 2027-08-24 or upon written revocation.', { editable: false }),
     ] })
   }
 
@@ -482,7 +636,7 @@ export function buildDemoPacket(form: DemoForm): DemoPacket {
   ] })
 
   return {
-    id: `PA-DEMO-${String(seq).padStart(4, '0')}`,
+    id: `BHUC_PRIOR_AUTH_${String(seq).padStart(3, '0')}`,
     service: form.service,
     status: 'draft',
     part2Gated: part2,

@@ -63,6 +63,7 @@ const CLINICIAN_NAV: NavItem[] = [
   { to: '/clinician/scheduling', label: 'Scheduling', icon: <CalendarClock className="h-4 w-4" /> },
   { to: '/clinician/calendar', label: 'Calendar', icon: <CalendarDays className="h-4 w-4" /> },
   { to: '/clinician/escalations', label: 'Escalations', icon: <ShieldAlert className="h-4 w-4" /> },
+  { to: '/clinician/prior-auth2', label: 'Prior Auth', icon: <FileText className="h-4 w-4" /> },
 ]
 
 export function PatientShell({ title, intro, actions, children }: { title: string; intro?: string; actions?: ReactNode; children: ReactNode }) {
