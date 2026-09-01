@@ -10,6 +10,7 @@ import { Panel, StatusBadge, Button, Input, Textarea, Select } from '../../compo
 import { AgentRunProgress } from '../../components/AgentRunProgress'
 import { HelpTip } from '../../components/HelpTip'
 import { PriorAuthFairnessModal } from '../../components/PriorAuthFairnessModal'
+import { PriorAuthIntegrityPanel } from '../../components/PriorAuthIntegrityPanel'
 import {
   buildDemoPacket, REDISCLOSURE_NOTICE,
   DEMO_PRIMARY_DX_OPTIONS, DEMO_SECONDARY_DX_OPTIONS, DEMO_PAYER_OPTIONS,
@@ -418,6 +419,11 @@ export function ClinicianPriorAuthDemo() {
                   ))}
                 </ul>
               </section>
+            </div>
+
+            {/* Output integrity for the drafted packet */}
+            <div className="border-t border-slate-100 px-6 py-5 sm:px-10">
+              <PriorAuthIntegrityPanel packet={selected} />
             </div>
 
             {/* Attest + submit / delete (hidden in preview and once submitted) */}
