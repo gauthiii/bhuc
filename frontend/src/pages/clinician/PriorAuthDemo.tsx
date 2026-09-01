@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Lock, LockOpen, CheckCircle2, Sparkles, Plus, FileText, Trash2, Eye, EyeOff,
-  Paperclip, PenLine, AlertTriangle, Scale,
+  Paperclip, PenLine, AlertTriangle, Scale, Download,
 } from 'lucide-react'
 import { ClinicianShell } from '../../components/portals'
 import { HumanInLoopNote } from '../../components/Shell'
@@ -11,6 +11,7 @@ import { AgentRunProgress } from '../../components/AgentRunProgress'
 import { HelpTip } from '../../components/HelpTip'
 import { PriorAuthFairnessModal } from '../../components/PriorAuthFairnessModal'
 import { PriorAuthIntegrityPanel } from '../../components/PriorAuthIntegrityPanel'
+import { downloadPacketPdf } from '../../lib/priorAuthPdf'
 import {
   buildDemoPacket, REDISCLOSURE_NOTICE,
   DEMO_PRIMARY_DX_OPTIONS, DEMO_SECONDARY_DX_OPTIONS, DEMO_PAYER_OPTIONS,
@@ -421,7 +422,26 @@ export function ClinicianPriorAuthDemo() {
               </section>
             </div>
 
-            {/* Output integrity for the drafted packet */}
+            {/* Download — the full packet, or the 42 CFR Part 2 redacted copy. Both are
+                available regardless of the Part 2 access switch above. */}
+            <div className="border-t border-slate-100 px-6 py-4 sm:px-10">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="secondary" onClick={() => downloadPacketPdf(selected, { values: edits, part2Access: true })}>
+                  <Download className="h-4 w-4" /> Download PDF — full
+                </Button>
+                <Button variant="secondary" onClick={() => downloadPacketPdf(selected, { values: edits, part2Access: false })}>
+                  <Download className="h-4 w-4" /> Download PDF — Part 2 redacted
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                {selected.part2Gated
+                  ? 'The redacted copy withholds every SUD-revealing field: those values are never written into the file, so the black bars cannot be selected or copied out from underneath.'
+                  : 'This packet carries no 42 CFR Part 2 content, so both copies are identical.'}
+              </p>
+            </div>
+
+            {/* Output integrity for the drafted packet — a check on the draft, deliberately
+                not part of the document that goes to the payer, so it is not in the PDF. */}
             <div className="border-t border-slate-100 px-6 py-5 sm:px-10">
               <PriorAuthIntegrityPanel packet={selected} />
             </div>

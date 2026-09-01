@@ -524,7 +524,7 @@ export function buildDemoPacket(form: DemoForm): DemoPacket {
       f('primary_dx', 'Primary Diagnosis (ICD-10)', primaryDx, { sensitive: true }),
       f('secondary_dx', 'Secondary Diagnosis (ICD-10)', secondary, { sensitive: true }),
       f('level_of_care', 'Level of Care Requested', b.loc, { sensitive: true }),
-      f('place_of_service', 'Place of Service', b.pos),
+      f('place_of_service', 'Place of Service', b.pos, { sensitive: true }),
       f('units', 'Units / Frequency Requested', form.requestedUnits || b.frequency, { sensitive: true }),
       f('requested_start', 'Requested Start Date', fmt(start)),
       f('requested_end', 'Requested End Date', end),
@@ -566,7 +566,7 @@ export function buildDemoPacket(form: DemoForm): DemoPacket {
       f('facility_npi', 'Facility NPI', DEMO_FACILITY.npi, { editable: false }),
       f('facility_tin', 'Facility TIN', DEMO_FACILITY.tin, { editable: false }),
       f('facility_address', 'Facility Address', DEMO_FACILITY.address, { editable: false }),
-      f('facility_pos', 'Place of Service Code', b.pos, { editable: false }),
+      f('facility_pos', 'Place of Service Code', b.pos, { editable: false, sensitive: true }),
     ] },
 
     // 5 ── Clinical justification
