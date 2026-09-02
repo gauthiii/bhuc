@@ -6,12 +6,34 @@ import {
 } from 'lucide-react'
 import { PriorLayout } from './Layout'
 import { Swimlane } from './Swimlane'
-import { futureFlow } from '../../lib/priorAuthFlows'
+import { currentFlow, futureFlow } from '../../lib/priorAuthFlows'
 import { authCases } from '../../lib/priorAuthDemo'
 import type { AuthCase, SimStep, StepTone } from '../../lib/priorAuthDemo'
 
-// /prior/simulate — interactive walkthrough of the AI-enabled prior-auth flow.
-// State lives in the URL (?case=&s=&d=) so any moment of the demo is deep-linkable.
+// /prior/simulate — interactive walkthrough of a prior-auth case, in either process
+// mode: 'manual' (today's fax-and-phone flow, slide 13) or 'ai' (AI-enabled, slide 14).
+// State lives in the URL (?case=&mode=&s=&d=) so any moment of the demo is deep-linkable.
+
+type SimMode = 'manual' | 'ai'
+
+function ModeToggle({ mode, onChange }: { mode: SimMode; onChange: (m: SimMode) => void }) {
+  const seg = (m: SimMode, label: string) => (
+    <button
+      onClick={() => onChange(m)}
+      className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+        mode === m ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+      }`}
+    >
+      {label}
+    </button>
+  )
+  return (
+    <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+      {seg('manual', 'Manual (today)')}
+      {seg('ai', 'AI-enabled (future)')}
+    </div>
+  )
+}
 
 const TONE_CHIP: Record<StepTone, string> = {
   neutral: 'bg-slate-100 text-slate-700',
@@ -36,17 +58,25 @@ function UrgencyChip({ urgency }: { urgency: 'Standard' | 'Expedited' }) {
 
 // ── Case picker ─────────────────────────────────────────────────────────────
 
-function CasePicker({ onPick }: { onPick: (id: string) => void }) {
+function CasePicker({ mode, onMode, onPick }: { mode: SimMode; onMode: (m: SimMode) => void; onPick: (id: string) => void }) {
   return (
     <div>
       <div className="max-w-3xl">
         <h1 className="font-display text-3xl font-semibold text-slate-900">Case Simulation</h1>
         <p className="mt-2 text-slate-500">
-          Pick an authorization request from the queue and step through the AI-enabled process —
-          including the human-in-the-loop review where one is required. Fictitious data throughout.
+          Pick an authorization request from the queue and step through it in either process mode —
+          today's manual workflow, or the AI-enabled future state with its human-in-the-loop review.
+          Fictitious data throughout.
         </p>
       </div>
-      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium text-slate-600">Process mode:</span>
+        <ModeToggle mode={mode} onChange={onMode} />
+        <span className="text-xs text-slate-400">
+          {mode === 'manual' ? 'Fax intake, manual review queues, mailed letters — decisions in days.' : 'Agent triage with human-in-the-loop review — decisions in minutes.'}
+        </span>
+      </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
         {authCases.map((c) => (
           <button
             key={c.id}
@@ -61,7 +91,7 @@ function CasePicker({ onPick }: { onPick: (id: string) => void }) {
             <p className="mt-1 text-sm text-slate-500">{c.member.name} · {c.service.code} · {c.service.units}</p>
             <p className="mt-1 text-xs text-slate-400">{c.service.diagnoses.map((d) => d.code).join(', ')} — {c.service.diagnoses[0].label}</p>
             <div className="mt-4 flex items-center justify-between">
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PATH_CHIP[c.pathTone]}`}>{c.pathBadge}</span>
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PATH_CHIP[c.pathTone]}`}>{mode === 'manual' ? c.manualBadge : c.pathBadge}</span>
               <span className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 opacity-0 transition group-hover:opacity-100">
                 Run case <ChevronRight className="h-4 w-4" />
               </span>
@@ -79,8 +109,9 @@ function CasePicker({ onPick }: { onPick: (id: string) => void }) {
 
 // ── Determination panels ────────────────────────────────────────────────────
 
-function ApprovalPanel({ authCase }: { authCase: AuthCase }) {
-  const a = authCase.approval!
+function ApprovalPanel({ authCase, manual }: { authCase: AuthCase; manual: boolean }) {
+  const a = manual ? (authCase.manualApproval ?? authCase.approval) : authCase.approval
+  if (!a) return null
   return (
     <div className="mt-4 rounded-xl border border-emerald-300 bg-emerald-50/60 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -102,8 +133,9 @@ function ApprovalPanel({ authCase }: { authCase: AuthCase }) {
   )
 }
 
-function DenialPanel({ authCase }: { authCase: AuthCase }) {
-  const d = authCase.denial!
+function DenialPanel({ authCase, manual }: { authCase: AuthCase; manual: boolean }) {
+  const d = manual ? (authCase.manualDenial ?? authCase.denial) : authCase.denial
+  if (!d) return null
   return (
     <div className="mt-4 rounded-xl border border-slate-300 bg-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
@@ -137,7 +169,11 @@ function DenialPanel({ authCase }: { authCase: AuthCase }) {
         <p className="text-xs font-semibold text-slate-600">Your appeal rights</p>
         <p className="mt-1 text-xs leading-relaxed text-slate-600">{d.appealRights}</p>
       </div>
-      <p className="mt-4 text-xs text-slate-400">Drafted by the Determination &amp; Notification Agent · Reviewed and signed by a licensed clinical peer reviewer</p>
+      <p className="mt-4 text-xs text-slate-400">
+        {manual
+          ? 'Template letter generated by the UM system · Mailed to the member and faxed to the facility'
+          : 'Drafted by the Determination & Notification Agent · Reviewed and signed by a licensed clinical peer reviewer'}
+      </p>
     </div>
   )
 }
@@ -192,20 +228,22 @@ export function PriorSimulate() {
 
   const caseId = params.get('case')
   const authCase = authCases.find((c) => c.id === caseId) ?? null
+  const mode: SimMode = params.get('mode') === 'manual' ? 'manual' : 'ai'
   const decision = params.get('d') === 'a' ? 'a' : params.get('d') === 'd' ? 'd' : null
 
   const steps: SimStep[] = useMemo(() => {
     if (!authCase) return []
+    if (mode === 'manual') return authCase.manualSteps
     if (!authCase.decision || !decision) return authCase.baseSteps
     return decision === 'a'
       ? [...authCase.baseSteps, ...(authCase.approveSteps ?? [])]
       : [...authCase.baseSteps, ...(authCase.denySteps ?? [])]
-  }, [authCase, decision])
+  }, [authCase, mode, decision])
 
   const rawIdx = Number(params.get('s') ?? 0)
   const idx = Math.min(Math.max(Number.isFinite(rawIdx) ? rawIdx : 0, 0), Math.max(steps.length - 1, 0))
   const step = steps[idx]
-  const atDecision = !!authCase?.decision && !decision && idx === (authCase?.baseSteps.length ?? 0) - 1
+  const atDecision = mode === 'ai' && !!authCase?.decision && !decision && idx === (authCase?.baseSteps.length ?? 0) - 1
   const atEnd = !atDecision && idx === steps.length - 1
 
   const update = (next: Record<string, string | null>) => {
@@ -225,7 +263,11 @@ export function PriorSimulate() {
   if (!authCase || !step) {
     return (
       <PriorLayout>
-        <CasePicker onPick={(id) => setParams({ case: id, s: '0' })} />
+        <CasePicker
+          mode={mode}
+          onMode={(m) => setParams(m === 'manual' ? { mode: 'manual' } : {})}
+          onPick={(id) => setParams({ case: id, s: '0', ...(mode === 'manual' ? { mode: 'manual' } : {}) })}
+        />
       </PriorLayout>
     )
   }
@@ -241,12 +283,13 @@ export function PriorSimulate() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs text-slate-400">{authCase.requestId}</span>
             <UrgencyChip urgency={authCase.service.urgency} />
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PATH_CHIP[authCase.pathTone]}`}>{authCase.pathBadge}</span>
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PATH_CHIP[authCase.pathTone]}`}>{mode === 'manual' ? authCase.manualBadge : authCase.pathBadge}</span>
           </div>
           <h1 className="mt-1 font-display text-2xl font-semibold text-slate-900">{authCase.label}</h1>
           <p className="mt-1 text-sm text-slate-500">{authCase.tatNote}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ModeToggle mode={mode} onChange={(m) => { setAutoPlay(false); update({ mode: m === 'manual' ? 'manual' : null, s: '0', d: null }) }} />
           <button onClick={() => update({ s: String(Math.max(idx - 1, 0)) })} disabled={idx === 0}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-40">
             <ArrowLeft className="h-4 w-4" /> Back
@@ -272,7 +315,12 @@ export function PriorSimulate() {
 
       {/* Swimlane */}
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <Swimlane flow={futureFlow} title="AI-enabled prior authorization — live case position" active={step.nodeId} visited={visited} />
+        <Swimlane
+          flow={mode === 'manual' ? currentFlow : futureFlow}
+          title={mode === 'manual' ? 'Manual prior authorization — live case position' : 'AI-enabled prior authorization — live case position'}
+          active={step.nodeId}
+          visited={visited}
+        />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -281,10 +329,10 @@ export function PriorSimulate() {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONE_CHIP[tone]}`}>
-                {step.agent.includes('human') || step.agent.includes('Team') ? <UserRound className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+                {step.human || step.agent.includes('human') || step.agent.includes('Team') ? <UserRound className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
                 {step.agent}
               </span>
-              <span className="text-xs text-slate-400">Step {idx + 1} of {steps.length}{authCase.decision && !decision ? '+' : ''}</span>
+              <span className="text-xs text-slate-400">Step {idx + 1} of {steps.length}{mode === 'ai' && authCase.decision && !decision ? '+' : ''}</span>
             </div>
             <h2 className="mt-3 text-lg font-semibold text-slate-800">{step.title}</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">{step.detail}</p>
@@ -299,8 +347,8 @@ export function PriorSimulate() {
               </dl>
             )}
             {atDecision && <DecisionCard authCase={authCase} onDecide={(d) => update({ d, s: String(idx + 1) })} />}
-            {step.render === 'approval' && <ApprovalPanel authCase={authCase} />}
-            {step.render === 'denial' && <DenialPanel authCase={authCase} />}
+            {step.render === 'approval' && <ApprovalPanel authCase={authCase} manual={mode === 'manual'} />}
+            {step.render === 'denial' && <DenialPanel authCase={authCase} manual={mode === 'manual'} />}
           </div>
         </div>
 
@@ -319,7 +367,7 @@ export function PriorSimulate() {
                   <span className={i === idx ? 'font-medium text-slate-800' : i < idx ? 'text-slate-600' : 'text-slate-400'}>{s.title}</span>
                 </li>
               ))}
-              {authCase.decision && !decision && (
+              {mode === 'ai' && authCase.decision && !decision && (
                 <li className="flex items-start gap-2 text-sm">
                   <Circle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                   <span className="text-amber-700">Determination — pending reviewer decision</span>

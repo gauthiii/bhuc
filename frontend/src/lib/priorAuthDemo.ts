@@ -12,7 +12,7 @@ export interface StepFact {
 
 export interface SimStep {
   id: string
-  /** Node in futureFlow to highlight on the swimlane. */
+  /** Node to highlight on the swimlane (futureFlow ids for AI steps, currentFlow ids for manual steps). */
   nodeId: string
   agent: string
   title: string
@@ -20,6 +20,8 @@ export interface SimStep {
   facts?: StepFact[]
   tone?: StepTone
   render?: 'approval' | 'denial'
+  /** True when the actor is a person rather than an AI agent (all manual-mode steps). */
+  human?: boolean
 }
 
 export interface DecisionCriterion {
@@ -56,6 +58,8 @@ export interface AuthCase {
   requestId: string
   label: string
   pathBadge: string
+  /** Outcome badge shown when running the traditional (manual) mode. */
+  manualBadge: string
   pathTone: 'approve' | 'hitl' | 'reject'
   member: { name: string; memberId: string; dob: string; plan: string }
   provider: { name: string; npi: string }
@@ -76,6 +80,10 @@ export interface AuthCase {
   denySteps?: SimStep[]
   approval?: ApprovalNotice
   denial?: DenialLetter
+  /** Traditional (manual) walkthrough of the same request — linear, no interactive decision. */
+  manualSteps: SimStep[]
+  manualApproval?: ApprovalNotice
+  manualDenial?: DenialLetter
 }
 
 export const authCases: AuthCase[] = [
@@ -85,6 +93,7 @@ export const authCases: AuthCase[] = [
     requestId: 'PA-2026-004821',
     label: 'Continue Intensive Outpatient Program (IOP)',
     pathBadge: 'Auto-approval',
+    manualBadge: 'Approved — day 6',
     pathTone: 'approve',
     member: { name: 'Jordan Pierce', memberId: 'M-84512033', dob: '03/14/1991', plan: 'BlueEdge HMO — Behavioral Health' },
     provider: { name: 'Green Mountain Behavioral Health — IOP Program', npi: '1487654321' },
@@ -157,6 +166,93 @@ export const authCases: AuthCase[] = [
         ],
       },
     ],
+    manualSteps: [
+      {
+        id: 'am1', nodeId: 'submit', agent: 'Clinic front office (human)', human: true,
+        title: 'Authorization request faxed to the payer',
+        detail: 'Clinic staff complete the plan\'s prior-authorization form by hand, print 22 pages of supporting records, and fax the packet to the UM intake line. There is no confirmation beyond the fax transmission report.',
+        facts: [
+          { label: 'Channel', value: 'Fax — UM intake line' },
+          { label: 'Packet', value: 'PA form + 22 pages of records' },
+          { label: 'Elapsed', value: 'Day 0' },
+        ],
+      },
+      {
+        id: 'am2', nodeId: 'receive', agent: 'UM Intake Coordinator (human)', human: true,
+        title: 'Request keyed into the UM system',
+        detail: 'The next business day, an intake coordinator matches the member, keys the request into the UM system by hand, and scans the fax into the document repository. A transposed member ID requires a call back to the clinic.',
+        facts: [
+          { label: 'Data entry', value: 'Manual, ~25 minutes' },
+          { label: 'Rework', value: 'Member ID corrected by phone' },
+          { label: 'Elapsed', value: 'Day 1' },
+        ],
+      },
+      {
+        id: 'am3', nodeId: 'checks', agent: 'UM Nurse Reviewer (human)', human: true,
+        title: 'Benefits, claims and clinical history reviewed by hand',
+        detail: 'A nurse reviewer pulls the benefits plan and claims history across two systems and reads the faxed notes. The attendance record is missing, so an additional-information request is faxed back to the clinic — pausing the decision clock.',
+        facts: [
+          { label: 'Systems consulted', value: 'Benefits, claims, imaged documents' },
+          { label: 'Additional info', value: 'Attendance record requested by fax' },
+          { label: 'Elapsed', value: 'Day 2–3 (clock extension issued)' },
+        ],
+      },
+      {
+        id: 'am4', nodeId: 'escalate', agent: 'Clinical review queue (human)', human: true,
+        title: 'Case pends in the clinical review queue',
+        detail: 'The clinic faxes the attendance record back on day 4. The case re-enters the nurse review queue behind the day\'s expedited work and waits for capacity.',
+        facts: [
+          { label: 'Queue position', value: 'Behind expedited cases' },
+          { label: 'Elapsed', value: 'Day 4–5' },
+        ],
+      },
+      {
+        id: 'am5', nodeId: 'determine', agent: 'UM Nurse Reviewer (human)', human: true, tone: 'approve',
+        title: 'Continued-stay criteria confirmed — approved',
+        detail: 'With the complete record, the nurse confirms the IOP continued-stay criteria are met and approves 12 visits. The same clinical facts the AI read in minutes took six days to assemble by fax and phone.',
+        facts: [
+          { label: 'Determination', value: 'Approved — 12 visits' },
+          { label: 'Elapsed', value: 'Day 6' },
+        ],
+      },
+      {
+        id: 'am6', nodeId: 'treatment', agent: 'Notification (mail / fax)', human: true, tone: 'approve', render: 'approval',
+        title: 'Approval letter mailed and faxed',
+        detail: 'The approval letter is mailed to the member and faxed to the clinic. The member\'s first authorized visit was rescheduled once while the request was pending.',
+      },
+      {
+        id: 'am7', nodeId: 'monitor', agent: 'Clinical team (human)', human: true,
+        title: 'Retrospective post-care review',
+        detail: 'Utilization is reviewed retrospectively on a sampled basis after claims arrive; step-down planning depends on the provider\'s own reporting.',
+        facts: [
+          { label: 'Post-care review', value: 'Retrospective, sampled' },
+        ],
+      },
+    ],
+    manualApproval: {
+      authNumber: 'AUTH-2026-117893',
+      approvedService: 'Intensive outpatient psychiatric services, per diem (S9480)',
+      units: '12 visits, 3×/week over 4 weeks',
+      validFrom: '09/14/2026',
+      validTo: '10/11/2026',
+      notes: [
+        'Determination issued on day 6 — an extension notice was required after additional information was requested.',
+        'Approval letter mailed to the member; fax confirmation sent to the provider.',
+        'This authorization is a determination of medical necessity and is not a guarantee of payment; payment is subject to eligibility and benefits at the time of service.',
+      ],
+    },
+    approval: {
+      authNumber: 'AUTH-2026-118102',
+      approvedService: 'Intensive outpatient psychiatric services, per diem (S9480)',
+      units: '12 visits, 3×/week over 4 weeks',
+      validFrom: '09/08/2026',
+      validTo: '10/05/2026',
+      notes: [
+        'Auto-approved — determination issued 3 minutes 42 seconds after receipt, within the 72-hour standard window.',
+        'Continued treatment beyond the approved units requires a new continued-stay request.',
+        'This authorization is a determination of medical necessity and is not a guarantee of payment; payment is subject to eligibility and benefits at the time of service.',
+      ],
+    },
   },
 
   // ── Case B: complex expedited inpatient admission → human review ─────────
@@ -165,6 +261,7 @@ export const authCases: AuthCase[] = [
     requestId: 'PA-2026-004876',
     label: 'Inpatient psychiatric admission (expedited)',
     pathBadge: 'Human review',
+    manualBadge: 'Approved — hour 23 of 24',
     pathTone: 'hitl',
     member: { name: 'Alicia Tran', memberId: 'M-90211457', dob: '11/02/1978', plan: 'BlueEdge PPO — Behavioral Health' },
     provider: { name: 'Dr. Marcus Webb, MD — Copley Regional Medical Center', npi: '1093827465' },
@@ -247,6 +344,78 @@ export const authCases: AuthCase[] = [
         detail: 'The reviewer issues an adverse determination. The agent drafts the plain-language notice citing the exact criteria applied; the reviewer signs it before release.',
       },
     ],
+    manualSteps: [
+      {
+        id: 'bm1', nodeId: 'submit', agent: 'Hospital UM department (human)', human: true,
+        title: 'After-hours notification by phone and fax',
+        detail: 'At 2:47 AM the hospital UM department calls the payer\'s after-hours line, reaches a voicemail, and faxes the ED psychiatric evaluation. The expedited 24-hour clock starts at receipt.',
+        facts: [
+          { label: 'Channel', value: 'Phone (voicemail) + fax' },
+          { label: 'Clock started', value: '09/01/2026 02:47 ET (24-hour TAT)' },
+        ],
+      },
+      {
+        id: 'bm2', nodeId: 'receive', agent: 'UM Intake Coordinator (human)', human: true,
+        title: 'Request processed at start of business',
+        detail: 'The intake coordinator finds the fax at 7:00 AM, keys the admission request as expedited, and pages the on-call nurse reviewer. Seven hours of the 24-hour window are already gone.',
+        facts: [
+          { label: 'Picked up', value: 'Hour 7 of 24' },
+        ],
+      },
+      {
+        id: 'bm3', nodeId: 'checks', agent: 'UM Nurse Reviewer (human)', human: true,
+        title: 'Clinical review — chasing the medical clearance',
+        detail: 'The nurse reviews the ED evaluation but cannot find the medical clearance labs in the fax. Two phone calls to the inpatient unit later, the labs arrive by fax and the acuity picture is complete.',
+        facts: [
+          { label: 'Missing at intake', value: 'Medical clearance labs' },
+          { label: 'Phone calls', value: '2 to the inpatient unit' },
+          { label: 'Elapsed', value: 'Hour 10–16' },
+        ],
+      },
+      {
+        id: 'bm4', nodeId: 'escalate', agent: 'Physician Reviewer (human)', human: true,
+        title: 'Peer-to-peer scheduled with the attending',
+        detail: 'Inpatient admissions require physician review. The payer psychiatrist attempts a peer-to-peer with Dr. Webb — first attempt hits the unit\'s voicemail; the second connects.',
+        facts: [
+          { label: 'Peer-to-peer', value: 'Connected on attempt 2' },
+          { label: 'Elapsed', value: 'Hour 20' },
+        ],
+      },
+      {
+        id: 'bm5', nodeId: 'determine', agent: 'Physician Reviewer (human)', human: true, tone: 'approve',
+        title: 'Admission approved at hour 23',
+        detail: 'The reviewing psychiatrist confirms all four acute inpatient criteria and approves 5 days with concurrent review at day 3 — one hour inside the expedited window.',
+        facts: [
+          { label: 'Determination', value: 'Approved — 5 days, concurrent review day 3' },
+          { label: 'Elapsed', value: 'Hour 23 of 24' },
+        ],
+      },
+      {
+        id: 'bm6', nodeId: 'treatment', agent: 'Notification (phone / fax)', human: true, tone: 'approve', render: 'approval',
+        title: 'Verbal approval phoned to the hospital',
+        detail: 'The determination is phoned to the hospital UM department and confirmed by fax; the written notice follows by mail. Concurrent review at day 3 will again be conducted by phone and fax.',
+      },
+      {
+        id: 'bm7', nodeId: 'monitor', agent: 'Concurrent review (human)', human: true,
+        title: 'Concurrent review by phone at day 3',
+        detail: 'A nurse reviewer calls the unit at day 3 for an updated clinical picture and discharge plan. Post-acute placement is arranged by the hospital\'s own case manager working the phones.',
+        facts: [
+          { label: 'Method', value: 'Telephonic review + faxed notes' },
+        ],
+      },
+    ],
+    manualApproval: {
+      authNumber: 'AUTH-2026-118217',
+      approvedService: 'Acute inpatient psychiatric admission (Rev 0124)',
+      units: '5 days (09/01/2026 – 09/05/2026), concurrent review day 3',
+      validFrom: '09/01/2026',
+      validTo: '09/05/2026',
+      notes: [
+        'Expedited determination issued at hour 23 of the 24-hour window after two peer-to-peer attempts.',
+        'Verbal notification by phone; written notice mailed within 24 hours.',
+        'This authorization is a determination of medical necessity and is not a guarantee of payment; payment is subject to eligibility and benefits at the time of service.',
+      ],
+    },
     approval: {
       authNumber: 'AUTH-2026-118234',
       approvedService: 'Acute inpatient psychiatric admission (Rev 0124)',
@@ -276,6 +445,7 @@ export const authCases: AuthCase[] = [
     requestId: 'PA-2026-004902',
     label: 'Residential SUD treatment — documentation gaps',
     pathBadge: 'Human review — likely denial',
+    manualBadge: 'Denied — day 7',
     pathTone: 'reject',
     member: { name: 'Devon Okafor', memberId: 'M-77120943', dob: '06/27/1985', plan: 'BlueEdge HMO — Behavioral Health' },
     provider: { name: 'Birchwood Recovery Center', npi: '1265439870' },
@@ -350,6 +520,67 @@ export const authCases: AuthCase[] = [
         detail: 'The agent drafts a plain-language notice that cites the exact criteria applied and lists the specific missing documentation; the peer reviewer signs it. The letter tells the member and facility precisely what would support an appeal or a new request.',
       },
     ],
+    manualSteps: [
+      {
+        id: 'cm1', nodeId: 'submit', agent: 'Facility admissions office (human)', human: true,
+        title: '30-day residential request faxed',
+        detail: 'The facility faxes a 30-day residential treatment request with the intake assessment and a partial ASAM assessment. Nobody at the facility is notified that the packet is incomplete.',
+        facts: [
+          { label: 'Channel', value: 'Fax — UM intake line' },
+          { label: 'Packet', value: 'Intake assessment + ASAM dimensions 1–3' },
+          { label: 'Elapsed', value: 'Day 0' },
+        ],
+      },
+      {
+        id: 'cm2', nodeId: 'receive', agent: 'UM Intake Coordinator (human)', human: true,
+        title: 'Request keyed and routed to clinical review',
+        detail: 'The intake coordinator keys the request and routes it to the SUD review queue. The documentation gaps will not be discovered until a nurse opens the file.',
+        facts: [
+          { label: 'Elapsed', value: 'Day 1' },
+        ],
+      },
+      {
+        id: 'cm3', nodeId: 'checks', agent: 'UM Nurse Reviewer (human)', human: true,
+        title: 'Gaps found — additional information requested by mail and fax',
+        detail: 'The nurse finds ASAM dimensions 4–6 missing and no record of a lower-level-of-care trial. An additional-information request is faxed to the facility and mailed to the member, and the decision clock is extended.',
+        facts: [
+          { label: 'Missing', value: 'ASAM dims 4–6 · lower level-of-care trial · discharge plan' },
+          { label: 'Elapsed', value: 'Day 2 (extension issued)' },
+        ],
+      },
+      {
+        id: 'cm4', nodeId: 'escalate', agent: 'Physician Reviewer queue (human)', human: true,
+        title: 'No response — case pends to peer review',
+        detail: 'The response window passes with no additional documentation received. The case pends to a physician peer reviewer for a determination on the record as submitted.',
+        facts: [
+          { label: 'Facility response', value: 'None received in window' },
+          { label: 'Elapsed', value: 'Day 3–6' },
+        ],
+      },
+      {
+        id: 'cm5', nodeId: 'determine', agent: 'Physician Peer Reviewer (human)', human: true, tone: 'reject',
+        title: 'Adverse determination on the submitted record',
+        detail: 'The peer reviewer cannot establish medical necessity for residential care from the submitted record and issues an adverse determination. A peer-to-peer offer is noted in the file.',
+        facts: [
+          { label: 'Determination', value: 'Denied — insufficient documentation' },
+          { label: 'Elapsed', value: 'Day 7' },
+        ],
+      },
+      {
+        id: 'cm6', nodeId: 'rejectLetter', agent: 'Notification (mail)', human: true, tone: 'reject', render: 'denial',
+        title: 'Template denial letter mailed',
+        detail: 'A standard template letter is mailed to the member and faxed to the facility. It cites the plan criteria in general terms — the member must call to learn exactly which documents were missing.',
+      },
+    ],
+    manualDenial: {
+      reasons: [
+        'Based on review of the information received, the requested service does not meet the plan\'s medical necessity criteria for the requested level of care.',
+        'This determination was made by a physician reviewer applying the plan\'s SUD Level of Care Criteria.',
+      ],
+      criteriaCited: ['SUD Level of Care Criteria — Residential (ASAM 3.5)'],
+      missing: ['See plan criteria; contact Member Services for details regarding this determination.'],
+      appealRights: 'You have the right to appeal within 180 days and to request an external review. To request a copy of the criteria used, or a peer-to-peer discussion, call Member Services at 1-800-555-0134 between 8:00 AM and 5:00 PM, Monday through Friday.',
+    },
     approval: {
       authNumber: 'AUTH-2026-118307',
       approvedService: 'Residential SUD treatment (H0017)',
