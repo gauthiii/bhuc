@@ -32,6 +32,7 @@ import { GovernanceAIAssetDetail } from './pages/governance/AIAssetDetail'
 import { GovernanceWorkflow } from './pages/governance/Workflow'
 import { GovernancePromptInjection } from './pages/governance/PromptInjection'
 import { GovernanceFairness } from './pages/governance/Fairness'
+import { PriorHome } from './pages/prior/Home'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -86,6 +87,9 @@ export default function App() {
       <Route path="/governance/prompt-injection" element={<GovernanceGuard><GovernancePromptInjection /></GovernanceGuard>} />
       <Route path="/governance/fairness" element={<GovernanceGuard><GovernanceFairness /></GovernanceGuard>} />
       <Route path="/governance/workflow" element={<GovernanceGuard><GovernanceWorkflow /></GovernanceGuard>} />
+
+      {/* Prior-authorization demo (frontend-only, no auth) */}
+      <Route path="/prior" element={<PriorHome />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
