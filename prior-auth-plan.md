@@ -24,16 +24,17 @@ Verified: `tsc -b` clean; rendered and screenshotted at `/prior` — both diagra
 
 ---
 
-## Phase 1 — Interactive future-state simulation (`/prior/simulate`)
+## Phase 1 — Interactive future-state simulation (`/prior/simulate`) ✅ DONE
 
-Bring slide 14 to life: watch a case travel through the AI-enabled flow.
+Slide 14 brought to life as a market-standard UM walkthrough:
 
-- **Case picker:** 3 mock cases — (a) clean rule-match → auto-approved, (b) complex → HITL → clinician approves, (c) likely-to-deny → HITL → denied.
-- **Animated walkthrough:** reuse `Swimlane` with an `activeNodeId` highlight; Next/Back stepper (or auto-play) advances the case node-by-node along its path.
-- **Narration panel:** beside the diagram, a step card explaining what the AI agent did at that node (codes read, policy matched, confidence, why flagged for HITL).
-- **HITL moment:** for cases (b)/(c), a clinician-review card (approve/deny buttons) so the audience sees the human decision point.
-- **Denial letter:** for case (c), show the AI-drafted plain-language denial letter citing exact clinical criteria and missing requirements (mock content).
-- Mock data in `frontend/src/lib/priorAuthDemo.ts`.
+- **Case picker (auth queue):** 3 fictitious behavioral-health cases with request IDs, urgency chips and expected-path badges — (a) IOP continuation `S9480` → auto-approved, (b) expedited inpatient psych admission → HITL → reviewer decides, (c) residential SUD `H0017` with documentation gaps → HITL → likely denial.
+- **Stepper + auto-play:** Back/Next stepper with an optional auto-play toggle; auto-play pauses automatically at the human-review decision point. State lives in the URL (`?case=&s=&d=`) so any moment is deep-linkable.
+- **Live swimlane:** the future-state diagram highlights the active node and tints visited ones.
+- **Narration panel:** per-step agent card (Provider EHR Agent, Intake & Eligibility, Clinical Criteria, Determination & Notification, Care Progression, Payment Integrity) with facts — X12 278 transactions, eligibility results, criteria sets, confidence vs auto-approval threshold, TAT clocks (72h standard / 24h expedited).
+- **HITL moment:** reviewer worksheet with met/unmet criteria (ASAM, level-of-care), agent recommendation, and Approve / Issue-adverse-determination buttons — the audience acts as the licensed reviewer and the flow branches on their choice. AI never auto-denies (stated on-page).
+- **Determinations:** formal approval notice (auth number, units, validity, concurrent-review notes) and a plain-language Notice of Adverse Benefit Determination (criteria cited, missing documentation, appeal rights, peer-to-peer line).
+- Files: `frontend/src/lib/priorAuthDemo.ts` (cases), `frontend/src/pages/prior/Simulate.tsx`, `frontend/src/pages/prior/Layout.tsx` (shared header + tabs).
 
 ## Phase 2 — Post-care AI operations (`/prior/post-care`)
 
@@ -60,9 +61,9 @@ Slide 15 as an interactive chain: Platform capabilities → CPRM risk register (
 - BHUC design system: teal accent, amber = pending, red reserved for risk/denial; `font-display` serif titles.
 - Everything is client-side and deterministic — no `services/` calls, safe to demo offline.
 
-## Open questions (for review)
+## Decisions (reviewed 2026-09-01)
 
-1. **Entry point:** should `/prior` stay a hidden URL, or get a card on the RolePicker home page? *(Options: hidden URL / RolePicker card / link from governance portal)*
-2. **Phase 1 walkthrough style:** manual stepper, auto-play with pause, or both? *(Recommend: stepper with an optional auto-play button)*
-3. **Scope order:** proceed Phase 1 → 2 → 3, or is Phase 3 (governance chain) higher priority for the audience?
-4. **Existing `PriorAuthDemo` clinician page:** reuse any of its content/components in Phase 1, or keep `/prior` fully independent? *(Recommend: independent; it's a different narrative)*
+1. **Entry point:** RolePicker home page card → ✅ added ("Prior Authorization Demo").
+2. **Walkthrough style:** stepper with optional auto-play → ✅ implemented.
+3. **Scope order:** Phase 1 → 2 → 3.
+4. **Independence:** `/prior` is fully independent of the clinician `PriorAuthDemo` page — built to market standards (X12 278 intake, TAT clocks, level-of-care criteria, clinician-only adverse determinations, formal notices).

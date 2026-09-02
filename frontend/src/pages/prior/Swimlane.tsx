@@ -65,8 +65,9 @@ function edgeGeometry(a: Rect, b: Rect, route: 'auto' | 'side' | 'over', offset:
   }
 }
 
-export function Swimlane({ flow, title }: { flow: Flow; title?: string }) {
+export function Swimlane({ flow, title, active, visited }: { flow: Flow; title?: string; active?: string; visited?: string[] }) {
   const markerPrefix = useId().replace(/:/g, '')
+  const visitedSet = new Set(visited ?? [])
   const width = GUTTER + flow.cols * COL_W + PAD_R
   const height = flow.lanes.length * LANE_H
   const rects = new Map(flow.nodes.map((n) => [n.id, nodeRect(n)]))
@@ -121,14 +122,16 @@ export function Swimlane({ flow, title }: { flow: Flow; title?: string }) {
         {flow.nodes.map((n) => {
           const r = rects.get(n.id)!
           const isAi = n.kind === 'ai'
+          const isActive = n.id === active
+          const isVisited = visitedSet.has(n.id)
           return (
             <g key={n.id}>
               <rect
                 x={r.x} y={r.y} width={r.w} height={r.h} rx={10}
-                fill="#ffffff"
-                stroke={isAi ? '#2563eb' : '#10b981'}
-                strokeWidth={1.4}
-                strokeDasharray={isAi ? '5 3' : undefined}
+                fill={isActive ? '#f0fdfa' : isVisited ? (isAi ? '#eff6ff' : '#ecfdf5') : '#ffffff'}
+                stroke={isActive ? '#0f766e' : isAi ? '#2563eb' : '#10b981'}
+                strokeWidth={isActive ? 2.4 : 1.4}
+                strokeDasharray={isAi && !isActive ? '5 3' : undefined}
               />
               <foreignObject x={r.x} y={r.y} width={r.w} height={r.h}>
                 <div className="flex h-full items-center justify-center p-1.5 text-center text-[11px] leading-tight font-medium text-slate-800">

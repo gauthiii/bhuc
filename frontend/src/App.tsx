@@ -33,6 +33,7 @@ import { GovernanceWorkflow } from './pages/governance/Workflow'
 import { GovernancePromptInjection } from './pages/governance/PromptInjection'
 import { GovernanceFairness } from './pages/governance/Fairness'
 import { PriorHome } from './pages/prior/Home'
+import { PriorSimulate } from './pages/prior/Simulate'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -90,6 +91,7 @@ export default function App() {
 
       {/* Prior-authorization demo (frontend-only, no auth) */}
       <Route path="/prior" element={<PriorHome />} />
+      <Route path="/prior/simulate" element={<PriorSimulate />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
