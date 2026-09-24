@@ -12,6 +12,7 @@ About 6 attorneys answer roughly 50 legal research requests a month from busines
 
 ## Phase 1: Overview page (`/prior/legal`) ✅ DONE
 
+- **How it works strip** (under the page title, replaces the intro paragraph): three step cards, Business unit asks, Copilot finds and summarizes (dashed blue, matching the Copilot step style), Attorney checks and decides.
 - **Today / Business case figures:** all taken from the workbook (sheets 02 and 03).
 - **Current state swimlane** (Business Unit, Attorney, Z: Legal Drive): question in, manual scoping, folder-by-folder search, reading and outside research, drafting, answer in 1 to 3 business days.
 - **Future state swimlane** (Business Unit, Attorney, Copilot, Chief Legal Officer): attorney prompts Copilot, Copilot searches the Z: drive within the attorney's permissions, summarizes with citations, attorney verifies each citation, Copilot helps draft, attorney finalizes, then internal answer or CLO approval for external release. Dashed boxes are Copilot steps.

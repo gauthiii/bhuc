@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Bot, CheckCircle2, FolderLock, GitCompareArrows, Gavel, Quote, UserCheck, XCircle } from 'lucide-react'
+import { ArrowRight, Bot, Briefcase, Building2, CheckCircle2, ChevronRight, FolderLock, GitCompareArrows, Gavel, Quote, UserCheck, XCircle } from 'lucide-react'
 import { LegalLayout } from './Layout'
 import { Swimlane } from '../Swimlane'
 import { legalCurrentFlow, legalFutureFlow } from '../../../lib/legalCopilotFlows'
@@ -105,24 +105,51 @@ function Figures() {
   )
 }
 
+// The use case in three steps, shown under the page title.
+const HOW_IT_WORKS = [
+  { icon: Building2, title: 'Business unit asks', text: 'A legal question comes in to the Legal Department.', ai: false },
+  { icon: Bot, title: 'Copilot finds and summarizes', text: 'Searches the Z: legal drive, cites its sources and helps draft.', ai: true },
+  { icon: Briefcase, title: 'Attorney checks and decides', text: 'Verifies every citation and owns the final answer.', ai: false },
+]
+
+function HowItWorks() {
+  return (
+    <ol className="grid gap-3 md:grid-cols-3 md:gap-8">
+      {HOW_IT_WORKS.map(({ icon: Icon, title, text, ai }, i) => (
+        <li key={title} className="relative">
+          <div className={`flex h-full items-start gap-3 rounded-2xl border bg-white p-4 shadow-sm ${ai ? 'border-dashed border-blue-400' : 'border-slate-200'}`}>
+            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${ai ? 'bg-blue-50 text-blue-700' : 'bg-teal-50 text-teal-700'}`}>
+              <Icon className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="text-xs font-semibold text-slate-400">Step {i + 1}</div>
+              <div className="text-sm font-semibold text-slate-800">{title}</div>
+              <p className="mt-0.5 text-sm text-slate-500">{text}</p>
+            </div>
+          </div>
+          {i < HOW_IT_WORKS.length - 1 && (
+            <ChevronRight className="absolute top-1/2 -right-7 hidden h-5 w-5 -translate-y-1/2 text-slate-300 md:block" aria-hidden />
+          )}
+        </li>
+      ))}
+    </ol>
+  )
+}
+
 export function LegalHome() {
   return (
     <LegalLayout>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="max-w-3xl">
-          <h1 className="font-display text-3xl font-semibold text-slate-900">
-            Legal Research and Work Product with Copilot
-          </h1>
-          <p className="mt-2 text-slate-500">
-            Attorneys answer legal questions from business units using material on the Z: legal drive.
-            Compare how that works today with how it works when Copilot finds, summarizes and helps draft,
-            and an attorney stays in charge of every answer.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="font-display text-3xl font-semibold text-slate-900">
+          Legal Research and Work Product with Copilot
+        </h1>
         <Link to="/prior/legal/simulate" className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800">
           Run a case simulation <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      {/* How it works */}
+      <div className="mt-6"><HowItWorks /></div>
 
       {/* Volume and value */}
       <div className="mt-6"><Figures /></div>
