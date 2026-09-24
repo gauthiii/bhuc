@@ -36,6 +36,7 @@ import { PriorHome } from './pages/prior/Home'
 import { PriorSimulate } from './pages/prior/Simulate'
 import { LegalHome } from './pages/prior/legal/Home'
 import { LegalSimulate } from './pages/prior/legal/Simulate'
+import { LegalSecurity } from './pages/prior/legal/Security'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -98,6 +99,7 @@ export default function App() {
       {/* Legal research Copilot demo (frontend-only, no auth) */}
       <Route path="/prior/legal" element={<LegalHome />} />
       <Route path="/prior/legal/simulate" element={<LegalSimulate />} />
+      <Route path="/prior/legal/security" element={<LegalSecurity />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

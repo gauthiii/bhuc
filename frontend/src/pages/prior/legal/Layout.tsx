@@ -7,6 +7,7 @@ import { Scale } from 'lucide-react'
 const TABS = [
   { to: '/prior/legal', label: 'Overview', end: true },
   { to: '/prior/legal/simulate', label: 'Case Simulation', end: false },
+  { to: '/prior/legal/security', label: 'Security & Governance', end: false },
 ]
 
 export function LegalLayout({ children }: { children: ReactNode }) {
@@ -19,7 +20,7 @@ export function LegalLayout({ children }: { children: ReactNode }) {
             <span className="ml-2 font-display text-lg font-semibold text-slate-800">BHUC Care</span>
           </Link>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-800">
-            <Scale className="h-3.5 w-3.5" /> Legal Research Copilot Demo
+            <Scale className="h-3.5 w-3.5" /> Legal Research Copilot
           </span>
         </div>
         <nav className="mx-auto flex max-w-7xl gap-1 px-6">
