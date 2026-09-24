@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { UserRound, Stethoscope, ShieldCheck, FileCheck2 } from 'lucide-react'
+import { UserRound, Stethoscope, ShieldCheck, FileCheck2, Scale } from 'lucide-react'
 import { CrisisBanner } from '../components/CrisisBanner'
 
 // Dev/demo entry: choose which portal to view. In production each portal is a separate
@@ -39,6 +39,11 @@ export function RolePicker() {
             <FileCheck2 className="h-8 w-8 text-teal-700" />
             <h2 className="mt-3 text-lg font-semibold text-slate-800">Prior Authorization Demo</h2>
             <p className="mt-1 text-sm text-slate-500">Compare manual vs AI-enabled prior authorization and run an interactive case simulation.</p>
+          </Link>
+          <Link to="/prior/legal" className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-teal-400 hover:shadow">
+            <Scale className="h-8 w-8 text-teal-700" />
+            <h2 className="mt-3 text-lg font-semibold text-slate-800">Legal Research Copilot Demo</h2>
+            <p className="mt-1 text-sm text-slate-500">Compare manual legal research with Copilot-assisted research and run an interactive case simulation.</p>
           </Link>
         </div>
       </div>

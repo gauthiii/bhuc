@@ -34,6 +34,8 @@ import { GovernancePromptInjection } from './pages/governance/PromptInjection'
 import { GovernanceFairness } from './pages/governance/Fairness'
 import { PriorHome } from './pages/prior/Home'
 import { PriorSimulate } from './pages/prior/Simulate'
+import { LegalHome } from './pages/prior/legal/Home'
+import { LegalSimulate } from './pages/prior/legal/Simulate'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -92,6 +94,10 @@ export default function App() {
       {/* Prior-authorization demo (frontend-only, no auth) */}
       <Route path="/prior" element={<PriorHome />} />
       <Route path="/prior/simulate" element={<PriorSimulate />} />
+
+      {/* Legal research Copilot demo (frontend-only, no auth) */}
+      <Route path="/prior/legal" element={<LegalHome />} />
+      <Route path="/prior/legal/simulate" element={<LegalSimulate />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
