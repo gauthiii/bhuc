@@ -15,7 +15,10 @@ About 6 attorneys answer roughly 50 legal research requests a month from busines
 - **Today / Business case figures:** all taken from the workbook (sheets 02 and 03).
 - **Current state swimlane** (Business Unit, Attorney, Z: Legal Drive): question in, manual scoping, folder-by-folder search, reading and outside research, drafting, answer in 1 to 3 business days.
 - **Future state swimlane** (Business Unit, Attorney, Copilot, Chief Legal Officer): attorney prompts Copilot, Copilot searches the Z: drive within the attorney's permissions, summarizes with citations, attorney verifies each citation, Copilot helps draft, attorney finalizes, then internal answer or CLO approval for external release. Dashed boxes are Copilot steps.
+- **Points beside each flow:** a red "Problems today" panel next to the current state (5 points) and a green "How Copilot solves them" panel next to the future state (5 matching points, same order). These replace the one-line subtexts. Flows scale down to fit beside the panel, with no scrolling.
+- **Figures repeated** directly above the future-state swimlane (same Today and Business case cards as the top of the page).
 - **Safeguards (4):** citations on every answer; attorney reviews every output; scope limited to the Z: drive and existing permissions with web search and plugins off; CLO approves external release.
+- **Case comparison table** (bottom of the page): one block per simulated case with four measures (answer delivered, finding the material, checking the sources, approval before release), Manual vs With Copilot, plus an "Across all three" summary. Values match the simulation step data and are labeled illustrative.
 
 ## Phase 2: Case simulation (`/prior/legal/simulate`) ✅ DONE
 

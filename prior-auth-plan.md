@@ -68,3 +68,7 @@ Slide 15 as an interactive chain: Platform capabilities → CPRM risk register (
 2. **Walkthrough style:** stepper with optional auto-play → ✅ implemented.
 3. **Scope order:** Phase 1 → 2 → 3.
 4. **Independence:** `/prior` is fully independent of the clinician `PriorAuthDemo` page — built to market standards (X12 278 intake, TAT clocks, level-of-care criteria, clinician-only adverse determinations, formal notices).
+
+## Presentation source
+
+- `prior-auth-slides.md` (added 2026-09-02) — slide-by-slide markdown of the prior-auth demo deck (EPM 5.5 → current/future flows → 3-case before/after → risks → risk-to-control mapping), written for later conversion to PPT.
