@@ -51,7 +51,7 @@ export function ComparisonTable() {
             <th className={`${th} w-56 text-slate-500`}>Case</th>
             <th className={`${th} w-44 text-slate-500`}>Measure</th>
             <th className={`${th} text-slate-600`}>Manual (today)</th>
-            <th className={`${th} text-teal-800`}>With Copilot (future)</th>
+            <th className={`${th} text-brand-800`}>With Copilot (future)</th>
           </tr>
         </thead>
         <tbody>
@@ -68,7 +68,7 @@ export function ComparisonTable() {
                 )}
                 <td className={`${td} font-medium text-slate-600`}>{r.measure}</td>
                 <td className={`${td} text-slate-700`}>{r.manual}</td>
-                <td className={`${td} bg-teal-50/40 text-slate-800`}>{r.copilot}</td>
+                <td className={`${td} bg-brand-50/40 text-slate-800`}>{r.copilot}</td>
               </tr>
             ))
           })}
@@ -81,7 +81,7 @@ export function ComparisonTable() {
               )}
               <td className={`${td} font-medium text-slate-600`}>{r.measure}</td>
               <td className={`${td} font-medium text-slate-700`}>{r.manual}</td>
-              <td className={`${td} font-medium text-teal-900`}>{r.copilot}</td>
+              <td className={`${td} font-medium text-brand-900`}>{r.copilot}</td>
             </tr>
           ))}
         </tbody>
