@@ -37,6 +37,11 @@ import { PriorSimulate } from './pages/prior/Simulate'
 import { LegalHome } from './pages/prior/legal/Home'
 import { LegalSimulate } from './pages/prior/legal/Simulate'
 import { LegalSecurity } from './pages/prior/legal/Security'
+import { LegalGuide } from './pages/prior/legal/Guide'
+import { LegalControls } from './pages/prior/legal/Controls'
+import { LegalDemoIdentity } from './pages/prior/legal/DemoIdentity'
+import { LegalDemoPurview } from './pages/prior/legal/DemoPurview'
+import { LegalDecision } from './pages/prior/legal/Decision'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -96,9 +101,14 @@ export default function App() {
       <Route path="/prior" element={<PriorHome />} />
       <Route path="/prior/simulate" element={<PriorSimulate />} />
 
-      {/* Legal research Copilot demo (frontend-only, no auth) */}
-      <Route path="/prior/legal" element={<LegalHome />} />
+      {/* BCBSVT Copilot for Legal: AI governance framework demo (frontend-only, no auth) */}
+      <Route path="/prior/legal" element={<LegalGuide />} />
+      <Route path="/prior/legal/use-case" element={<LegalHome />} />
       <Route path="/prior/legal/simulate" element={<LegalSimulate />} />
+      <Route path="/prior/legal/controls" element={<LegalControls />} />
+      <Route path="/prior/legal/demo/identity" element={<LegalDemoIdentity />} />
+      <Route path="/prior/legal/demo/data-protection" element={<LegalDemoPurview />} />
+      <Route path="/prior/legal/decision" element={<LegalDecision />} />
       <Route path="/prior/legal/security" element={<LegalSecurity />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,5 +1,7 @@
 # Legal Research Copilot Demo Plan (`/prior/legal`)
 
+> Since Phase 4 the section is the BCBSVT **AI Governance Framework** demo; the run of show is on `/prior/legal`.
+
 **Goal:** a frontend-only demo of the Legal Department's Microsoft Copilot (BeccaBot) use case, living under `/prior/legal` next to the prior-auth demo. It shows today's manual research process, the Copilot-assisted future state, and three simulated requests run both ways. No backend calls, no auth guard, no PHI. All case data is fictitious.
 
 **Source:** `CoPilot_CPRM_Sprint2_Master_Workbook.xlsx` (sheets 01 Use Case Overview, 02 Process Discovery, 03 Opportunity Assessment, 09 AI Intake Form). Governance and security sheets (04 to 08) are not surfaced beyond the four safeguards below, by design.
@@ -53,6 +55,33 @@ Sections, in order:
 6. **Approval trail:** 5 sign-offs with role and date.
 
 The header badge on all legal tabs now reads "Legal Research Copilot". The home card title is unchanged.
+
+## Phase 4: Governance framework flow and BCBSVT branding ✅ DONE
+
+**Source:** client deck `Copilot-Governance-Framework-Demonstration.pptx` (18 slides: Assess, Control, Implement, Prove, with two live demos). The demo now follows the deck in order, and every screen maps to deck slides.
+
+**Branding:** BCBSVT palette from the deck as Tailwind tokens `brand-50…900` in `styles.css` (500 = #0079CF blue, 800 = #013765 navy, 200 = #99D6EA sky). The white BCBSVT logo and the mountain title background are taken from the deck (`src/assets/brand/`). All legal pages moved from teal to brand classes; the header is navy with the logo.
+
+**Navigation:** tabs are grouped by framework phase. A Previous / Next footer walks the screens in presentation order, and a **Presenter notes** toggle (header) shows what to show and say, deck slides and timing for the current screen.
+
+| Route | Phase | Deck | What it shows |
+|---|---|---|---|
+| `/prior/legal` | Start | 1 to 4 | Demo guide: the question, the lifecycle, the governance chain for Copilot for Legal, and the run of show (about 22 minutes core) |
+| `/prior/legal/use-case` | Assess | 5 to 7 | Former overview page, plus the AI use case card |
+| `/prior/legal/simulate` | Assess | 7 | Unchanged case simulation (optional stop; shows R4 human oversight) |
+| `/prior/legal/controls` | Control & Implement | 6, 8 to 12 | Three perspectives, follow the data, seven risk lenses, R1 to R6 with the full trace, and the tenant map lighting up where the selected requirement runs (`?r=`) |
+| `/prior/legal/demo/identity` | Prove | 13 | **Demo 1, Entra ID.** Four sign-in attempts (Legal user on a managed laptop, same user on a personal laptop, Claims user, MFA denied) run through the six checks, then show the outcome and the sign-in log entry |
+| `/prior/legal/demo/data-protection` | Prove | 14 | **Demo 2, Purview.** Four scenarios through the five slide stages: Confidential memo (label inherited), Privileged file (excluded by DLP), Copilot draft sent outside (notify or restrict toggle), file Maria cannot open (never surfaced) |
+| `/prior/legal/decision` | Decide | 15 to 18 | End-to-end trace for R1, requirement status R1 to R6, evidence pack, the AI Governance Council decision, technology-led versus governance-led, and the closing |
+| `/prior/legal/security` | Decide | Appendix | Unchanged workbook posture page |
+
+**Evidence carries forward:** each scenario run in Demo 1 or Demo 2 adds a record to an evidence pack (`lib/legalEvidence.ts`, sessionStorage). The decision page reads it, and **Approve with conditions** stays locked until R1 and R3 have live evidence. Reset from the guide or the decision page.
+
+**Content rules:** accounts (`@bcbsvt.demo`), devices, documents and log entries are fictitious; Entra error codes and Purview activity names are shown for illustration. Each Prove screen says so and notes that, with a live tenant, the same scenario can be shown in the admin center.
+
+**Also changed:** the global `a`, `button` resets in `styles.css` now sit in `@layer base`, so Tailwind text and font utilities on links and buttons apply (they were being overridden app-wide).
+
+Files: `lib/legalGovernance.ts` (all framework content, scenarios, run of show), `lib/legalEvidence.ts`, `pages/prior/legal/{Guide,Controls,DemoIdentity,DemoPurview,ProveParts,Decision}.tsx`, plus edits to `Layout.tsx`, `Home.tsx`, `App.tsx`, `RolePicker.tsx`.
 
 ## Files
 

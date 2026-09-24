@@ -24,7 +24,7 @@ function ModeToggle({ mode, onChange }: { mode: SimMode; onChange: (m: SimMode) 
     <button
       onClick={() => onChange(m)}
       className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-        mode === m ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+        mode === m ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
       }`}
     >
       {label}
@@ -94,7 +94,7 @@ function CasePicker({ mode, onMode, onPick }: { mode: SimMode; onMode: (m: SimMo
           <button
             key={c.id}
             onClick={() => onPick(c.id)}
-            className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-teal-400 hover:shadow"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-400 hover:shadow"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs text-slate-400">{c.requestId}</span>
@@ -105,7 +105,7 @@ function CasePicker({ mode, onMode, onPick }: { mode: SimMode; onMode: (m: SimMo
             <p className="mt-2 text-xs italic text-slate-500">"{c.question}"</p>
             <div className="mt-4 flex items-center justify-between">
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${mode === 'manual' ? 'bg-slate-100 text-slate-700' : CASE_CHIP[c.tone]}`}>{mode === 'manual' ? c.manualBadge : c.badge}</span>
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 opacity-0 transition group-hover:opacity-100">
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-brand-500 opacity-0 transition group-hover:opacity-100">
                 Run case <ChevronRight className="h-4 w-4" />
               </span>
             </div>
@@ -304,7 +304,7 @@ export function LegalSimulate() {
             <ArrowLeft className="h-4 w-4" /> Back
           </button>
           <button onClick={() => update({ s: String(idx + 1) })} disabled={atDecision || atEnd}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:opacity-40">
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-40">
             Next <ArrowRight className="h-4 w-4" />
           </button>
           <button onClick={() => setAutoPlay((v) => !v)} disabled={atDecision || atEnd}
@@ -370,9 +370,9 @@ export function LegalSimulate() {
               {steps.map((s, i) => (
                 <li key={s.id} className="flex items-start gap-2 text-sm">
                   {i < idx
-                    ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
                     : i === idx
-                      ? <Circle className="mt-0.5 h-4 w-4 shrink-0 fill-teal-600 text-teal-600" />
+                      ? <Circle className="mt-0.5 h-4 w-4 shrink-0 fill-brand-500 text-brand-500" />
                       : <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />}
                   <span className={i === idx ? 'font-medium text-slate-800' : i < idx ? 'text-slate-600' : 'text-slate-400'}>{s.title}</span>
                 </li>

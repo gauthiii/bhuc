@@ -4,7 +4,7 @@ import { LegalLayout } from './Layout'
 import { Swimlane } from '../Swimlane'
 import { legalCurrentFlow, legalFutureFlow } from '../../../lib/legalCopilotFlows'
 
-// /prior/legal: Legal Department research with Microsoft Copilot (BeccaBot).
+// /prior/legal/use-case: Legal Department research with Microsoft Copilot (BeccaBot).
 // Home page: today's manual research flow next to the Copilot-assisted flow, plus the
 // workbook's volume and value figures and the four safeguards that keep a person in charge.
 
@@ -95,8 +95,8 @@ function Figures() {
           {TODAY.map((s) => <Stat key={s.label} {...s} />)}
         </div>
       </section>
-      <section className="rounded-2xl border border-teal-200 bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-semibold text-teal-800">Business case</h2>
+      <section className="rounded-2xl border border-brand-200 bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-brand-800">Business case</h2>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {TARGET.map((s) => <Stat key={s.label} {...s} />)}
         </div>
@@ -118,7 +118,7 @@ function HowItWorks() {
       {HOW_IT_WORKS.map(({ icon: Icon, title, text, ai }, i) => (
         <li key={title} className="relative">
           <div className={`flex h-full items-start gap-3 rounded-2xl border bg-white p-4 shadow-sm ${ai ? 'border-dashed border-blue-400' : 'border-slate-200'}`}>
-            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${ai ? 'bg-blue-50 text-blue-700' : 'bg-teal-50 text-teal-700'}`}>
+            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${ai ? 'bg-blue-50 text-blue-700' : 'bg-brand-50 text-brand-500'}`}>
               <Icon className="h-5 w-5" />
             </span>
             <div>
@@ -136,20 +136,56 @@ function HowItWorks() {
   )
 }
 
+// Deck slide 5: the AI use case card.
+const AI_DOES = ['Research', 'Summarize', 'Draft']
+const AI_TOUCHES = ['Confidential information', 'Privileged legal information', 'User identity', 'Prompts', 'Documents', 'Generated responses']
+const PIPELINE = ['Business value', 'Financial value', 'AI feasibility', 'Risk / complexity', 'Strategic fit']
+
+function UseCaseCard() {
+  return (
+    <section className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:grid-cols-[1.2fr_1fr_1.3fr_1fr]">
+      <div className="bg-brand-800 p-5 text-white">
+        <div className="text-[11px] font-bold tracking-wider text-brand-200 uppercase">AI use case card</div>
+        <div className="mt-1 font-display text-xl font-semibold">Microsoft Copilot for Legal</div>
+        <p className="mt-2 text-sm text-brand-50">Legal users work with internal legal documents to accelerate research, summarization and drafting.</p>
+      </div>
+      <div className="p-5">
+        <div className="text-[11px] font-bold tracking-wider text-brand-600 uppercase">What the AI does</div>
+        <div className="mt-2 flex flex-wrap gap-1.5">{AI_DOES.map((x) => <span key={x} className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-800">{x}</span>)}</div>
+        <p className="mt-2 text-xs text-slate-500">on internal legal information</p>
+      </div>
+      <div className="border-t border-slate-100 p-5 lg:border-t-0 lg:border-l">
+        <div className="text-[11px] font-bold tracking-wider text-brand-600 uppercase">What the AI touches</div>
+        <div className="mt-2 flex flex-wrap gap-1.5">{AI_TOUCHES.map((x) => <span key={x} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700">{x}</span>)}</div>
+      </div>
+      <div className="border-t border-slate-100 p-5 lg:border-t-0 lg:border-l">
+        <div className="text-[11px] font-bold tracking-wider text-brand-600 uppercase">Selected from a prioritized pipeline</div>
+        <ul className="mt-2 space-y-1">{PIPELINE.map((x) => <li key={x} className="flex items-center gap-1.5 text-xs text-slate-700"><CheckCircle2 className="h-3.5 w-3.5 text-brand-500" />{x}</li>)}</ul>
+      </div>
+    </section>
+  )
+}
+
 export function LegalHome() {
   return (
     <LegalLayout>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-3xl font-semibold text-slate-900">
-          Legal Research and Work Product with Copilot
-        </h1>
-        <Link to="/prior/legal/simulate" className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold tracking-widest text-brand-500 uppercase">Assess · What exactly are we governing?</p>
+          <h1 className="mt-1 font-display text-3xl font-semibold text-slate-900">
+            Legal Research and Work Product with Copilot
+          </h1>
+        </div>
+        <Link to="/prior/legal/simulate" className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-600">
           Run a case simulation <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
       {/* How it works */}
       <div className="mt-6"><HowItWorks /></div>
+
+      {/* Use case card (deck slide 5) */}
+      <div className="mt-6"><UseCaseCard /></div>
 
       {/* Volume and value */}
       <div className="mt-6"><Figures /></div>
@@ -177,7 +213,7 @@ export function LegalHome() {
       {/* Future state */}
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-800">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-800">
             <Bot className="h-3.5 w-3.5" /> Future state
           </span>
           <h2 className="text-lg font-semibold text-slate-800">Legal research with Copilot</h2>
@@ -198,7 +234,7 @@ export function LegalHome() {
         <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {SAFEGUARDS.map(({ icon: Icon, title, text }) => (
             <div key={title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <Icon className="h-6 w-6 text-teal-700" />
+              <Icon className="h-6 w-6 text-brand-500" />
               <h3 className="mt-2 text-sm font-semibold text-slate-800">{title}</h3>
               <p className="mt-1 text-sm text-slate-500">{text}</p>
             </div>

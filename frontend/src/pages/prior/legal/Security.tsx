@@ -66,7 +66,7 @@ function StatusBadge({ status }: { status: string }) {
 function Section({ id, eyebrow, title, intro, children }: { id: string; eyebrow: string; title: string; intro?: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mt-12 scroll-mt-24">
-      <div className="text-xs font-semibold uppercase tracking-wider text-teal-700">{eyebrow}</div>
+      <div className="text-xs font-semibold uppercase tracking-wider text-brand-500">{eyebrow}</div>
       <h2 className="mt-1 font-display text-2xl font-semibold text-slate-900">{title}</h2>
       {intro && <p className="mt-1 max-w-3xl text-sm text-slate-500">{intro}</p>}
       <div className="mt-5">{children}</div>
@@ -95,7 +95,7 @@ function Posture() {
         <Card key={unit} className="p-4">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{unit}</span>
-            <Icon className="h-4 w-4 text-teal-700" />
+            <Icon className="h-4 w-4 text-brand-500" />
           </div>
           <div className="mt-2 font-display text-3xl font-semibold text-slate-900">{value}</div>
           <p className="mt-1 text-xs text-slate-500">{label}</p>
@@ -131,17 +131,17 @@ function Wheel({ selected, onSelect }: { selected: Fn | null; onSelect: (f: Fn |
         return (
           <g key={fn} onClick={() => onSelect(active ? null : fn)} className="cursor-pointer">
             <title>{`${TITLE[fn]}: ${s.direct} direct, ${s.enterprise} enterprise program, ${s.na} not applicable`}</title>
-            <path d={arcPath(a0, a1)} fill={active ? '#0f766e' : '#f1f5f9'} stroke="#ffffff" strokeWidth={2} className="transition-colors hover:fill-teal-100" style={active ? { fill: '#0f766e' } : undefined} />
+            <path d={arcPath(a0, a1)} fill={active ? '#0079cf' : '#f1f5f9'} stroke="#ffffff" strokeWidth={2} className="transition-colors hover:fill-brand-100" style={active ? { fill: '#0079cf' } : undefined} />
             <text x={lx} y={ly - 4} textAnchor="middle" fontSize={14} fontWeight={700} fill={active ? '#ffffff' : '#1e293b'} pointerEvents="none">{TITLE[fn]}</text>
-            <text x={lx} y={ly + 13} textAnchor="middle" fontSize={11} fill={active ? '#ccfbf1' : '#64748b'} pointerEvents="none">{s.direct} direct</text>
+            <text x={lx} y={ly + 13} textAnchor="middle" fontSize={11} fill={active ? '#e8f2fb' : '#64748b'} pointerEvents="none">{s.direct} direct</text>
           </g>
         )
       })}
       <g onClick={() => onSelect(selected === 'GOVERN' ? null : 'GOVERN')} className="cursor-pointer">
         <title>{`Govern: ${fnStats('GOVERN').direct} direct, ${fnStats('GOVERN').enterprise} enterprise program`}</title>
-        <circle cx={CX} cy={CY} r={R_CORE} fill={selected === 'GOVERN' ? '#0f766e' : '#ffffff'} stroke={selected === 'GOVERN' ? '#0f766e' : '#cbd5e1'} strokeWidth={2} className="transition-colors hover:fill-teal-50" style={selected === 'GOVERN' ? { fill: '#0f766e' } : undefined} />
+        <circle cx={CX} cy={CY} r={R_CORE} fill={selected === 'GOVERN' ? '#0079cf' : '#ffffff'} stroke={selected === 'GOVERN' ? '#0079cf' : '#cbd5e1'} strokeWidth={2} className="transition-colors hover:fill-brand-50" style={selected === 'GOVERN' ? { fill: '#0079cf' } : undefined} />
         <text x={CX} y={CY - 4} textAnchor="middle" fontSize={16} fontWeight={700} fill={selected === 'GOVERN' ? '#ffffff' : '#1e293b'} pointerEvents="none">Govern</text>
-        <text x={CX} y={CY + 14} textAnchor="middle" fontSize={11} fill={selected === 'GOVERN' ? '#ccfbf1' : '#64748b'} pointerEvents="none">{fnStats('GOVERN').direct} direct</text>
+        <text x={CX} y={CY + 14} textAnchor="middle" fontSize={11} fill={selected === 'GOVERN' ? '#e8f2fb' : '#64748b'} pointerEvents="none">{fnStats('GOVERN').direct} direct</text>
       </g>
     </svg>
   )
@@ -209,7 +209,7 @@ function ProcessTable({ fn }: { fn: Fn | null }) {
         <span className="mr-1 text-sm font-semibold text-slate-700">{fn ? TITLE[fn] : 'All functions'}</span>
         {chips.map((c) => (
           <button key={c.key} onClick={() => setFilter(c.key)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition ${filter === c.key ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            className={`rounded-full px-3 py-1 text-xs font-medium transition ${filter === c.key ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
             {c.label} <span className="opacity-70">{c.n}</span>
           </button>
         ))}
@@ -240,7 +240,7 @@ function ProcessTable({ fn }: { fn: Fn | null }) {
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {p.check}
-                    {isOpen && <p className="mt-2 rounded-lg bg-teal-50/60 p-2 text-xs text-teal-900"><span className="font-semibold">Why it matters: </span>{p.why}</p>}
+                    {isOpen && <p className="mt-2 rounded-lg bg-brand-50/60 p-2 text-xs text-brand-900"><span className="font-semibold">Why it matters: </span>{p.why}</p>}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{p.current}</td>
                   <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
@@ -308,7 +308,7 @@ function ScoreBuild() {
           </div>
           <div className="absolute inset-x-0 inset-y-1 flex gap-0.5 px-0.5">
             {securityData.scoreFactors.map((f) => (
-              <div key={f.factor} className="grid h-full shrink-0 place-items-center rounded bg-teal-600 text-[11px] font-semibold text-white" style={{ width: `${Number(f.points)}%` }} title={`${f.factor}: ${f.points} points`}>{f.points}</div>
+              <div key={f.factor} className="grid h-full shrink-0 place-items-center rounded bg-brand-500 text-[11px] font-semibold text-white" style={{ width: `${Number(f.points)}%` }} title={`${f.factor}: ${f.points} points`}>{f.points}</div>
             ))}
           </div>
         </div>
@@ -365,14 +365,14 @@ function Crosswalk() {
           const n = f.rows.filter((r) => r.status === 'Yes').length
           return (
             <button key={f.key} onClick={() => setTab(f.key)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition ${tab === f.key ? 'border-teal-700 text-teal-800' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition ${tab === f.key ? 'border-brand-500 text-brand-800' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
               {f.label} <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{n}/{f.rows.length}</span>
             </button>
           )
         })}
       </div>
       <div className="flex items-center gap-2 px-4 pt-4 text-sm text-slate-600">
-        <ShieldCheck className="h-4 w-4 text-teal-700" />
+        <ShieldCheck className="h-4 w-4 text-brand-500" />
         {implemented} of {fw.rows.length} implemented{fw.rows.length > implemented ? `, ${fw.rows.length - implemented} in progress` : ''}. Each control is traced to the NIST reference it satisfies.
       </div>
       <div className="overflow-x-auto p-4">
@@ -410,7 +410,7 @@ function VendorCard() {
   const list = showAll ? contractApplicable : contractApplicable.slice(0, 6)
   return (
     <Card>
-      <div className="flex items-center gap-2"><Handshake className="h-5 w-5 text-teal-700" /><h3 className="text-base font-semibold text-slate-900">Third-party assurance: Microsoft</h3></div>
+      <div className="flex items-center gap-2"><Handshake className="h-5 w-5 text-brand-500" /><h3 className="text-base font-semibold text-slate-900">Third-party assurance: Microsoft</h3></div>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {certs.map((c) => (
           <span key={c} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
@@ -432,7 +432,7 @@ function VendorCard() {
           </li>
         ))}
       </ul>
-      <button onClick={() => setShowAll((v) => !v)} className="mt-2 text-xs font-semibold text-teal-700 hover:underline">
+      <button onClick={() => setShowAll((v) => !v)} className="mt-2 text-xs font-semibold text-brand-500 hover:underline">
         {showAll ? 'Show fewer' : `Show all ${contractApplicable.length}`}
       </button>
     </Card>
@@ -442,7 +442,7 @@ function VendorCard() {
 function DataCard() {
   return (
     <Card>
-      <div className="flex items-center gap-2"><FileLock2 className="h-5 w-5 text-teal-700" /><h3 className="text-base font-semibold text-slate-900">Data protection</h3></div>
+      <div className="flex items-center gap-2"><FileLock2 className="h-5 w-5 text-brand-500" /><h3 className="text-base font-semibold text-slate-900">Data protection</h3></div>
       <p className="mt-2 text-sm text-slate-500">No PHI or member personal information is processed. Copilot reads the Z: legal drive only and does not keep a separate copy.</p>
       <div className="mt-4 space-y-3">
         {securityData.dataElements.map((d) => (
@@ -473,7 +473,7 @@ function TrustCard() {
   return (
     <Card>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex items-center gap-2"><Layers className="h-5 w-5 text-teal-700" /><h3 className="text-base font-semibold text-slate-900">NIST AI RMF trustworthy characteristics</h3></div>
+        <div className="flex items-center gap-2"><Layers className="h-5 w-5 text-brand-500" /><h3 className="text-base font-semibold text-slate-900">NIST AI RMF trustworthy characteristics</h3></div>
         <div className="text-sm text-slate-500">Average <span className="font-semibold text-slate-900">{trustAvg.toFixed(2)}</span> of 5</div>
       </div>
       <p className="mt-1 text-sm text-slate-500">Rated 1 to 5. A rating of 3 or above means the characteristic is adequately managed for a Tier 3 system.</p>
@@ -482,7 +482,7 @@ function TrustCard() {
           <div key={t.name} className="grid grid-cols-[minmax(0,200px)_1fr_28px] items-center gap-3" title={t.note}>
             <span className="text-sm text-slate-700">{t.name}</span>
             <div className="relative h-2.5 rounded-full bg-slate-100">
-              <div className="absolute inset-y-0 left-0 rounded-full bg-teal-600" style={{ width: `${(Number(t.rating) / 5) * 100}%` }} />
+              <div className="absolute inset-y-0 left-0 rounded-full bg-brand-500" style={{ width: `${(Number(t.rating) / 5) * 100}%` }} />
               <div className="absolute -inset-y-1 w-0.5 bg-slate-500" style={{ left: '60%' }} />
             </div>
             <span className="text-right text-sm font-semibold text-slate-900">{t.rating}</span>
@@ -505,7 +505,7 @@ function Approvals() {
       {list.map((a) => (
         <li key={a.role} className="relative">
           <Card className="h-full p-4">
-            <Stamp className="h-5 w-5 text-teal-700" />
+            <Stamp className="h-5 w-5 text-brand-500" />
             <div className="mt-2 text-sm font-semibold text-slate-900">{a.role}</div>
             <div className="mt-0.5 text-xs text-slate-500">{a.by}</div>
             <div className="mt-3 flex items-center justify-between gap-2">
