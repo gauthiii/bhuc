@@ -5,6 +5,7 @@ import {
   FileText, Gavel, Info, Pause, Play, RotateCcw, UserRound,
 } from 'lucide-react'
 import { LegalLayout } from './Layout'
+import { ComparisonTable } from './ComparisonTable'
 import { Swimlane } from '../Swimlane'
 import { legalCurrentFlow, legalFutureFlow } from '../../../lib/legalCopilotFlows'
 import { legalCases } from '../../../lib/legalCopilotDemo'
@@ -111,6 +112,14 @@ function CasePicker({ mode, onMode, onPick }: { mode: SimMode; onMode: (m: SimMo
           </button>
         ))}
       </div>
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-slate-800">Case by case: today and with Copilot</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          How each request plays out today and with Copilot. Each request arrives on day 1 and the attorney picks it up
+          at the same time in both modes.
+        </p>
+        <div className="mt-3"><ComparisonTable /></div>
+      </section>
       <SimNote />
     </div>
   )
