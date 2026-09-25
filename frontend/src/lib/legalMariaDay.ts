@@ -96,8 +96,6 @@ export interface MariaRun {
 export interface MariaCard {
   id: string
   time: string
-  slide: number
-  tag?: string
   title: string
   variant?: string
   headline: string
@@ -175,9 +173,8 @@ function identityRun(id: string): MariaRun {
   }
 }
 
-const START_DECK: Pick<MariaCard, 'time' | 'slide' | 'title' | 'headline' | 'what' | 'where' | 'deck' | 'principle' | 'day'> = {
+const START_DECK: Pick<MariaCard, 'time' | 'title' | 'headline' | 'what' | 'where' | 'deck' | 'principle' | 'day'> = {
   time: '8:30 AM',
-  slide: 12,
   title: 'Start Work',
   headline: 'Maria begins her day',
   what: { text: ['Maria signs in and begins working on matters assigned to her.', 'She needs access to the information required for her role.'] },
@@ -645,10 +642,8 @@ function shareRun(mode: 'notify' | 'restrict'): MariaRun {
   }
 }
 
-const SHARE_DECK: Pick<MariaCard, 'time' | 'slide' | 'tag' | 'title' | 'headline' | 'what' | 'where' | 'deck' | 'day'> = {
+const SHARE_DECK: Pick<MariaCard, 'time' | 'title' | 'headline' | 'what' | 'where' | 'deck' | 'day'> = {
   time: '2:30 PM',
-  slide: 19,
-  tag: 'DEMO 2/3',
   title: 'Prepare Information for Sharing',
   headline: 'Maria is ready to share her work',
   what: { text: ['Maria prepares information for a business stakeholder.', 'Before sending it, another question arises:', SHARE_QUESTION] },
@@ -775,25 +770,22 @@ const decisionRun: MariaRun = {
 
 // ── The 14 cards, in the order of Maria's day ───────────────────────────────
 
-const identityCard = (id: string, scenario: string, n: number, variant: string, tag?: string): MariaCard => ({
+const identityCard = (id: string, scenario: string, n: number, variant: string): MariaCard => ({
   ...START_DECK,
   id,
-  tag,
   variant,
   basedOn: { label: `Demo 1 · Scenario ${n}`, to: `/prior/legal/demo/identity?sc=${scenario}` },
   runs: [identityRun(scenario)],
 })
 
 export const MARIA_CARDS: MariaCard[] = [
-  identityCard('0830-start', 'maria', 1, 'Managed laptop', 'DEMO 1/1'),
+  identityCard('0830-start', 'maria', 1, 'Managed laptop'),
   identityCard('0830-byod', 'maria-byod', 2, 'Personal laptop'),
   identityCard('0830-claims', 'claims', 3, 'Non-Legal user'),
   identityCard('0830-mfa', 'maria-mfa', 4, 'MFA not completed'),
   {
     id: '0900-contract',
     time: '9:00 AM',
-    slide: 13,
-    tag: 'DEMO 2/1',
     title: 'Review an Assigned Contract',
     headline: 'Maria asks Copilot to help review a contract',
     what: {
@@ -814,8 +806,6 @@ export const MARIA_CARDS: MariaCard[] = [
   {
     id: '1000-find',
     time: '10:00 AM',
-    slide: 14,
-    tag: 'Period DEMO',
     title: 'Find Information',
     headline: 'Maria needs information to answer a legal question',
     what: {
@@ -836,8 +826,6 @@ export const MARIA_CARDS: MariaCard[] = [
   {
     id: '1030-sensitive',
     time: '10:30 AM',
-    slide: 15,
-    tag: 'DEMO 2/2',
     title: 'Work With Sensitive Information',
     headline: 'Maria encounters sensitive information',
     what: {
@@ -857,7 +845,6 @@ export const MARIA_CARDS: MariaCard[] = [
   {
     id: '1100-needed',
     time: '11:00 AM',
-    slide: 16,
     title: 'Use Only What Is Needed',
     headline: 'Maria needs an answer - not every piece of information',
     what: {
@@ -878,8 +865,6 @@ export const MARIA_CARDS: MariaCard[] = [
   {
     id: '1200-response',
     time: '12:00 PM',
-    slide: 17,
-    tag: 'Vendor DATA',
     title: 'Prepare a Legal Response',
     headline: 'Copilot helps Maria prepare a response',
     what: { text: ['Maria asks Copilot to draft a response based on the contract and relevant information.', 'Copilot produces a draft.'] },
@@ -897,8 +882,6 @@ export const MARIA_CARDS: MariaCard[] = [
   {
     id: '1330-outside',
     time: '1:30 PM',
-    slide: 18,
-    tag: 'DEMO 2/4',
     title: "A Request Falls Outside Maria's Role",
     headline: 'Someone asks Maria for information from another legal matter',
     what: {
@@ -933,8 +916,6 @@ export const MARIA_CARDS: MariaCard[] = [
   {
     id: '1530-decision',
     time: '3:30 PM',
-    slide: 20,
-    tag: 'License DEMO',
     title: 'A Legal Decision Requires Human Judgment',
     headline: 'Copilot provides a recommendation',
     what: {
@@ -954,7 +935,6 @@ export const MARIA_CARDS: MariaCard[] = [
   {
     id: '1630-prove',
     time: '4:30 PM',
-    slide: 21,
     title: 'Can the Organization Prove What Happened',
     headline: "Maria's workday is almost over",
     what: {

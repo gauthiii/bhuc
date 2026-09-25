@@ -169,8 +169,6 @@ function CardBrief({ card }: { card: MariaCard }) {
       <div className="border-b border-slate-100 px-5 py-4">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="inline-flex items-center gap-1 rounded-full bg-brand-800 px-2.5 py-0.5 font-semibold text-white"><Clock className="h-3 w-3" /> {card.time}</span>
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Deck slide {card.slide}</span>
-          {card.tag && <span className="rounded-full bg-brand-50 px-2 py-0.5 font-bold text-brand-700">{card.tag}</span>}
           {card.variant && <span className="rounded-full border border-slate-200 px-2 py-0.5 text-slate-600">{card.variant}</span>}
         </div>
         <h2 className="mt-2 font-display text-2xl font-semibold text-slate-900">{card.title}</h2>
@@ -198,8 +196,7 @@ function CardBrief({ card }: { card: MariaCard }) {
           </div>
         </div>
         <div className="border-t border-slate-100 bg-slate-50/60 p-5 lg:border-t-0 lg:border-l">
-          <h3 className="text-[11px] font-bold tracking-wider text-brand-600 uppercase">Deck wording · slide {card.slide}</h3>
-          <dl className="mt-2 space-y-3 text-sm">
+          <dl className="space-y-3 text-sm">
             {card.deck.map((d) => (
               <div key={d.k}>
                 <dt className="font-semibold text-slate-700">{d.k}</dt>
@@ -232,7 +229,6 @@ function CardBrief({ card }: { card: MariaCard }) {
           </div>
         ))}
       </div>
-      <p className="px-5 pb-3 text-[11px] text-slate-400">Bottom row: deck slide 22, "What Maria's Day Demonstrated".</p>
     </section>
   )
 }
@@ -612,7 +608,7 @@ export function LegalMariaDay() {
     <LegalLayout>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold tracking-widest text-brand-500 uppercase">Day in the life · Deck slides 11 to 22</p>
+          <p className="text-xs font-bold tracking-widest text-brand-500 uppercase">Day in the life</p>
           <h1 className="mt-1 font-display text-3xl font-semibold text-slate-900">Maria's day</h1>
           <p className="mt-1 text-sm text-slate-600">{INTRO.subtitle} · {MARIA.name}, {MARIA.role}</p>
         </div>
@@ -654,7 +650,6 @@ export function LegalMariaDay() {
                   <span className="text-xs font-bold text-brand-600">{c.time}</span>
                   {ran && <CheckCircle2 className="h-4 w-4 text-brand-500" aria-label="Already run" />}
                 </div>
-                {c.tag && <span className="mt-1 self-start rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">{c.tag}</span>}
                 <div className="mt-1 text-sm leading-snug font-semibold text-slate-800">{c.title}</div>
                 {c.variant && <div className="text-xs text-slate-500">{c.variant}</div>}
                 <div className="mt-auto flex flex-wrap gap-1 pt-2">
