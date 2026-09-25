@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Clock, Megaphone, MonitorPlay, X } from 'lucide-react'
 import logo from '../../../assets/brand/bcbsvt-logo-white.png'
@@ -10,6 +10,7 @@ import { DEMO_STOPS, PHASES, slidesLabel } from '../../../lib/legalGovernance'
 // walks the demo in presentation order.
 
 const NOTES_KEY = 'bcbsvt-presenter-notes'
+const PAGE_TITLE = 'BCBS VT - AI Governance Framework'
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   `border-b-2 px-2 pt-1 pb-2 text-sm font-medium whitespace-nowrap transition ${
@@ -70,6 +71,13 @@ function FlowFooter() {
 
 export function LegalLayout({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState(readNotesPref)
+
+  // Browser tab title for every /prior/legal screen; the app's own title comes back on leaving.
+  useEffect(() => {
+    const previous = document.title
+    document.title = PAGE_TITLE
+    return () => { document.title = previous }
+  }, [])
   const toggleNotes = (v: boolean) => {
     setNotes(v)
     try { localStorage.setItem(NOTES_KEY, v ? '1' : '0') } catch { /* per-viewer convenience only */ }
