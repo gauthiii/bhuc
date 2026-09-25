@@ -42,6 +42,7 @@ import { LegalControls } from './pages/prior/legal/Controls'
 import { LegalDemoIdentity } from './pages/prior/legal/DemoIdentity'
 import { LegalDemoPurview } from './pages/prior/legal/DemoPurview'
 import { LegalDecision } from './pages/prior/legal/Decision'
+import { LegalMariaDay } from './pages/prior/legal/MariaDay'
 
 function PatientGuard({ children }: { children: ReactNode }) {
   const { isAuthenticated } = usePatientAuth()
@@ -108,6 +109,7 @@ export default function App() {
       <Route path="/prior/legal/controls" element={<LegalControls />} />
       <Route path="/prior/legal/demo/identity" element={<LegalDemoIdentity />} />
       <Route path="/prior/legal/demo/data-protection" element={<LegalDemoPurview />} />
+      <Route path="/prior/legal/maria" element={<LegalMariaDay />} />
       <Route path="/prior/legal/decision" element={<LegalDecision />} />
       <Route path="/prior/legal/security" element={<LegalSecurity />} />
 

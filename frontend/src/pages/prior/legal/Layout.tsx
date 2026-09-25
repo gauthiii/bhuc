@@ -4,11 +4,17 @@ import { ArrowLeft, ArrowRight, Clock, Megaphone, MonitorPlay, X } from 'lucide-
 import logo from '../../../assets/brand/bcbsvt-logo-white.png'
 import { DEMO_STOPS, PHASES, slidesLabel } from '../../../lib/legalGovernance'
 
-// Shared chrome for the /prior/legal demo: BCBSVT header, tabs grouped by framework
-// phase (Assess, Control & Implement, Prove, Decide), presenter notes for the current
-// screen, and a Previous / Next footer that walks the demo in presentation order.
+// Shared chrome for the /prior/legal demo: BCBSVT header, a "Day in the life" tab for
+// Maria's day, tabs grouped by framework phase (Assess, Control & Implement, Prove,
+// Decide), presenter notes for the current screen, and a Previous / Next footer that
+// walks the demo in presentation order.
 
 const NOTES_KEY = 'bcbsvt-presenter-notes'
+
+const tabClass = ({ isActive }: { isActive: boolean }) =>
+  `border-b-2 px-2 pt-1 pb-2 text-sm font-medium whitespace-nowrap transition ${
+    isActive ? 'border-brand-500 text-brand-800' : 'border-transparent text-slate-500 hover:text-slate-800'
+  }`
 
 function readNotesPref() {
   try { return localStorage.getItem(NOTES_KEY) === '1' } catch { return false }
@@ -96,6 +102,13 @@ export function LegalLayout({ children }: { children: ReactNode }) {
 
       <nav className="border-b border-slate-200 bg-white" aria-label="Demo sections">
         <div className="mx-auto flex max-w-7xl gap-5 overflow-x-auto px-6">
+          {/* Maria's day sits outside the presentation flow: no presenter notes or Previous / Next. */}
+          <div className="shrink-0 pt-2">
+            <div className="px-2 text-[10px] font-bold tracking-wider text-brand-500 uppercase">Day in the life</div>
+            <div className="flex">
+              <NavLink to="/prior/legal/maria" end className={tabClass}>Maria's day</NavLink>
+            </div>
+          </div>
           {PHASES.map((phase) => (
             <div key={phase} className="shrink-0 pt-2">
               <div className="px-2 text-[10px] font-bold tracking-wider text-brand-500 uppercase">{phase}</div>
@@ -105,11 +118,7 @@ export function LegalLayout({ children }: { children: ReactNode }) {
                     key={s.to}
                     to={s.to}
                     end
-                    className={({ isActive }) =>
-                      `border-b-2 px-2 pt-1 pb-2 text-sm font-medium whitespace-nowrap transition ${
-                        isActive ? 'border-brand-500 text-brand-800' : 'border-transparent text-slate-500 hover:text-slate-800'
-                      }`
-                    }
+                    className={tabClass}
                   >
                     {s.label}
                   </NavLink>
