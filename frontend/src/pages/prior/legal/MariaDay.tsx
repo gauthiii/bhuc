@@ -331,7 +331,7 @@ function ScreenPane({ run, response, progress, running, done, awaiting }: {
   )
 }
 
-function EvidencePanel({ records, at, onProve }: { records: MariaRun['evidence']; at: string; onProve: () => void }) {
+function EvidencePanel({ records, at, onProve }: { records: MariaRun['evidence']; at: string; onProve?: () => void }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-5 py-3">
@@ -353,7 +353,7 @@ function EvidencePanel({ records, at, onProve }: { records: MariaRun['evidence']
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-b-2xl bg-brand-50 px-5 py-3 text-sm">
         <span className="inline-flex items-center gap-2 font-medium text-brand-800"><FileCheck2 className="h-4 w-4" /> Added to Maria's day log</span>
-        <button onClick={onProve} className="inline-flex items-center gap-1 font-semibold text-brand-600 hover:text-brand-800">4:30 PM · Can the organization prove it? <ArrowRight className="h-4 w-4" /></button>
+        {onProve && <button onClick={onProve} className="inline-flex items-center gap-1 font-semibold text-brand-600 hover:text-brand-800">4:30 PM · Can the organization prove it? <ArrowRight className="h-4 w-4" /></button>}
       </div>
     </div>
   )
@@ -457,7 +457,7 @@ function Runner({ card, run, onSelect }: { card: MariaCard; run: MariaRun; onSel
       {done && doneAt && (
         <div className="mt-6 space-y-4">
           <OutcomeBanner tone={outcome.tone} label={outcome.label} />
-          <EvidencePanel records={evidence} at={doneAt} onProve={() => onSelect(PROVE_ID)} />
+          <EvidencePanel records={evidence} at={doneAt} onProve={MARIA_CARDS.some((c) => c.id === PROVE_ID) ? () => onSelect(PROVE_ID) : undefined} />
           <div className="space-y-1 rounded-2xl bg-brand-800 p-4 text-sm text-white">
             {experience && <p><strong className="text-brand-200">What does Maria experience? </strong>{experience.v.join(' ')}</p>}
             {card.principle && <p><strong className="text-brand-200">{card.principle.k}: </strong>{card.principle.v}</p>}

@@ -932,26 +932,27 @@ export const MARIA_CARDS: MariaCard[] = [
     day: { activity: 'Make legal decision', experience: 'Professional review', risk: 'AI replaces human judgment', control: 'Human accountability' },
     runs: [decisionRun],
   },
-  {
-    id: '1630-prove',
-    time: '4:30 PM',
-    title: 'Can the Organization Prove What Happened',
-    headline: "Maria's workday is almost over",
-    what: {
-      text: ['Throughout the day, AI has helped Maria:'],
-      bullets: ['Find information', 'Review documents', 'Prepare content', 'Analyze information', 'Develop a legal response'],
-      after: ['But governance is not complete simply because controls operated.'],
-    },
-    where: ["Today's sign-in, audit and review records from the cards above (this page's log)"],
-    deck: [
-      { k: 'The organization also needs to know:', v: ['Who used AI?', 'What business activity was being performed?', 'What information was involved?', 'What protections applied?', 'When was access restricted?', 'Where was human review required?', 'What decision or action resulted?', 'What evidence remains?'] },
-      { k: 'The question', v: ['"Can we prove that governance operated when it mattered?"'] },
-    ],
-    principle: { k: 'Business outcome', v: 'The organization can demonstrate how AI was used and how the associated risks were managed.' },
-    day: { activity: 'End the day', experience: 'Governable activity', risk: 'No evidence of governance', control: 'Monitoring & evidence' },
-    runs: [],
-    prove: true,
-  },
+  // 4:30 · Can the Organization Prove What Happened: hidden for now. Uncomment to bring it back.
+  // {
+  //   id: '1630-prove',
+  //   time: '4:30 PM',
+  //   title: 'Can the Organization Prove What Happened',
+  //   headline: "Maria's workday is almost over",
+  //   what: {
+  //     text: ['Throughout the day, AI has helped Maria:'],
+  //     bullets: ['Find information', 'Review documents', 'Prepare content', 'Analyze information', 'Develop a legal response'],
+  //     after: ['But governance is not complete simply because controls operated.'],
+  //   },
+  //   where: ["Today's sign-in, audit and review records from the cards above (this page's log)"],
+  //   deck: [
+  //     { k: 'The organization also needs to know:', v: ['Who used AI?', 'What business activity was being performed?', 'What information was involved?', 'What protections applied?', 'When was access restricted?', 'Where was human review required?', 'What decision or action resulted?', 'What evidence remains?'] },
+  //     { k: 'The question', v: ['"Can we prove that governance operated when it mattered?"'] },
+  //   ],
+  //   principle: { k: 'Business outcome', v: 'The organization can demonstrate how AI was used and how the associated risks were managed.' },
+  //   day: { activity: 'End the day', experience: 'Governable activity', risk: 'No evidence of governance', control: 'Monitoring & evidence' },
+  //   runs: [],
+  //   prove: true,
+  // },
 ]
 
 // ── 4:30 review: the eight questions on slide 21 ────────────────────────────
