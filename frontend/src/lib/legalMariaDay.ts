@@ -1,8 +1,8 @@
 // "Maria's day" for the /prior/legal/maria page, taken from the workshop deck
-// "507 & 510: Workshop_09/24 – 09/25", slides 11 to 22 (A Day in the Life of a Legal
+// "507 & 510: Workshop_09/24 – 09/25", slides 22 to 32 (A Day in the Life of a Legal
 // Professional). Deck wording is kept word for word. The demonstrations reuse the
 // scenarios from /prior/legal/demo and /prior/legal/simulate, retold with Maria as the
-// Legal Counsel; 9:00, 11:00, 1:30 and 2:30 carry content written for this page only.
+// Legal Counsel; 9:00, 10:00, 1:30 and 2:30 carry content written for this page only.
 // Frontend-only. People, accounts, documents and log entries are fictitious.
 
 import { IDENTITY_CHECKS, IDENTITY_SCENARIOS, type IdentityScenario } from './legalGovernance'
@@ -54,7 +54,7 @@ export interface MariaEvidence {
   fields: { k: string; v: string }[]
 }
 
-/** What the 4:30 review reads back from each run (slide 21 questions). */
+/** What the 4:30 review reads back from each run (slide 31 questions). */
 export interface MariaFacts {
   user: string
   activity: string
@@ -104,7 +104,7 @@ export interface MariaCard {
   basedOn?: { label: string; to: string }
   deck: { k: string; v: string[] }[]
   principle?: { k: string; v: string }
-  /** The matching row of slide 22. */
+  /** The matching row of slide 32. */
   day: { activity: string; experience: string; risk: string; control: string }
   runs: MariaRun[]
   prove?: true
@@ -114,7 +114,7 @@ export const MARIA = { name: 'Maria Alvarez', role: 'Legal Counsel', upn: 'maria
 
 const SCOPE_LINES = ['Search scope: Z: legal drive only', "Permissions: Same as Maria's own Z: drive access", 'Web search: Off']
 
-// ── 8:30 · Start Work (slide 12), built from the Demo 1 sign-in scenarios ─────
+// ── 8:30 · Start Work (slide 23), built from the Demo 1 sign-in scenarios ─────
 
 function identityFields(s: IdentityScenario) {
   const r = s.results
@@ -180,7 +180,7 @@ const START_DECK: Pick<MariaCard, 'time' | 'title' | 'headline' | 'what' | 'wher
   what: { text: ['Maria signs in and begins working on matters assigned to her.', 'She needs access to the information required for her role.'] },
   where: ['Microsoft 365 sign-in', 'Microsoft Entra ID: Legal Department group, Conditional Access, MFA, compliant device'],
   deck: [
-    { k: 'What could go wrong?', v: ['Someone could use AI without being properly identified or could gain access to information outside their responsibilities.'] },
+    { k: 'What could go wrong?', v: ['Maria could try to connect with her Personal Laptop, or Gain Access to Co-Pilot without completing Multi Factor Authentication or May not belong to Legal Department where the functionality is rolled out'] },
     { k: 'What does the organization require?', v: ["Only an appropriately identified and authorized worker should be able to use the organization's AI capability and business information."] },
     { k: 'What does Maria experience?', v: ['She signs in and gets access to the work she is permitted to perform.'] },
   ],
@@ -188,7 +188,7 @@ const START_DECK: Pick<MariaCard, 'time' | 'title' | 'headline' | 'what' | 'wher
   day: { activity: 'Start work', experience: 'Appropriate access', risk: 'Wrong person gains access', control: 'Identity & access requirements' },
 }
 
-// ── 9:00 · Review an Assigned Contract (slide 13) ───────────────────────────
+// ── Supplier agreement, used from 9:00 onward ───────────────────────────────
 
 const SUPPLIER_V2 = 'Supplier Agreement – Document Management Services v2 (2026).docx'
 const SUPPLIER_V1 = 'Supplier Agreement – Document Management Services v1 (2023).docx'
@@ -211,130 +211,7 @@ const openCopilot = (app: string): MariaStep => ({
   actor: 'Maria', label: `Maria opens ${app}`, detail: `Signed in as ${MARIA.upn} through CA-Legal-Copilot (8:30 AM).`, tone: 'done',
 })
 
-const contractRun: MariaRun = {
-  id: 'run',
-  label: 'Review the supplier agreement',
-  screen: {
-    app: 'Microsoft 365 Copilot (Word)',
-    prompt: 'Help me review this supplier agreement. What are the termination provisions? Should the asset be returned or deleted, and within how many days? What are the supplier obligations? What are the key changes from the previous version?',
-    sources: [{ name: SUPPLIER_V2, label: CONF, tone: 'confidential' }],
-    response: {
-      kind: 'answer',
-      text: [
-        "Termination: either party, 90 days' written notice (s.14.1)",
-        "Returned or deleted: return all BCBSVT data or, at BCBSVT's written election, delete it (s.14.3)",
-        'Within 30 days of termination',
-        'Supplier obligations: certify deletion in writing; keep no copies in backups beyond the retention window',
-        'Key changes from v1 (2023): notice 60 -> 90 days; written deletion certificate now required',
-      ],
-      label: { name: CONF, tone: 'confidential' },
-      footnote: `Response labeled ${CONF}, inherited from the source. [1] ${SUPPLIER_V2}`,
-    },
-  },
-  steps: [
-    openCopilot('Copilot in Word'),
-    { actor: 'Maria', label: 'Opens her assigned supplier agreement', detail: 'The document carries a sensitivity label.', tone: 'done', lines: [SUPPLIER_V2, SUPPLIER_PATH, `Label: ${CONF}`] },
-    { actor: 'Copilot', label: 'Copilot works from the assigned contract', detail: 'Copilot only uses content Maria is permitted to open.', tone: 'pass', lines: ['Maria has read access to the file (assigned matter)', 'Resource referenced: the open supplier agreement only'] },
-    { actor: 'Purview', label: 'Purview evaluates', detail: 'Sensitivity label and DLP policy are checked against the activity.', tone: 'pass', lines: [`Label found: ${CONF}`, 'DLP policy "Legal – Copilot privileged content": no match for this label'] },
-    { actor: 'Purview', label: 'Policy behavior occurs', detail: 'Allow, notify or restrict, as configured.', tone: 'pass', lines: ['Allowed · label inherited by the response'] },
-    { actor: 'Purview', label: 'Evidence is generated', detail: 'Policy match and activity / audit record.', tone: 'done', lines: ['CopilotInteraction written to Purview Audit and Activity explorer'] },
-  ],
-  outcome: { tone: 'ok', label: 'Allowed · label inherited by the response' },
-  evidence: [copilotAudit('Microsoft 365 Copilot (Word)', SUPPLIER_V2, CONF)],
-  facts: {
-    user: MARIA.upn,
-    activity: 'Review an assigned contract with Copilot in Word',
-    information: [SUPPLIER_V2],
-    protections: [`Sensitivity label ${CONF}, inherited by the response`],
-    action: 'Contract review answer provided within the assigned matter',
-  },
-}
-
-// ── 10:00 · Find Information (slide 14), from simulation case LR-2026-0419 ──
-
-const brokerDocs = {
-  oldMemo: 'Memo: Retention of producer and broker files (2019)',
-  schedule: 'Records Retention Schedule v7 (2024)',
-  template: 'Broker Agreement Template (2023)',
-}
-
-const findRun: MariaRun = {
-  id: 'run',
-  label: 'Retention period for closed broker files',
-  screen: {
-    app: 'Microsoft 365 Copilot (Chat)',
-    ask: { from: 'Priya Natarajan, Compliance', text: 'Priya in Compliance asks how long closed broker agreement files must be kept.' },
-    prompt: 'How long do we keep files for a broker agreement after the agreement ends?',
-    sources: [{ name: brokerDocs.schedule }, { name: brokerDocs.template }],
-    response: {
-      kind: 'answer',
-      title: 'Email reply to Priya Natarajan, Compliance',
-      text: [
-        'Closed broker agreement files are kept for 7 years after the agreement ends. This comes from the Records Retention Schedule v7 (2024), line "Producer and broker agreements".',
-        'You may come across a 2019 memo that says 5 years. That memo was replaced by the 2024 schedule and should not be relied on.',
-        'The broker agreement template (2023) points to the current retention schedule, so no contract change is needed.',
-      ],
-      footnote: `Sources: ${brokerDocs.schedule} · ${brokerDocs.template}`,
-    },
-  },
-  steps: [
-    { actor: 'Compliance', label: 'Question arrives by email', detail: 'Priya in Compliance asks how long closed broker agreement files must be kept.', tone: 'done' },
-    { actor: 'Maria', label: 'Maria asks Copilot', detail: 'Maria asks: "How long do we keep files for a broker agreement after the agreement ends?"', tone: 'done' },
-    { actor: 'Copilot', label: 'Copilot searches the Z: drive', detail: "Copilot searches the Z: legal drive within Maria's permissions and returns the 2019 memo and the broker agreement template.", tone: 'pass', lines: SCOPE_LINES },
-    { actor: 'Copilot', label: 'Copilot summarizes with citations', detail: 'Copilot answers: broker agreement files are kept for 5 years after the agreement ends [1], and the template refers to the retention schedule [2].', tone: 'done' },
-    {
-      actor: 'Maria', label: 'Maria flags an outdated source',
-      detail: 'Maria opens citation [1]. The first page of the 2019 memo is stamped "Superseded by Records Retention Schedule v7 (2024)". The 5-year answer cannot be used. This is the check that human review exists for.',
-      tone: 'warn',
-      citations: [
-        { doc: brokerDocs.oldMemo, location: 'Page 1', excerpt: 'Producer and broker files are retained for five years after the relationship ends.', status: 'superseded', note: 'Stamped "Superseded by Records Retention Schedule v7 (2024)"' },
-        { doc: brokerDocs.template, location: 'Section 11', excerpt: "Records are retained in line with the Company's current records retention schedule.", status: 'verified' },
-      ],
-    },
-    { actor: 'Copilot', label: 'Copilot searches again', detail: 'Maria asks a follow-up: "Find the current records retention schedule and give the period for broker agreements." Copilot searches again and returns the 2024 schedule.', tone: 'done' },
-    { actor: 'Copilot', label: 'Copilot gives the corrected answer', detail: 'Copilot answers: broker agreement files are kept for 7 years after the agreement ends [1]. The schedule states it replaces earlier retention guidance.', tone: 'done' },
-    {
-      actor: 'Maria', label: 'Maria verifies the new citation', detail: 'Maria opens the 2024 schedule, confirms the 7-year line and confirms the schedule is the current version.', tone: 'human',
-      citations: [
-        { doc: brokerDocs.schedule, location: 'Line "Producer and broker agreements"', excerpt: 'Retain 7 years after the agreement ends. This schedule replaces all earlier retention guidance.', status: 'verified' },
-        { doc: brokerDocs.template, location: 'Section 11', excerpt: "Records are retained in line with the Company's current records retention schedule.", status: 'verified' },
-      ],
-    },
-    { actor: 'Copilot', label: 'Copilot drafts the reply', detail: 'Copilot drafts the reply from the verified schedule. Maria asks it to add a line warning about the old memo.', tone: 'done' },
-    { actor: 'Maria', label: 'Maria edits and finalizes', detail: 'Maria finalizes the reply. It is for internal use, so no further approval is needed. She also logs the outdated memo in the monthly quality feedback so the file can be archived.', tone: 'human' },
-    { actor: 'Compliance', label: 'Compliance receives the answer', detail: 'Compliance has the correct answer.', tone: 'pass' },
-  ],
-  outcome: { tone: 'ok', label: 'Relevant information found · outdated source caught in review' },
-  evidence: [
-    {
-      source: 'Purview audit', activity: 'CopilotInteraction',
-      fields: [
-        { k: 'User', v: MARIA.upn },
-        { k: 'App', v: 'Microsoft 365 Copilot (Chat)' },
-        { k: 'Resources referenced', v: `${brokerDocs.oldMemo}; ${brokerDocs.template}; ${brokerDocs.schedule}` },
-        { k: 'Search scope', v: "Z: legal drive, within Maria's permissions" },
-      ],
-    },
-    {
-      source: 'Legal review log', activity: 'CitationCheck',
-      fields: [
-        { k: 'Reviewer', v: `${MARIA.name}, ${MARIA.role}` },
-        { k: 'Rejected', v: `${brokerDocs.oldMemo} (superseded)` },
-        { k: 'Verified', v: `${brokerDocs.schedule}; ${brokerDocs.template}` },
-      ],
-    },
-  ],
-  facts: {
-    user: MARIA.upn,
-    activity: 'Find information: retention period for closed broker files',
-    information: [brokerDocs.oldMemo, brokerDocs.template, brokerDocs.schedule],
-    protections: ["Copilot search limited to Maria's Z: drive permissions"],
-    humanReview: 'Maria rejected a superseded 2019 memo and verified the 2024 schedule',
-    action: 'Internal reply sent to Compliance: 7 years',
-  },
-}
-
-// ── 10:30 · Work With Sensitive Information (slide 15), from Demo 2 · Scenario 2 ─
+// ── 10:30 · Work With Sensitive Information (slide 26), from Demo 2 · Scenario 2 ─
 
 const PRIV_DOC = 'Provider Dispute – Strategy Notes.docx'
 const PRIV_DLP = {
@@ -379,7 +256,8 @@ const sensitiveRun: MariaRun = {
   },
 }
 
-// ── 11:00 · Use Only What Is Needed (slide 16): broad and focused runs ──────
+// ── 9:00 · Find Information (slide 24): the broad run. 10:00 · Review an Assigned
+// Contract (slide 25): the focused run. Both were the 11:00 slide in the earlier deck. ─
 
 const BROAD_DOCS = [SUPPLIER_V2, SUPPLIER_V1, '2021 billing dispute settlement', '2022 audit findings', 'Correspondence 2021–2025 (5 files)']
 
@@ -415,7 +293,7 @@ const broadRun: MariaRun = {
   }],
   facts: {
     user: MARIA.upn,
-    activity: 'Use only what is needed: broad question about the supplier',
+    activity: 'Find information: broad question about the supplier',
     information: BROAD_DOCS,
     protections: [],
     action: 'Broad answer drawn from 9 resources',
@@ -460,14 +338,14 @@ const focusedRun: MariaRun = {
   }],
   facts: {
     user: MARIA.upn,
-    activity: 'Use only what is needed: focused question on the current agreement',
+    activity: 'Review an assigned contract: focused question on the current agreement',
     information: [SUPPLIER_V2],
     protections: [`Sensitivity label ${CONF}, inherited by the response`],
     action: 'Focused answer drawn from 1 resource',
   },
 }
 
-// ── 12:00 · Prepare a Legal Response (slide 17), from simulation case LR-2026-0412 ─
+// ── 12:00 · Prepare a Legal Response (slide 27), from simulation case LR-2026-0412 ─
 
 const vendorDocs = {
   template: 'Vendor Agreement Template v4 (2025)',
@@ -540,7 +418,7 @@ const responseRun: MariaRun = {
   },
 }
 
-// ── 1:30 · A Request Falls Outside Maria's Role (slide 18) ──────────────────
+// ── 1:30 · A Request Falls Outside Maria's Role (slide 28) ──────────────────
 
 const NOTES_DOC = 'Negotiation Notes.docx'
 const OTHER_MATTER = 'Legal > Matters > LM-2026-0388'
@@ -586,7 +464,7 @@ const outsideRun: MariaRun = {
   },
 }
 
-// ── 2:30 · Prepare Information for Sharing (slide 19): notify and restrict ──
+// ── 2:30 · Prepare Information for Sharing (slide 29): notify and restrict ──
 
 const STAKEHOLDER = 'account.manager@supplier.example'
 const SHARE_QUESTION = '"Can this information be shared in this form, with this person, for this purpose?"'
@@ -656,7 +534,7 @@ const SHARE_DECK: Pick<MariaCard, 'time' | 'title' | 'headline' | 'what' | 'wher
   day: { activity: 'Share information', experience: 'Appropriate sharing', risk: 'Inappropriate disclosure', control: 'Sharing protections' },
 }
 
-// ── 3:30 · A Legal Decision Requires Human Judgment (slide 20), from case LR-2026-0427 ─
+// ── 3:30 · A Legal Decision Requires Human Judgment (slide 30), from case LR-2026-0427 ─
 
 const licenseDocs = {
   license: 'Software License Agreement, document management vendor (2023)',
@@ -768,7 +646,7 @@ const decisionRun: MariaRun = {
   },
 }
 
-// ── The 14 cards, in the order of Maria's day ───────────────────────────────
+// ── The 13 cards, in the order of Maria's day (11:00 is not in the deck) ────
 
 const identityCard = (id: string, scenario: string, n: number, variant: string): MariaCard => ({
   ...START_DECK,
@@ -784,35 +662,14 @@ export const MARIA_CARDS: MariaCard[] = [
   identityCard('0830-claims', 'claims', 3, 'Non-Legal user'),
   identityCard('0830-mfa', 'maria-mfa', 4, 'MFA not completed'),
   {
-    id: '0900-contract',
+    id: '0900-find',
     time: '9:00 AM',
-    title: 'Review an Assigned Contract',
-    headline: 'Maria asks Copilot to help review a contract',
-    what: {
-      text: ['Maria is assigned a supplier agreement.', 'She asks Copilot to help identify termination obligations :'],
-      bullets: ['Should the asset be Returned or Deleted?', 'Termination provisions', 'Within how Many days ?', 'Supplier obligations', 'Key changes from the previous version'],
-    },
-    where: ['Microsoft 365 Copilot in Word', SUPPLIER_PATH, 'Microsoft Purview: sensitivity label, DLP for Copilot'],
-    basedOn: { label: 'Demo 2 · Scenario 1 (new content on this page)', to: '/prior/legal/demo/data-protection?sc=confidential' },
-    deck: [
-      { k: 'What could go wrong?', v: ['AI could expose information from matters Maria is not authorized to access or combine information from unrelated work.'] },
-      { k: 'What does the organization require?', v: ['AI-assisted work must remain within the information and business activities Maria is authorized to perform.'] },
-      { k: 'What does Maria experience?', v: ['Copilot helps with the contract Maria is working on - without opening the door to unrelated matters.'] },
-    ],
-    principle: { k: 'Business outcome', v: 'Maria gets assistance within the boundaries of her work.' },
-    day: { activity: 'Review contract', experience: 'Relevant assistance', risk: 'Unrelated information exposed', control: 'Authorized use' },
-    runs: [contractRun],
-  },
-  {
-    id: '1000-find',
-    time: '10:00 AM',
     title: 'Find Information',
     headline: 'Maria needs information to answer a legal question',
     what: {
-      text: ['Maria asks:', '“How long do we keep files for a broker agreement after the agreement ends?"', 'Copilot helps Maria locate relevant information.'],
+      text: ['Maria is assigned a supplier agreement.', 'Maria asks:', '“Tell me everything about this supplier."', 'Copilot helps Maria locate relevant information.'],
     },
-    where: ['Microsoft 365 Copilot (Chat)', 'Z: legal drive, within Maria\'s permissions'],
-    basedOn: { label: 'Case simulation · LR-2026-0419', to: '/prior/legal/simulate?case=broker-file-retention' },
+    where: ['Microsoft 365 Copilot (Chat)', SUPPLIER_PATH, 'Purview Audit: resources referenced by each interaction'],
     deck: [
       { k: 'The question is not:', v: ['"Can Copilot find information?"'] },
       { k: 'The question is:', v: ['"Which information should Maria be able to find?"'] },
@@ -821,7 +678,26 @@ export const MARIA_CARDS: MariaCard[] = [
     ],
     principle: { k: 'Governance principle', v: 'Access should follow business responsibility - not simply information availability.' },
     day: { activity: 'Find information', experience: 'Relevant information', risk: 'Information outside role retrieved', control: 'Information access boundaries' },
-    runs: [findRun],
+    runs: [broadRun],
+  },
+  {
+    id: '1000-contract',
+    time: '10:00 AM',
+    title: 'Review an Assigned Contract',
+    headline: 'Maria asks Copilot to help review a contract',
+    what: {
+      text: ['Maria reviews all the identified documents and then asks Copilot to help summarize termination obligation:'],
+      bullets: ['Should the asset be Returned or Deleted?', 'Termination provisions', 'Within how Many days ?', 'Supplier obligations', 'Key changes from the previous version'],
+    },
+    where: ['Microsoft 365 Copilot (Chat)', SUPPLIER_PATH, 'Purview Audit: resources referenced by each interaction'],
+    deck: [
+      { k: 'What could go wrong?', v: ['AI could expose information from matters Maria is not authorized to access or combine information from unrelated work.'] },
+      { k: 'What does the organization require?', v: ['AI-assisted work must remain within the information and business activities Maria is authorized to perform.'] },
+      { k: 'What does Maria experience?', v: ['Copilot helps with the contract Maria is working on - without opening the door to unrelated matters.'] },
+    ],
+    principle: { k: 'Business outcome', v: 'Maria gets assistance within the boundaries of her work.' },
+    day: { activity: 'Review contract', experience: 'Relevant assistance', risk: 'Unrelated information exposed', control: 'Authorized use' },
+    runs: [focusedRun],
   },
   {
     id: '1030-sensitive',
@@ -829,7 +705,7 @@ export const MARIA_CARDS: MariaCard[] = [
     title: 'Work With Sensitive Information',
     headline: 'Maria encounters sensitive information',
     what: {
-      text: ['The contract and related documents may contain information that requires additional protection.', 'Depending on the matter, information may involve:'],
+      text: ['“Summarize our litigation strategy notes for the provider network dispute."', 'The contract and related documents may contain information that requires additional protection.', 'Depending on the matter, information may involve:'],
       bullets: ['Confidential legal information', 'Personal information', 'Business-sensitive information', 'Regulated information, where applicable'],
     },
     where: ['Microsoft 365 Copilot in Word', 'Legal > Litigation > Privileged', 'Microsoft Purview: sensitivity labels, DLP policy "Legal – Copilot privileged content"'],
@@ -841,26 +717,6 @@ export const MARIA_CARDS: MariaCard[] = [
     ],
     day: { activity: 'Work with sensitive data', experience: 'Appropriate safeguards', risk: 'Inappropriate handling', control: 'Protection requirements' },
     runs: [sensitiveRun],
-  },
-  {
-    id: '1100-needed',
-    time: '11:00 AM',
-    title: 'Use Only What Is Needed',
-    headline: 'Maria needs an answer - not every piece of information',
-    what: {
-      text: ['Maria needs to understand:'],
-      bullets: ['Renewal date', 'Termination notice period', 'Supplier obligations'],
-      after: ["But does she need the supplier's entire legal history?"],
-    },
-    where: ['Microsoft 365 Copilot (Chat)', SUPPLIER_PATH, 'Purview Audit: resources referenced by each interaction'],
-    deck: [
-      { k: 'The question', v: ['"Does the AI need all of this information to perform this task?"'] },
-      { k: 'What does the organization require?', v: ['Use information appropriate to the business purpose.', 'Avoid unnecessary exposure of information simply because it is available.'] },
-      { k: 'What does Maria experience?', v: ['She can accomplish the task without unnecessarily expanding the information involved.'] },
-    ],
-    principle: { k: 'Business principle', v: 'Use what is needed for the work - not everything that happens to be available.' },
-    day: { activity: 'Use only what is needed', experience: 'Focused information', risk: 'Unnecessary information exposed', control: 'Purpose-based use' },
-    runs: [broadRun, focusedRun],
   },
   {
     id: '1200-response',
@@ -955,17 +811,17 @@ export const MARIA_CARDS: MariaCard[] = [
   // },
 ]
 
-// ── 4:30 review: the eight questions on slide 21 ────────────────────────────
+// ── 4:30 review: the eight questions on slide 31 ────────────────────────────
 
 export type ProveKey = 'who' | 'activity' | 'information' | 'protections' | 'restricted' | 'review' | 'action' | 'evidence'
 
 export const PROVE_QUESTIONS: { key: ProveKey; q: string; hint: string[] }[] = [
   { key: 'who', q: 'Who used AI?', hint: ['0830-start'] },
-  { key: 'activity', q: 'What business activity was being performed?', hint: ['0900-contract', '1000-find'] },
-  { key: 'information', q: 'What information was involved?', hint: ['0900-contract', '1000-find', '1100-needed'] },
+  { key: 'activity', q: 'What business activity was being performed?', hint: ['0900-find', '1000-contract'] },
+  { key: 'information', q: 'What information was involved?', hint: ['0900-find', '1000-contract'] },
   { key: 'protections', q: 'What protections applied?', hint: ['0830-start', '1030-sensitive', '1430-share-notify'] },
   { key: 'restricted', q: 'When was access restricted?', hint: ['0830-byod', '1030-sensitive', '1330-outside', '1430-share-restrict'] },
-  { key: 'review', q: 'Where was human review required?', hint: ['1000-find', '1200-response', '1530-decision'] },
+  { key: 'review', q: 'Where was human review required?', hint: ['1200-response', '1530-decision'] },
   { key: 'action', q: 'What decision or action resulted?', hint: ['1530-decision'] },
   { key: 'evidence', q: 'What evidence remains?', hint: ['0830-start', '1030-sensitive'] },
 ]

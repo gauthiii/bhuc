@@ -1,13 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Clock, Megaphone, MonitorPlay, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Clock, Megaphone, X } from 'lucide-react'
 import logo from '../../../assets/brand/bcbsvt-logo-white.png'
-import { DEMO_STOPS, PHASES, slidesLabel } from '../../../lib/legalGovernance'
+import { DEMO_STOPS, slidesLabel } from '../../../lib/legalGovernance'
 
 // Shared chrome for the /prior/legal demo: BCBSVT header, a "Day in the life" tab for
-// Maria's day, tabs grouped by framework phase (Assess, Control & Implement, Prove,
-// Decide), presenter notes for the current screen, and a Previous / Next footer that
-// walks the demo in presentation order.
+// Maria's day, presenter notes for the current screen, and a Previous / Next footer that
+// walks the demo in presentation order. For the workshop demo the nav shows Maria's day
+// only; the phase tabs (Assess, Control & Implement, Prove, Decide), the Presenter notes
+// button and "All demos" are hidden, and the other screens still open by URL.
 
 const NOTES_KEY = 'bcbsvt-presenter-notes'
 const PAGE_TITLE = 'BCBS VT - AI Governance Framework'
@@ -87,7 +88,7 @@ export function LegalLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-brand-800 text-white shadow-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-6">
-          <Link to="/prior/legal" className="flex min-w-0 items-center gap-4" aria-label="Blue Cross and Blue Shield of Vermont, Copilot governance demo home">
+          <Link to="/prior/legal/maria" className="flex min-w-0 items-center gap-4" aria-label="Blue Cross and Blue Shield of Vermont, Copilot governance demo home">
             <img src={logo} alt="Blue Cross and Blue Shield of Vermont" className="h-9 w-auto shrink-0" />
             <span className="hidden h-8 w-px bg-white/25 md:block" aria-hidden />
             <span className="hidden min-w-0 leading-tight md:block">
@@ -95,7 +96,8 @@ export function LegalLayout({ children }: { children: ReactNode }) {
               <span className="block truncate text-xs text-brand-200">Microsoft Copilot for Legal</span>
             </span>
           </Link>
-          <div className="flex items-center gap-2">
+          {/* Presenter notes and "All demos": hidden for the demo. Uncomment to bring them back. */}
+          {/* <div className="flex items-center gap-2">
             <button
               onClick={() => toggleNotes(!notes)}
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition ${notes ? 'bg-white text-brand-800' : 'bg-white/10 text-white hover:bg-white/20'}`}
@@ -104,7 +106,7 @@ export function LegalLayout({ children }: { children: ReactNode }) {
               <MonitorPlay className="h-3.5 w-3.5" /> Presenter notes
             </button>
             <Link to="/" className="hidden rounded-full px-3 py-1.5 text-xs text-brand-100 hover:bg-white/10 sm:inline">All demos</Link>
-          </div>
+          </div> */}
         </div>
       </header>
 
@@ -117,7 +119,8 @@ export function LegalLayout({ children }: { children: ReactNode }) {
               <NavLink to="/prior/legal/maria" end className={tabClass}>Maria's day</NavLink>
             </div>
           </div>
-          {PHASES.map((phase) => (
+          {/* Phase tabs: hidden for the demo. Uncomment to bring them back. */}
+          {/* {PHASES.map((phase) => (
             <div key={phase} className="shrink-0 pt-2">
               <div className="px-2 text-[10px] font-bold tracking-wider text-brand-500 uppercase">{phase}</div>
               <div className="flex">
@@ -133,7 +136,7 @@ export function LegalLayout({ children }: { children: ReactNode }) {
                 ))}
               </div>
             </div>
-          ))}
+          ))} */}
         </div>
       </nav>
 

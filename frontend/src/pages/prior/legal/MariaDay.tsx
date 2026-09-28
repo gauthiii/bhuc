@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowRight, Ban, Bot, CheckCircle2, CircleDashed, Clock, FileCheck2, FileText, Loader2, LogIn,
   Mail, MinusCircle, Play, RotateCcw, ScrollText, SearchX, ShieldCheck, SkipForward, Tag, Trash2, UserCheck, XCircle,
@@ -13,10 +13,10 @@ import {
 import { addMariaLog, resetMariaLog, useMariaLog, type MariaLogRecord } from '../../../lib/legalMariaLog'
 import { fmtTime } from '../../../lib/legalEvidence'
 
-// /prior/legal/maria: deck slides 11 to 22, "A Day in the Life of a Legal Professional".
-// Fourteen cards in the order of Maria's day, each with the deck wording and a runnable
+// /prior/legal/maria: deck slides 22 to 32, "A Day in the Life of a Legal Professional".
+// Thirteen cards in the order of Maria's day, each with the deck wording and a runnable
 // demonstration: the same step-by-step runner, coloured results and evidence records as
-// the /prior/legal/demo screens. Card in ?card=, run in ?run= (11:00 only).
+// the /prior/legal/demo screens. Card in ?card=, run in ?run= (cards with several runs).
 // Simulated, fictitious data.
 
 const STEP_MS = 800
@@ -188,11 +188,12 @@ function CardBrief({ card }: { card: MariaCard }) {
           <div>
             <h3 className="text-[11px] font-bold tracking-wider text-brand-600 uppercase">Where</h3>
             <ul className="mt-1.5 space-y-1 text-sm text-slate-800">{card.where.map((w) => <li key={w}>{w}</li>)}</ul>
-            {card.basedOn && (
+            {/* "Also in the app" links to the other /prior/legal screens: hidden for the demo. Uncomment to bring them back. */}
+            {/* {card.basedOn && (
               <Link to={card.basedOn.to} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-800">
                 Also in the app: {card.basedOn.label} <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-            )}
+            )} */}
           </div>
         </div>
         <div className="border-t border-slate-100 bg-slate-50/60 p-5 lg:border-t-0 lg:border-l">
